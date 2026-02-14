@@ -33,6 +33,11 @@ vim.opt.mouse = "a"
 -- Terminal colors
 vim.opt.termguicolors = true
 
+-- Disable word wrap
+vim.opt.wrap = false
+vim.opt.sidescroll = 1  -- Smooth horizontal scrolling
+vim.opt.sidescrolloff = 8  -- Keep 8 columns visible when scrolling horizontally
+
 -- Hide end-of-buffer tildes
 vim.opt.fillchars:append({ eob = " " })
 
@@ -59,6 +64,13 @@ vim.api.nvim_create_autocmd("FileChangedShellPost", {
 
 -- Manual reload keymap
 vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload files" })
+
+-- Toggle word wrap
+vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
+
+-- Save and quit
+vim.keymap.set("n", "<leader>w", "<cmd>w<cr>", { desc = "Save file" })
+vim.keymap.set("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit window" })
 
 -- Window navigation
 vim.keymap.set("n", "<leader>h", "<C-w>h", { desc = "Move to left window" })
