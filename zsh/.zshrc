@@ -267,6 +267,8 @@ alias v='nvim'
 # vibe coding
 alias opc="opencode"
 alias cld="claude"
+alias ccd="claude --dangerously-skip-permissions"
+alias rm="/opt/homebrew/opt/trash/bin/trash"
 
 # Navigation shortcuts
 alias ..="cd .."
