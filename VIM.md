@@ -110,7 +110,8 @@ Advanced syntax highlighting and code understanding.
 Provides IDE-like features: autocomplete, go-to-definition, hover docs, etc.
 
 **Pre-configured Servers**:
-- `lua_ls` (Lua)
+- `lua_ls` (Lua) - with Neovim-specific configuration
+- `pyright` (Python) - configured for Python 3.10/3.11/3.12
 
 **Adding More Language Servers**:
 1. Open Mason: `:Mason`
@@ -129,11 +130,13 @@ vim.lsp.enable("pyright")
 - `<Space>ca` - Code actions
 
 **Common Language Servers**:
-- Python: `pyright` or `pylsp`
+- Python: `pyright` (pre-configured) or `pylsp`
 - JavaScript/TypeScript: `ts_ls`
 - Go: `gopls`
 - Rust: `rust_analyzer`
 - C/C++: `clangd`
+
+**Note**: This configuration searches for Python in the following order: python3.12, python3.11, python3.10, then falls back to python3.
 
 ---
 
@@ -412,6 +415,183 @@ Advanced code folding with Treesitter and LSP support.
 
 ---
 
+### 16. Harpoon (Quick File Marks)
+**Plugin**: `ThePrimeagen/harpoon`
+
+Fast file navigation using persistent marks for frequently accessed files.
+
+**Features**:
+- Mark up to 5 frequently used files for instant access
+- Quick menu to view and manage all marks
+- Navigate between marks with single keystrokes
+- Project-specific mark persistence
+- Faster than fuzzy finding for files you access repeatedly
+
+**Keybindings**:
+- `<Space>oa` - Add current file to Harpoon marks
+- `<Space>oo` - Open Harpoon quick menu
+- `<Space>o1` - Jump to mark 1
+- `<Space>o2` - Jump to mark 2
+- `<Space>o3` - Jump to mark 3
+- `<Space>o4` - Jump to mark 4
+- `<Space>o5` - Jump to mark 5
+- `<Space>on` - Navigate to next mark
+- `<Space>op` - Navigate to previous mark
+
+**Inside Harpoon Menu**:
+- `j/k` or `Down/Up` - Navigate through marks
+- `Enter` - Jump to selected file
+- `dd` - Remove mark from list
+- `q` or `Esc` - Close menu
+
+**Usage**:
+1. Open a file you frequently access
+2. Press `<Space>oa` to add it to Harpoon
+3. Repeat for up to 5 important files in your project
+4. Use `<Space>o1` through `<Space>o5` to instantly jump between them
+5. Press `<Space>oo` to see all your marks and manage them
+
+**Workflow Tip**: Mark your most-edited files (main file, config, types, tests, etc.) and switch between them instantly without fuzzy finding.
+
+---
+
+### 17. Markdown Preview
+**Plugin**: `iamcco/markdown-preview.nvim`
+
+Browser-based live preview for markdown files with auto-refresh.
+
+**Features**:
+- Real-time preview in your default browser
+- Auto-scrolls to cursor position
+- Supports GitHub-flavored markdown
+- Renders code blocks with syntax highlighting
+- Shows images, tables, and diagrams
+- Live updates as you type
+
+**Keybindings**:
+- `<Space>mp` - Toggle markdown preview in browser
+
+**Usage**:
+1. Open a markdown file
+2. Press `<Space>mp` to launch preview in browser
+3. Edit your markdown - preview updates automatically
+4. Preview shows exactly where your cursor is
+5. Press `<Space>mp` again to close preview
+
+**Tips**:
+- Great for writing documentation, READMEs, or blog posts
+- Preview stays synced even when switching between files
+- Works alongside render-markdown for in-editor previewing
+
+---
+
+### 18. Render Markdown
+**Plugin**: `MeanderingProgrammer/render-markdown.nvim`
+
+In-buffer markdown rendering with beautiful syntax and icons.
+
+**Features**:
+- Renders markdown directly in Neovim (no browser needed)
+- Code blocks with language-specific styling
+- Custom bullet point icons
+- Heading colors matching Vesper theme
+- Concealment of markdown syntax (shows formatted result)
+- Tables, links, and emphasis rendering
+- Checkbox rendering for task lists
+
+**Keybindings**:
+- `<Space>tr` - Toggle render markdown on/off
+
+**Auto-enabled for**:
+- All `.md` files automatically show rendered markdown
+- Concealment level set to hide syntax when not editing
+- Word wrap enabled for comfortable reading
+
+**Usage**:
+- Open any markdown file - rendering is automatic
+- Press `<Space>tr` to toggle between raw and rendered view
+- Edit normally - syntax is revealed when cursor is on a line
+- See formatted preview without leaving Neovim
+
+**Features in Detail**:
+- **Code blocks**: Highlighted with custom icons
+- **Headings**: Color-coded (H1-H6) using Vesper theme colors
+- **Lists**: Custom bullet icons for better readability
+- **Links**: Concealed to show just the link text
+- **Emphasis**: Italics and bold rendered properly
+
+---
+
+### 19. Image.nvim
+**Plugin**: `3rd/image.nvim`
+
+Inline image viewing within Neovim using Kitty graphics protocol.
+
+**Features**:
+- Display images directly in Neovim (Kitty terminal required)
+- Automatic image rendering in markdown files
+- Download and cache remote images
+- Supports PNG, JPG, GIF formats
+- Markdown integration (shows `![alt](image.png)` images)
+- PDF and Office file external opening support
+
+**Keybindings**:
+- `<Space>io` - Open file externally (for PDFs, Office docs, etc.)
+
+**Supported External Files**:
+- PDFs (`.pdf`)
+- Office documents (`.docx`, `.xlsx`, `.pptx`)
+- Other binary files
+
+**Usage**:
+1. In markdown files, images are automatically displayed inline
+2. For PDFs or Office files, press `<Space>io` to open in default app
+3. Remote images in markdown are downloaded and cached automatically
+4. Works seamlessly while editing documentation
+
+**Requirements**:
+- Kitty terminal for inline image display
+- ImageMagick for image processing
+- Default system apps for external file opening
+
+**Tips**:
+- Great for viewing diagrams while editing documentation
+- Automatically handles both local and remote images
+- Falls back gracefully if Kitty terminal is not available
+
+---
+
+### 20. Rainbow CSV
+**Plugin**: `cameron-wags/rainbow_csv.nvim`
+
+Syntax highlighting for CSV and TSV files with column visualization.
+
+**Features**:
+- Auto-detects CSV and TSV files
+- Color-codes each column differently
+- Makes data structure immediately visible
+- Lightweight and fast
+- Works with various delimiters
+
+**Supported Formats**:
+- CSV (comma-separated values)
+- TSV (tab-separated values)
+- Other delimiter-separated files
+
+**Usage**:
+- Open any `.csv` or `.tsv` file
+- Columns automatically get different colors
+- Navigate and edit data with visual column separation
+- No configuration needed
+
+**Benefits**:
+- Easier to read and edit tabular data
+- Quickly identify column boundaries
+- Reduces errors when working with data files
+- Essential for data analysis and manipulation
+
+---
+
 ## LSP Configuration
 
 ### What is LSP?
@@ -463,6 +643,15 @@ vim.lsp.enable("server_name")
 - `u` - Undo
 - `Ctrl+r` - Redo
 
+### General Editor
+- `<Space>w` - Save file
+- `<Space>q` - Quit window
+- `<Space>cr` - Check and reload files
+- `<Space>tw` - Toggle word wrap
+- `gh` - Jump back in history
+- `gl` - Jump forward in history
+- `Esc` - Clear search highlights
+
 ### Navigation
 - `h/j/k/l` - Left/Down/Up/Right
 - `w` - Next word
@@ -492,6 +681,10 @@ vim.lsp.enable("server_name")
 - `:split` or `:sp` - Horizontal split
 - `:vsplit` or `:vs` - Vertical split
 - `Ctrl+w h/j/k/l` - Navigate between splits
+- `<Space>h` - Move to left split
+- `<Space>j` - Move to bottom split
+- `<Space>k` - Move to top split
+- `<Space>l` - Move to right split
 - `Ctrl+w =` - Equal size splits
 - `Ctrl+w q` - Close current split
 
@@ -510,6 +703,10 @@ vim.lsp.enable("server_name")
 ### File Explorer (Neo-tree)
 - `-` - Toggle Neo-tree
 - `<Space>e` - Focus Neo-tree
+
+### Which-key (Keymap Discovery)
+- `<Space>?` - Show all keymaps
+- `<Space><Space>` - Show leader keymaps only
 
 ### Comments
 - `gcc` - Toggle line comment
@@ -533,6 +730,29 @@ vim.lsp.enable("server_name")
 - `zj` - Next fold
 - `zk` - Previous fold
 
+### Harpoon (Quick Marks)
+- `<Space>oa` - Add file to Harpoon marks
+- `<Space>oo` - Open Harpoon menu
+- `<Space>o1` - Jump to mark 1
+- `<Space>o2` - Jump to mark 2
+- `<Space>o3` - Jump to mark 3
+- `<Space>o4` - Jump to mark 4
+- `<Space>o5` - Jump to mark 5
+- `<Space>on` - Navigate to next mark
+- `<Space>op` - Navigate to previous mark
+
+### Markdown
+- `<Space>mp` - Toggle markdown preview (browser)
+- `<Space>tr` - Toggle render markdown (in-buffer)
+
+### Images and External Files
+- `<Space>io` - Open file externally (PDFs, Office docs)
+
+### Visual Mode
+- `*` - Search for selected text
+- `gc` - Toggle comment on selection
+- `gb` - Toggle block comment on selection
+
 ---
 
 ## Tips and Tricks
@@ -540,13 +760,15 @@ vim.lsp.enable("server_name")
 ### Workflow Tips
 
 1. **Quick File Switching**:
-   - `<Space>ff` to find files by name
+   - Use Harpoon for your 5 most-accessed files: `<Space>oa` to mark, `<Space>o1-5` to jump
+   - `<Space>ff` to find files by name (for everything else)
    - `<Space>fb` to switch between recent buffers
-   - `-` to toggle Neo-tree file explorer
+   - `-` to toggle Neo-tree file explorer for project navigation
 
 2. **Search Across Project**:
    - `<Space>fg` then type search term
    - Use LSP features: `gd` to jump to definitions
+   - Visual select + `*` to search for selected text
 
 3. **Multiple Cursors Alternative**:
    - Use `cgn` pattern: search with `/pattern`, then `cgn` to change next match, `.` to repeat
@@ -561,6 +783,18 @@ vim.lsp.enable("server_name")
    - View changes in gutter with Gitsigns
    - Use `:Git` if you have vim-fugitive installed
    - See file history with `<Space>fg` and search for filename
+
+6. **Markdown Editing**:
+   - In-buffer rendering with `<Space>tr` for quick previews
+   - Browser preview with `<Space>mp` for final review
+   - Images display automatically in Kitty terminal
+   - Use `<Space>io` to open PDFs or Office docs externally
+
+7. **Code Navigation with Folding**:
+   - Open a large file and press `zM` to fold everything
+   - Scan the structure, then `zo` on sections you need to see
+   - Use `K` to peek inside folds without opening them
+   - Combine with Harpoon: mark files, use folding to understand structure
 
 ### Plugin-Specific Tips
 
@@ -590,6 +824,26 @@ vim.lsp.enable("server_name")
 - Combine with Telescope: `<Space>ff` to find file, then `zM` to collapse all functions
 - Great for understanding code structure at a glance
 - Folds automatically work for functions, classes, objects, arrays, and more
+
+**Harpoon**:
+- Mark your 5 most-edited files in a project for instant access
+- Use numeric marks (`<Space>o1-5`) instead of fuzzy finding for core project files
+- Common pattern: 1=main/index, 2=config, 3=types, 4=tests, 5=utils
+- Perfect for switching between related files during feature development
+- Much faster than Telescope for files you access constantly
+
+**Markdown Workflow**:
+- Use `<Space>tr` for in-buffer preview while editing
+- Use `<Space>mp` for browser preview when sharing or presenting
+- Both can be used together - in-buffer for quick checks, browser for final review
+- Images render inline automatically in markdown files
+- Great for writing documentation, READMEs, or technical blog posts
+
+**Rainbow CSV**:
+- Open any `.csv` or `.tsv` file to see automatic column highlighting
+- Each column gets a different color for easy visual separation
+- Navigate with standard Vim motions - colors make it easier to track columns
+- Essential when editing configuration data or analyzing datasets
 
 ### Learning Resources
 
@@ -647,6 +901,8 @@ Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
 
 | Command | Action |
 |---------|--------|
+| `<Space>w` | Save file |
+| `<Space>q` | Quit window |
 | `<Space>ff` | Find files |
 | `<Space>fg` | Search in files |
 | `<Space>fb` | Find buffers |
@@ -662,7 +918,17 @@ Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
 | `zM` | Close all folds |
 | `zR` | Open all folds |
 | `<Space>h/j/k/l` | Window navigation |
+| `<Space>oa` | Add Harpoon mark |
+| `<Space>oo` | Harpoon menu |
+| `<Space>o1-5` | Jump to mark 1-5 |
+| `<Space>on/op` | Next/previous mark |
+| `<Space>mp` | Markdown preview |
+| `<Space>tr` | Toggle markdown render |
+| `<Space>io` | Open file externally |
+| `gh/gl` | Jump history back/forward |
+| `<Space>tw` | Toggle word wrap |
 | `<Space>?` | Show all keymaps |
+| `<Space><Space>` | Show leader keymaps |
 | `:Mason` | Manage LSP servers |
 | `:Lazy` | Manage plugins |
 

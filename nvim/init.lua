@@ -101,6 +101,9 @@ vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload f
 -- Toggle word wrap
 vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
 
+-- Clear search highlights
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlights" })
+
 -- Folding options (for nvim-ufo)
 vim.opt.foldcolumn = "0" -- Disable fold column (we'll use virtual text instead)
 vim.opt.foldlevel = 99 -- Start with all folds open
@@ -120,6 +123,20 @@ vim.keymap.set("n", "<leader>h", "<C-w>h", { desc = "Move to left window" })
 vim.keymap.set("n", "<leader>j", "<C-w>j", { desc = "Move to bottom window" })
 vim.keymap.set("n", "<leader>k", "<C-w>k", { desc = "Move to top window" })
 vim.keymap.set("n", "<leader>l", "<C-w>l", { desc = "Move to right window" })
+
+-- Jump navigation
+vim.keymap.set("n", "gh", "<C-o>", { desc = "Jump back" })
+vim.keymap.set("n", "gl", "<C-i>", { desc = "Jump forward" })
+
+-- Search for visually selected text
+vim.keymap.set("v", "*", function()
+  vim.cmd('noau normal! "vy"')
+  local text = vim.fn.getreg("v")
+  text = vim.fn.escape(text, [[\/]])
+  vim.fn.setreg("/", text)
+  vim.opt.hlsearch = true
+  vim.cmd("normal! `<")
+end, { desc = "Search for visual selection" })
 
 -- Diagnostic configuration
 vim.diagnostic.config({
@@ -404,6 +421,7 @@ require("lazy").setup({
         "nvim-lua/plenary.nvim",
         "nvim-tree/nvim-web-devicons",
         "MunifTanjim/nui.nvim",
+        { "3rd/image.nvim", optional = true }, -- Image preview support
       },
       config = function()
         require("neo-tree").setup({
@@ -561,6 +579,7 @@ require("lazy").setup({
           { "<leader>c", group = "Code/LSP" },
           { "<leader>t", group = "Toggle" },
           { "<leader>m", group = "Markdown" },
+          { "<leader>i", group = "Images/Files" },
           { "<leader>o", group = "Harpoon" },
           { "<leader>w", desc = "Save file" },
           { "<leader>q", desc = "Quit window" },
@@ -593,9 +612,13 @@ require("lazy").setup({
           { "<leader>cl", desc = "LSP definitions/references" },
           { "<leader>cr", desc = "Check/reload files" },
           { "<leader>rn", desc = "Rename symbol" },
+          { "<leader>io", desc = "Open file externally" },
           { "<leader>tw", desc = "Toggle word wrap" },
           { "gd", desc = "Go to definition" },
+          { "gh", desc = "Jump back" },
+          { "gl", desc = "Jump forward" },
           { "K", desc = "Peek fold or LSP hover" },
+          { "<Esc>", desc = "Clear search highlights" },
           { "-", desc = "Toggle file explorer" },
           { "z", group = "Folds" },
           { "za", desc = "Toggle fold under cursor" },
@@ -607,6 +630,7 @@ require("lazy").setup({
           { "zm", desc = "Close folds with" },
           { "zj", desc = "Move to next fold" },
           { "zk", desc = "Move to previous fold" },
+          { "*", desc = "Search for visual selection", mode = "v" },
         })
       end,
     },
@@ -828,8 +852,79 @@ require("lazy").setup({
       },
     },
 
+    -- Image.nvim (inline image viewing with Kitty graphics protocol)
+    {
+      "3rd/image.nvim",
+      event = "VeryLazy",
+      ft = { "markdown" },
+      dependencies = {
+        "nvim-treesitter/nvim-treesitter",
+      },
+      build = false,
+      config = function()
+        require("image").setup({
+          backend = "kitty",
+          processor = "magick_cli",
+          integrations = {
+            markdown = {
+              enabled = true,
+              clear_in_insert_mode = false,
+              download_remote_images = true,
+              only_render_image_at_cursor = false,
+              filetypes = { "markdown", "vimwiki" },
+            },
+            neorg = { enabled = false },
+            html = { enabled = false },
+            css = { enabled = false },
+          },
+          max_height_window_percentage = 50,
+          window_overlap_clear_enabled = false,
+          window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+          hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.svg" },
+        })
+      end,
+    },
+
+    -- Rainbow CSV (CSV/TSV syntax highlighting and querying)
+    {
+      "cameron-wags/rainbow_csv.nvim",
+      ft = { "csv", "tsv", "csv_semicolon", "csv_whitespace", "csv_pipe", "rfc_csv", "rfc_semicolon" },
+      cmd = { "RainbowDelim", "RainbowDelimSimple", "RainbowDelimQuoted", "RainbowMultiDelim" },
+      config = function()
+        require("rainbow_csv").setup()
+      end,
+    },
 
   },
   install = { colorscheme = { "vesper" } },
   checker = { enabled = true },
 })
+
+-- External file opener for PDFs and Office documents
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+  pattern = { "*.pdf", "*.docx", "*.xlsx", "*.pptx", "*.doc", "*.xls", "*.ppt" },
+  callback = function()
+    vim.bo.filetype = "binary"
+    vim.notify("Binary file detected. Use <leader>io to open externally.", vim.log.levels.INFO)
+  end,
+})
+
+-- Keymap to open current file with system default app
+vim.keymap.set("n", "<leader>io", function()
+  local file = vim.fn.expand("%:p")
+  if file == "" then
+    vim.notify("No file to open", vim.log.levels.WARN)
+    return
+  end
+
+  local cmd = string.format("open '%s'", file)
+  vim.fn.jobstart(cmd, {
+    on_exit = function(_, exit_code)
+      if exit_code == 0 then
+        vim.notify("Opened: " .. vim.fn.expand("%:t"), vim.log.levels.INFO)
+      else
+        vim.notify("Failed to open file", vim.log.levels.ERROR)
+      end
+    end,
+  })
+end, { desc = "Open file externally" })
