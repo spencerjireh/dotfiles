@@ -165,6 +165,9 @@ export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
+# Go binaries
+export PATH="$HOME/go/bin:$PATH"
+
 # ===========================
 # Pyenv (Lazy Loading)
 # ===========================

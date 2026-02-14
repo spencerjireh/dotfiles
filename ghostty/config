@@ -104,6 +104,17 @@ image-storage-limit = 1000000000
 
 # Font Rendering
 freetype-load-flags = no-hinting
-keybind = shift+enter=text:\x1b\r
 window-height = 9999
 window-width = 9999
+
+# Tab Navigation
+keybind = cmd+shift+h=move_tab:-1
+keybind = cmd+shift+j=previous_tab
+keybind = cmd+shift+k=next_tab
+keybind = cmd+shift+l=move_tab:1
+
+# Split Navigation
+keybind = cmd+ctrl+h=goto_split:left
+keybind = cmd+ctrl+j=goto_split:bottom
+keybind = cmd+ctrl+k=goto_split:top
+keybind = cmd+ctrl+l=goto_split:right
