@@ -101,6 +101,16 @@ vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload f
 -- Toggle word wrap
 vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
 
+-- Open markdown file in default browser
+vim.keymap.set("n", "<leader>mp", function()
+  local file = vim.fn.expand("%:p")
+  if file:match("%.md$") then
+    vim.fn.system({ "open", file })
+  else
+    vim.notify("Not a markdown file", vim.log.levels.WARN)
+  end
+end, { desc = "Open markdown in browser" })
+
 -- Clear search highlights
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlights" })
 
@@ -217,32 +227,23 @@ require("lazy").setup({
     {
       "nvim-treesitter/nvim-treesitter",
       build = ":TSUpdate",
-      config = function()
-        require("nvim-treesitter.configs").setup({
-          ensure_installed = {
-            "c",
-            "lua",
-            "vim",
-            "vimdoc",
-            "query",
-            "markdown",
-            "markdown_inline",
-            "tsx",
-            "typescript",
-            "python",
-          },
-          sync_install = false,
-          auto_install = false,
-          ignore_install = {},
-          modules = {},
-          highlight = {
-            enable = true,
-          },
-          indent = {
-            enable = true,
-          },
-        })
-      end,
+      opts = {
+        ensure_installed = {
+          "c",
+          "lua",
+          "vim",
+          "vimdoc",
+          "query",
+          "markdown",
+          "markdown_inline",
+          "tsx",
+          "typescript",
+          "python",
+        },
+        auto_install = false,
+        highlight = { enable = true },
+        indent = { enable = true },
+      },
     },
 
     -- LSP
@@ -603,7 +604,7 @@ require("lazy").setup({
           { "<leader>w", desc = "Save file" },
           { "<leader>q", desc = "Quit window" },
           { "<leader>e", desc = "Focus file explorer" },
-          { "<leader>mp", desc = "Markdown preview" },
+          { "<leader>mp", desc = "Open markdown in browser" },
           { "<leader>tr", desc = "Toggle render markdown" },
           { "<leader>oa", desc = "Add to Harpoon" },
           { "<leader>oo", desc = "Open Harpoon menu" },
@@ -819,17 +820,6 @@ require("lazy").setup({
           end
         end, { desc = "Peek fold or LSP hover" })
       end,
-    },
-
-    -- Markdown Preview (browser-based preview)
-    {
-      "iamcco/markdown-preview.nvim",
-      cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
-      ft = { "markdown" },
-      build = "cd app && npm install",
-      keys = {
-        { "<leader>mp", "<cmd>MarkdownPreview<cr>", desc = "Markdown preview" },
-      },
     },
 
     -- Render Markdown (in-buffer rendering)

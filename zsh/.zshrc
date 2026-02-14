@@ -166,8 +166,12 @@ fi
 # ===========================
 # Path Configuration
 # ===========================
-# Python 3.12 from Homebrew 
-export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
+# Homebrew paths (differ by platform)
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
+elif [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
 
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
@@ -275,7 +279,9 @@ alias v='nvim'
 alias opc="opencode"
 alias cld="claude"
 alias ccd="claude --dangerously-skip-permissions"
-alias rm="/opt/homebrew/opt/trash/bin/trash"
+if command -v trash &>/dev/null; then
+  alias rm="trash"
+fi
 
 # tmux
 alias tm="tmux attach || tmux new"
@@ -339,7 +345,9 @@ alias dimg="docker images"
 alias dex="docker exec -it"
 alias dlog="docker logs -f"
 alias dprune="docker system prune -af"
-alias docker-desktop="open /Applications/Docker.app"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  alias docker-desktop="open /Applications/Docker.app"
+fi
 
 # Network
 alias myip="curl -s ifconfig.me"
