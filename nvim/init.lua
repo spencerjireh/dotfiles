@@ -30,26 +30,26 @@ vim.opt.swapfile = false
 -- Mouse support
 vim.opt.mouse = "a"
 
--- Terminal/transparency settings
-vim.opt.termguicolors = false
+-- Terminal colors
+vim.opt.termguicolors = true
 
-vim.cmd([[
-  highlight Normal guibg=NONE ctermbg=NONE
-  highlight NonText guibg=NONE ctermbg=NONE
-  highlight LineNr guibg=NONE ctermbg=NONE
-  highlight SignColumn guibg=NONE ctermbg=NONE
-  highlight EndOfBuffer guibg=NONE ctermbg=NONE
-  highlight StatusLine ctermfg=0 ctermbg=15
-]])
+-- Hide end-of-buffer tildes
+vim.opt.fillchars:append({ eob = " " })
 
-vim.cmd([[
-  autocmd ColorScheme * highlight Normal guibg=NONE ctermbg=NONE
-  autocmd ColorScheme * highlight NonText guibg=NONE ctermbg=NONE
-  autocmd ColorScheme * highlight LineNr guibg=NONE ctermbg=NONE
-  autocmd ColorScheme * highlight SignColumn guibg=NONE ctermbg=NONE
-  autocmd ColorScheme * highlight StatusLine guibg=NONE ctermbg=NONE
-  autocmd ColorScheme * highlight StatusLineNC guibg=NONE ctermbg=NONE
-]])
+-- Window navigation
+vim.keymap.set("n", "<leader>h", "<C-w>h", { desc = "Move to left window" })
+vim.keymap.set("n", "<leader>j", "<C-w>j", { desc = "Move to bottom window" })
+vim.keymap.set("n", "<leader>k", "<C-w>k", { desc = "Move to top window" })
+vim.keymap.set("n", "<leader>l", "<C-w>l", { desc = "Move to right window" })
+
+-- Diagnostic configuration
+vim.diagnostic.config({
+  virtual_text = true, -- Show error messages at end of line
+  signs = false, -- Hide signs in the gutter (no more W, E, etc.)
+  underline = true, -- Underline problematic code
+  update_in_insert = false, -- Don't update diagnostics while typing
+  severity_sort = true, -- Sort by severity
+})
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -71,6 +71,42 @@ vim.opt.rtp:prepend(lazypath)
 -- Setup lazy.nvim
 require("lazy").setup({
   spec = {
+    -- Vesper theme
+    {
+      "datsfilipe/vesper.nvim",
+      lazy = false,
+      priority = 1000,
+      config = function()
+        require("vesper").setup({
+          transparent = true,
+          italics = {
+            comments = true,
+            keywords = true,
+            functions = true,
+            strings = true,
+            variables = true,
+          },
+        })
+        vim.cmd.colorscheme("vesper")
+      end,
+    },
+
+    -- Lualine
+    {
+      "nvim-lualine/lualine.nvim",
+      dependencies = { "nvim-tree/nvim-web-devicons" },
+      config = function()
+        require("lualine").setup({
+          options = {
+            theme = "auto",
+            icons_enabled = true,
+            component_separators = { left = "", right = "" },
+            section_separators = { left = "", right = "" },
+          },
+        })
+      end,
+    },
+
     -- Treesitter
     {
       "nvim-treesitter/nvim-treesitter",
@@ -85,10 +121,22 @@ require("lazy").setup({
             "query",
             "markdown",
             "markdown_inline",
+            "tsx",
+            "typescript",
+            "python",
           },
           sync_install = false,
           highlight = {
             enable = true,
+          },
+          indent = { 
+            enable = true,
+          },
+          autotage = {
+            enable = true,
+          },
+          auto_install = {
+            enable = false,
           },
         })
       end,
@@ -128,6 +176,46 @@ require("lazy").setup({
         vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename" })
         vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
       end,
+    },
+
+    -- Trouble (Diagnostics panel)
+    {
+      "folke/trouble.nvim",
+      dependencies = { "nvim-tree/nvim-web-devicons" },
+      cmd = "Trouble",
+      opts = {},
+      keys = {
+        {
+          "<leader>xx",
+          "<cmd>Trouble diagnostics toggle<cr>",
+          desc = "Toggle diagnostics (Trouble)",
+        },
+        {
+          "<leader>xX",
+          "<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+          desc = "Buffer diagnostics (Trouble)",
+        },
+        {
+          "<leader>cs",
+          "<cmd>Trouble symbols toggle focus=false<cr>",
+          desc = "Symbols (Trouble)",
+        },
+        {
+          "<leader>cl",
+          "<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+          desc = "LSP definitions / references / ... (Trouble)",
+        },
+        {
+          "<leader>xL",
+          "<cmd>Trouble loclist toggle<cr>",
+          desc = "Location List (Trouble)",
+        },
+        {
+          "<leader>xQ",
+          "<cmd>Trouble qflist toggle<cr>",
+          desc = "Quickfix List (Trouble)",
+        },
+      },
     },
 
     -- Completion
@@ -203,14 +291,34 @@ require("lazy").setup({
       end,
     },
 
-    -- Oil.nvim
+    -- Neo-tree
     {
-      "stevearc/oil.nvim",
+      "nvim-neo-tree/neo-tree.nvim",
+      branch = "v3.x",
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+        "nvim-tree/nvim-web-devicons",
+        "MunifTanjim/nui.nvim",
+      },
       config = function()
-        require("oil").setup({
-          default_file_explorer = true,
+        require("neo-tree").setup({
+          close_if_last_window = true,
+          window = {
+            position = "right", -- "left", "right", "top", "bottom", "float", "current"
+            width = 30,
+            mappings = {
+              ["<space>"] = "none",
+            },
+          },
+          filesystem = {
+            follow_current_file = {
+              enabled = true,
+            },
+            use_libuv_file_watcher = true,
+          },
         })
-        vim.keymap.set("n", "-", "<CMD>Oil<CR>", { desc = "Open parent directory" })
+        vim.keymap.set("n", "-", "<CMD>Neotree toggle<CR>", { desc = "Toggle Neo-tree" })
+        vim.keymap.set("n", "<leader>e", "<CMD>Neotree focus<CR>", { desc = "Focus Neo-tree" })
       end,
     },
 
@@ -238,7 +346,9 @@ require("lazy").setup({
         require("gitsigns").setup()
       end,
     },
+
+    
   },
-  install = { colorscheme = { "habamax" } },
+  install = { colorscheme = { "vesper" } },
   checker = { enabled = true },
 })

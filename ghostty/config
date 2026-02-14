@@ -2,7 +2,12 @@
 # Peppermint & orange flavored dark theme with hidden tabs
 
 # Font Configuration
+# Try one of these if icons don't show:
+# font-family = "JetBrainsMono Nerd Font"
+# font-family = "FiraCode Nerd Font"
+# font-family = "Hack Nerd Font"
 font-family = "GohuFont Nerd Font"
+font-size = 14
 font-feature = ss01
 font-feature = ss02
 font-feature = ss03
@@ -11,37 +16,37 @@ font-feature = calt
 # Background transparency (80% opacity = 0.8)
 background-opacity = 0.8
 
-# Vesper Theme Colors
+# Vesper Theme Colors (Official Palette)
 background = 101010
 foreground = ffffff
 
 # Black
 palette = 0=#101010
-palette = 8=#7e7e7e
+palette = 8=#505050
 
 # Red
 palette = 1=#ff8080
 palette = 9=#ff8080
 
 # Green
-palette = 2=#00ff00
-palette = 10=#00ffff
+palette = 2=#80d9c7
+palette = 10=#80d9c7
 
 # Yellow
-palette = 3=#e6b99d
+palette = 3=#ffc799
 palette = 11=#ffc799
 
 # Blue
-palette = 4=#ffaf87
-palette = 12=#ffffaf
+palette = 4=#65737e
+palette = 12=#8b8b8b
 
 # Magenta
-palette = 5=#ffd7d7
-palette = 13=#ffd7ff
+palette = 5=#ffcfa8
+palette = 13=#ffcfa8
 
 # Cyan
 palette = 6=#99ffe4
-palette = 14=#f591b2
+palette = 14=#99ffe4
 
 # White
 palette = 7=#a0a0a0

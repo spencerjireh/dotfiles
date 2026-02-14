@@ -310,14 +310,7 @@ alias pip="python -m pip"
 alias venv="python -m venv"
 alias activate="source .venv/bin/activate"
 
-# Safety aliases (use trash if available, otherwise interactive mode)
-if command -v trash &>/dev/null; then
-  alias rm="trash"
-else
-  alias rm="rm -i"
-fi
-alias cp="cp -i"
-alias mv="mv -i"
+
 
 # Docker shortcuts
 alias dps="docker ps"
