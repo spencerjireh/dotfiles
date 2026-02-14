@@ -1,0 +1,108 @@
+# Ghostty Terminal Configuration - Vesper Theme
+# Peppermint & orange flavored dark theme with hidden tabs
+
+# Font Configuration
+font-family = "GohuFont Nerd Font"
+font-feature = ss01
+font-feature = ss02
+font-feature = ss03
+font-feature = calt
+
+# Background transparency (80% opacity = 0.8)
+background-opacity = 0.8
+
+# Vesper Theme Colors
+background = 101010
+foreground = ffffff
+
+# Black
+palette = 0=#101010
+palette = 8=#7e7e7e
+
+# Red
+palette = 1=#ff8080
+palette = 9=#ff8080
+
+# Green
+palette = 2=#00ff00
+palette = 10=#00ffff
+
+# Yellow
+palette = 3=#e6b99d
+palette = 11=#ffc799
+
+# Blue
+palette = 4=#ffaf87
+palette = 12=#ffffaf
+
+# Magenta
+palette = 5=#ffd7d7
+palette = 13=#ffd7ff
+
+# Cyan
+palette = 6=#99ffe4
+palette = 14=#f591b2
+
+# White
+palette = 7=#a0a0a0
+palette = 15=#ffffff
+
+# Cursor
+cursor-color = ffc799
+cursor-style = block
+cursor-style-blink = true
+
+# Selection
+selection-background = 2a2a2a
+selection-foreground = ffffff
+
+# Window settings
+window-padding-x = 4
+window-padding-y = 4
+window-theme = dark
+
+# Hide tabs completely
+gtk-tabs-location = hidden
+macos-titlebar-style = tabs
+	
+# Shell integration
+shell-integration = detect
+shell-integration-features = cursor,sudo,title
+
+# Clipboard
+clipboard-read = allow
+clipboard-write = allow
+
+# Mouse
+mouse-hide-while-typing = true
+
+# Performance
+resize-overlay = never
+window-vsync = true
+
+# Advanced Visual Effects
+background-blur = true
+window-step-resize = true
+window-save-state = always
+window-inherit-working-directory = true
+window-inherit-font-size = true
+unfocused-split-opacity = 0.7
+
+# Scrollback & History
+scrollback-limit = 100000000
+link-url = true
+mouse-scroll-multiplier = 3
+
+# Terminal Behavior
+bold-is-bright = true
+term = xterm-256color
+focus-follows-mouse = true
+
+# Image Support
+image-storage-limit = 1000000000
+
+# Font Rendering
+freetype-load-flags = no-hinting
+keybind = shift+enter=text:\x1b\r
+window-height = 9999
+window-width = 9999
