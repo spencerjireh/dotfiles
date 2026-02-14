@@ -134,6 +134,8 @@ else
     git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
     log_info "Installed TPM"
 fi
+"$HOME/.tmux/plugins/tpm/bin/install_plugins"
+log_info "Installed TPM plugins"
 
 # Ghostty
 log_info "Setting up Ghostty..."
@@ -340,7 +342,6 @@ echo "========================================"
 log_info "Dotfiles installed successfully!"
 echo ""
 log_info "Note: Restart your shell or run 'source ~/.zshrc' to apply changes."
-log_info "Note: Run 'prefix + I' inside tmux to install tmux plugins via TPM."
 echo ""
 if command -v gh &>/dev/null && ! gh auth status &>/dev/null; then
     log_info "GitHub SSH post-setup steps:"
