@@ -68,6 +68,10 @@ vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload f
 -- Toggle word wrap
 vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
 
+-- which-key helper keymaps
+vim.keymap.set("n", "<leader>?", "<cmd>WhichKey<cr>", { desc = "Show all keymaps" })
+vim.keymap.set("n", "<leader><leader>", "<cmd>WhichKey <leader><cr>", { desc = "Show leader keymaps" })
+
 -- Save and quit
 vim.keymap.set("n", "<leader>w", "<cmd>w<cr>", { desc = "Save file" })
 vim.keymap.set("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit window" })
@@ -89,7 +93,7 @@ vim.diagnostic.config({
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   local lazyrepo = "https://github.com/folke/lazy.nvim.git"
   local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
   if vim.v.shell_error ~= 0 then
@@ -124,6 +128,11 @@ require("lazy").setup({
           },
         })
         vim.cmd.colorscheme("vesper")
+
+        -- Customize which-key to match Vesper theme colors
+        vim.api.nvim_set_hl(0, "WhichKeyNormal", { bg = "#101010" })
+        vim.api.nvim_set_hl(0, "WhichKeyBorder", { fg = "#80d9c7", bg = "#101010" })
+        vim.api.nvim_set_hl(0, "WhichKeyTitle", { fg = "#ffc799", bg = "#101010", bold = true })
       end,
     },
 
@@ -394,6 +403,140 @@ require("lazy").setup({
       "lewis6991/gitsigns.nvim",
       config = function()
         require("gitsigns").setup()
+      end,
+    },
+
+    -- which-key.nvim (keymap hints)
+    {
+      "folke/which-key.nvim",
+      event = "VeryLazy",
+      config = function()
+        local wk = require("which-key")
+
+        wk.setup({
+          preset = "modern",
+          delay = 500,
+          plugins = {
+            marks = true,
+            registers = true,
+            spelling = {
+              enabled = true,
+              suggestions = 20,
+            },
+            presets = {
+              operators = true,
+              motions = true,
+              text_objects = true,
+              windows = true,
+              nav = true,
+              z = true,
+              g = true,
+            },
+          },
+          win = {
+            border = "rounded",
+            padding = { 1, 2 },
+            wo = {
+              winblend = 30, -- 0 for fully opaque, 100 for fully transparent
+            },
+          },
+          layout = {
+            height = { min = 4, max = 25 },
+            width = { min = 20, max = 50 },
+            spacing = 0,
+            align = "left",
+          },
+          show_help = true,
+          show_keys = true,
+        })
+
+        wk.add({
+          { "<leader>f", group = "Find/Files (Telescope)" },
+          { "<leader>x", group = "Diagnostics (Trouble)" },
+          { "<leader>c", group = "Code/LSP" },
+          { "<leader>t", group = "Toggle" },
+          { "<leader>w", desc = "Save file" },
+          { "<leader>q", desc = "Quit window" },
+          { "<leader>e", desc = "Focus file explorer" },
+          { "<leader>h", desc = "Go to left window" },
+          { "<leader>j", desc = "Go to bottom window" },
+          { "<leader>k", desc = "Go to top window" },
+          { "<leader>l", desc = "Go to right window" },
+          { "<leader>ff", desc = "Find files" },
+          { "<leader>fg", desc = "Live grep" },
+          { "<leader>fb", desc = "Find buffers" },
+          { "<leader>fh", desc = "Help tags" },
+          { "<leader>xx", desc = "Toggle diagnostics" },
+          { "<leader>xX", desc = "Buffer diagnostics" },
+          { "<leader>xL", desc = "Location list" },
+          { "<leader>xQ", desc = "Quickfix list" },
+          { "<leader>ca", desc = "Code action" },
+          { "<leader>cs", desc = "Symbols" },
+          { "<leader>cl", desc = "LSP definitions/references" },
+          { "<leader>cr", desc = "Check/reload files" },
+          { "<leader>rn", desc = "Rename symbol" },
+          { "<leader>tw", desc = "Toggle word wrap" },
+          { "gd", desc = "Go to definition" },
+          { "K", desc = "Hover documentation" },
+          { "-", desc = "Toggle file explorer" },
+        })
+      end,
+    },
+
+    -- dressing.nvim (better UI)
+    {
+      "stevearc/dressing.nvim",
+      event = "VeryLazy",
+      config = function()
+        require("dressing").setup({
+          input = {
+            enabled = true,
+            default_prompt = "Input",
+            trim_prompt = true,
+            title_pos = "left",
+            start_in_insert = true,
+            border = "rounded",
+            relative = "cursor",
+            prefer_width = 40,
+            win_options = {
+              wrap = false,
+              list = true,
+              listchars = "precedes:…,extends:…",
+              sidescrolloff = 0,
+            },
+            mappings = {
+              n = {
+                ["<Esc>"] = "Close",
+                ["<CR>"] = "Confirm",
+              },
+              i = {
+                ["<C-c>"] = "Close",
+                ["<CR>"] = "Confirm",
+                ["<Up>"] = "HistoryPrev",
+                ["<Down>"] = "HistoryNext",
+              },
+            },
+          },
+          select = {
+            enabled = true,
+            backend = { "telescope", "fzf_lua", "fzf", "builtin", "nui" },
+            trim_prompt = true,
+            telescope = require("telescope.themes").get_dropdown({
+              borderchars = {
+                prompt = { "─", "│", " ", "│", "╭", "╮", "│", "│" },
+                results = { "─", "│", "─", "│", "├", "┤", "╯", "╰" },
+                preview = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
+              },
+              width = 0.8,
+              previewer = false,
+              prompt_title = false,
+            }),
+            builtin = {
+              border = "rounded",
+              relative = "editor",
+            },
+          },
+        })
       end,
     },
 
