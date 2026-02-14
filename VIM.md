@@ -124,7 +124,7 @@ vim.lsp.enable("pyright")
 
 **LSP Keybindings**:
 - `gd` - Go to definition
-- `K` - Show hover documentation
+- `K` - Peek fold or show LSP hover documentation (context-aware)
 - `<Space>rn` - Rename symbol
 - `<Space>ca` - Code actions
 
@@ -321,6 +321,97 @@ Beautiful diagnostics panel to view and navigate all errors and warnings.
 
 ---
 
+### 12. which-key (Keymap Helper)
+**Plugin**: `folke/which-key.nvim`
+
+Shows available keybindings in a popup as you type.
+
+**Usage**:
+- `<Space>?` - Show all keymaps
+- `<Space><Space>` - Show leader keymaps
+- Press any key prefix (like `<Space>` or `z`) and wait 500ms to see available completions
+
+**Features**:
+- Modern, clean interface
+- Organized by groups (Find/Files, Diagnostics, Code/LSP, etc.)
+- Shows key descriptions for easy discovery
+- Helpful for learning new keybindings
+
+---
+
+### 13. dressing.nvim (Better UI)
+**Plugin**: `stevearc/dressing.nvim`
+
+Improves the default Neovim UI for inputs and selections.
+
+**Features**:
+- Better input prompts (like rename dialog)
+- Integrates with Telescope for selections
+- Rounded borders and cleaner appearance
+- Improved visibility and usability
+
+**Usage**: Works automatically when plugins request user input or selections.
+
+---
+
+### 14. Satellite (Scrollbar)
+**Plugin**: `lewis6991/satellite.nvim`
+
+Displays a scrollbar with decorations showing search matches, diagnostics, git changes, and cursor position.
+
+**Features**:
+- Visual scrollbar on the right side
+- Search match indicators
+- Diagnostic locations (errors/warnings)
+- Git change locations
+- Mark positions
+- Cursor position indicator
+
+**Usage**: Always visible on the right side of the window.
+
+---
+
+### 15. UFO (Code Folding)
+**Plugins**: 
+- `kevinhwang91/nvim-ufo`
+- `kevinhwang91/promise-async`
+
+Advanced code folding with Treesitter and LSP support.
+
+**Features**:
+- Intelligent folding based on code structure
+- Folds functions, classes, objects, arrays, loops, etc.
+- Preview folded content on hover
+- Works with all Treesitter-supported languages
+- Beautiful fold column indicator
+
+**Keybindings**:
+- `za` - Toggle fold under cursor
+- `zc` - Close fold under cursor
+- `zo` - Open fold under cursor
+- `zR` - Open all folds in buffer
+- `zM` - Close all folds in buffer
+- `zr` - Open folds except certain kinds
+- `zm` - Close folds with specific criteria
+- `zj` - Move to next fold
+- `zk` - Move to previous fold
+- `K` - Peek folded content (or show LSP hover if not on fold)
+
+**Usage**: 
+1. Navigate to a function or code block
+2. Press `zc` to close/fold it
+3. Press `zo` to open/unfold it
+4. Hover over a fold and press `K` to preview its contents without unfolding
+5. Use `zM` to fold everything, `zR` to unfold everything
+
+**Tips**:
+- Folds are based on syntax, so they work intelligently for each language
+- The fold column on the left shows fold indicators
+- All folds start open by default (foldlevel=99)
+- Preview window appears when you press `K` on a folded line
+
+---
+
 ## LSP Configuration
 
 ### What is LSP?
@@ -406,7 +497,7 @@ vim.lsp.enable("server_name")
 
 ### LSP (configured in this setup)
 - `gd` - Go to definition
-- `K` - Hover documentation
+- `K` - Peek fold or LSP hover documentation
 - `<Space>rn` - Rename symbol
 - `<Space>ca` - Code actions
 
@@ -430,6 +521,17 @@ vim.lsp.enable("server_name")
 - `Shift+Tab` - Previous item
 - `Enter` - Confirm
 - `Ctrl+e` - Close menu
+
+### Code Folding
+- `za` - Toggle fold under cursor
+- `zc` - Close fold under cursor
+- `zo` - Open fold under cursor
+- `zR` - Open all folds
+- `zM` - Close all folds
+- `zr` - Open folds except kinds
+- `zm` - Close folds with criteria
+- `zj` - Next fold
+- `zk` - Previous fold
 
 ---
 
@@ -481,6 +583,13 @@ vim.lsp.enable("server_name")
 **Treesitter**:
 - `:InspectTree` - See syntax tree (great for debugging highlighting)
 - `:Inspect` - Show highlight groups under cursor
+
+**Code Folding (UFO)**:
+- Use `zM` to fold all code, then `zo` to selectively open sections you're working on
+- Press `K` on a folded line to preview its contents without opening
+- Combine with Telescope: `<Space>ff` to find file, then `zM` to collapse all functions
+- Great for understanding code structure at a glance
+- Folds automatically work for functions, classes, objects, arrays, and more
 
 ### Learning Resources
 
@@ -545,11 +654,15 @@ Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
 | `<Space>e` | Focus file explorer |
 | `<Space>xx` | Toggle diagnostics panel |
 | `gd` | Go to definition |
-| `K` | Hover docs |
+| `K` | Peek fold or hover docs |
 | `<Space>rn` | Rename |
 | `<Space>ca` | Code actions |
 | `gcc` | Toggle comment |
+| `za` | Toggle fold |
+| `zM` | Close all folds |
+| `zR` | Open all folds |
 | `<Space>h/j/k/l` | Window navigation |
+| `<Space>?` | Show all keymaps |
 | `:Mason` | Manage LSP servers |
 | `:Lazy` | Manage plugins |
 

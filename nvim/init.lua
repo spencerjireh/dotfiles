@@ -68,6 +68,12 @@ vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload f
 -- Toggle word wrap
 vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
 
+-- Folding options (for nvim-ufo)
+vim.opt.foldcolumn = "0" -- Disable fold column (we'll use virtual text instead)
+vim.opt.foldlevel = 99 -- Start with all folds open
+vim.opt.foldlevelstart = 99 -- Start with all folds open when opening a file
+vim.opt.foldenable = true -- Enable folding
+
 -- which-key helper keymaps
 vim.keymap.set("n", "<leader>?", "<cmd>WhichKey<cr>", { desc = "Show all keymaps" })
 vim.keymap.set("n", "<leader><leader>", "<cmd>WhichKey <leader><cr>", { desc = "Show leader keymaps" })
@@ -376,6 +382,16 @@ require("lazy").setup({
             use_libuv_file_watcher = true,
           },
         })
+        
+        -- Disable fold column in Neo-tree windows
+        vim.api.nvim_create_autocmd("FileType", {
+          pattern = "neo-tree",
+          callback = function()
+            vim.opt_local.foldcolumn = "0"
+            vim.opt_local.foldenable = false
+          end,
+        })
+        
         vim.keymap.set("n", "-", "<CMD>Neotree toggle<CR>", { desc = "Toggle Neo-tree" })
         vim.keymap.set("n", "<leader>e", "<CMD>Neotree focus<CR>", { desc = "Focus Neo-tree" })
       end,
@@ -477,8 +493,18 @@ require("lazy").setup({
           { "<leader>rn", desc = "Rename symbol" },
           { "<leader>tw", desc = "Toggle word wrap" },
           { "gd", desc = "Go to definition" },
-          { "K", desc = "Hover documentation" },
+          { "K", desc = "Peek fold or LSP hover" },
           { "-", desc = "Toggle file explorer" },
+          { "z", group = "Folds" },
+          { "za", desc = "Toggle fold under cursor" },
+          { "zc", desc = "Close fold under cursor" },
+          { "zo", desc = "Open fold under cursor" },
+          { "zR", desc = "Open all folds" },
+          { "zM", desc = "Close all folds" },
+          { "zr", desc = "Open folds except kinds" },
+          { "zm", desc = "Close folds with" },
+          { "zj", desc = "Move to next fold" },
+          { "zk", desc = "Move to previous fold" },
         })
       end,
     },
@@ -567,6 +593,86 @@ require("lazy").setup({
             },
           },
         })
+      end,
+    },
+
+    -- UFO (Ultra Fold with LSP/Treesitter support)
+    {
+      "kevinhwang91/nvim-ufo",
+      dependencies = {
+        "kevinhwang91/promise-async",
+      },
+      event = "VeryLazy",
+      config = function()
+        -- UFO uses foldmethod 'expr' internally
+        vim.o.foldmethod = "expr"
+        vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+        
+        local ufo = require("ufo")
+        
+        -- Custom fold text handler for beautiful inline fold preview
+        local handler = function(virtText, lnum, endLnum, width, truncate)
+          local newVirtText = {}
+          local suffix = ('  %d lines'):format(endLnum - lnum)
+          local sufWidth = vim.fn.strdisplaywidth(suffix)
+          local targetWidth = width - sufWidth
+          local curWidth = 0
+          
+          for _, chunk in ipairs(virtText) do
+            local chunkText = chunk[1]
+            local chunkWidth = vim.fn.strdisplaywidth(chunkText)
+            if targetWidth > curWidth + chunkWidth then
+              table.insert(newVirtText, chunk)
+            else
+              chunkText = truncate(chunkText, targetWidth - curWidth)
+              local hlGroup = chunk[2]
+              table.insert(newVirtText, {chunkText, hlGroup})
+              chunkWidth = vim.fn.strdisplaywidth(chunkText)
+              if curWidth + chunkWidth < targetWidth then
+                suffix = suffix .. (' '):rep(targetWidth - curWidth - chunkWidth)
+              end
+              break
+            end
+            curWidth = curWidth + chunkWidth
+          end
+          
+          table.insert(newVirtText, {suffix, 'MoreMsg'})
+          return newVirtText
+        end
+        
+        -- Tell UFO to use Treesitter as the provider
+        ufo.setup({
+          fold_virt_text_handler = handler,
+          provider_selector = function(bufnr, filetype, buftype)
+            return { "treesitter", "indent" }
+          end,
+          -- Preview folded content when hovering
+          preview = {
+            win_config = {
+              border = { "", "─", "", "", "", "─", "", "" },
+              winhighlight = "Normal:Folded",
+              winblend = 0,
+            },
+            mappings = {
+              scrollU = "<C-u>",
+              scrollD = "<C-d>",
+              jumpTop = "[",
+              jumpBot = "]",
+            },
+          },
+        })
+        
+        -- Folding keymaps
+        vim.keymap.set("n", "zR", ufo.openAllFolds, { desc = "Open all folds" })
+        vim.keymap.set("n", "zM", ufo.closeAllFolds, { desc = "Close all folds" })
+        vim.keymap.set("n", "zr", ufo.openFoldsExceptKinds, { desc = "Open folds except kinds" })
+        vim.keymap.set("n", "zm", ufo.closeFoldsWith, { desc = "Close folds with" })
+        vim.keymap.set("n", "K", function()
+          local winid = ufo.peekFoldedLinesUnderCursor()
+          if not winid then
+            vim.lsp.buf.hover()
+          end
+        end, { desc = "Peek fold or LSP hover" })
       end,
     },
 
