@@ -62,6 +62,18 @@ vim.api.nvim_create_autocmd("FileChangedShellPost", {
   end,
 })
 
+-- Markdown-specific settings for better reading
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "markdown",
+  callback = function()
+    vim.opt_local.conceallevel = 2  -- Hide markup syntax
+    vim.opt_local.concealcursor = "" -- Don't reveal on cursor line
+    vim.opt_local.wrap = true        -- Wrap long lines
+    vim.opt_local.linebreak = true   -- Break at word boundaries
+    vim.opt_local.spell = true       -- Enable spell check
+  end,
+})
+
 -- Manual reload keymap
 vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload files" })
 
@@ -471,9 +483,12 @@ require("lazy").setup({
           { "<leader>x", group = "Diagnostics (Trouble)" },
           { "<leader>c", group = "Code/LSP" },
           { "<leader>t", group = "Toggle" },
+          { "<leader>m", group = "Markdown" },
           { "<leader>w", desc = "Save file" },
           { "<leader>q", desc = "Quit window" },
           { "<leader>e", desc = "Focus file explorer" },
+          { "<leader>mp", desc = "Markdown preview" },
+          { "<leader>tr", desc = "Toggle render markdown" },
           { "<leader>h", desc = "Go to left window" },
           { "<leader>j", desc = "Go to bottom window" },
           { "<leader>k", desc = "Go to top window" },
@@ -676,7 +691,57 @@ require("lazy").setup({
       end,
     },
 
-    
+    -- Markdown Preview (browser-based preview)
+    {
+      "iamcco/markdown-preview.nvim",
+      cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+      ft = { "markdown" },
+      build = "cd app && npm install",
+      keys = {
+        { "<leader>mp", "<cmd>MarkdownPreview<cr>", desc = "Markdown preview" },
+      },
+    },
+
+    -- Render Markdown (in-buffer rendering)
+    {
+      "MeanderingProgrammer/render-markdown.nvim",
+      dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+      ft = { "markdown" },
+      config = function()
+        require("render-markdown").setup({
+          heading = {
+            enabled = false,  -- Disable heading rendering, use native treesitter
+          },
+          code = {
+            enabled = true,
+            sign = false,
+            style = "normal",
+            width = "block",
+            left_pad = 1,
+            right_pad = 1,
+            border = "thin",
+          },
+          bullet = {
+            enabled = true,
+            icons = { "●", "○", "◆", "◇" },
+          },
+        })
+
+        -- Custom Vesper colors for native markdown headings (treesitter)
+        vim.api.nvim_set_hl(0, "@markup.heading.1.markdown", { fg = "#ffc799", bold = true })
+        vim.api.nvim_set_hl(0, "@markup.heading.2.markdown", { fg = "#80d9c7", bold = true })
+        vim.api.nvim_set_hl(0, "@markup.heading.3.markdown", { fg = "#99ffe4", bold = true })
+        vim.api.nvim_set_hl(0, "@markup.heading.4.markdown", { fg = "#ffcfa8" })
+        vim.api.nvim_set_hl(0, "@markup.heading.5.markdown", { fg = "#a0a0a0" })
+        vim.api.nvim_set_hl(0, "@markup.heading.6.markdown", { fg = "#8b8b8b" })
+        vim.api.nvim_set_hl(0, "RenderMarkdownCode", { bg = "NONE" })
+      end,
+      keys = {
+        { "<leader>tr", "<cmd>RenderMarkdown toggle<cr>", desc = "Toggle render markdown" },
+      },
+    },
+
+
   },
   install = { colorscheme = { "vesper" } },
   checker = { enabled = true },
