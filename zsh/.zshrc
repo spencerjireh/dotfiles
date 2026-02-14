@@ -555,3 +555,6 @@ timezsh() {
 # ===========================
 # Uncomment the next line if you uncommented zmodload zsh/zprof at the top
 # [[ -n "$ZPROF" ]] && zprof
+
+# opencode
+export PATH=/Users/spencerjireh.cebrian/.opencode/bin:$PATH
