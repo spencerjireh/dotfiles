@@ -1,0 +1,5 @@
+[alias]
+    nuke = "!sh -c 'printf \"Nuke working tree? This will reset --hard and remove untracked files. [y/N] \" && read ans && [ \"$ans\" = y ] && git reset --hard HEAD && git clean -fd && echo \"Nuked.\" || echo \"Aborted.\"'"
+    wowow = log --oneline --graph --decorate --all
+    undo = reset --soft HEAD~1
+    branches = branch --sort=-committerdate --format='%(refname:short) (%(committerdate:relative))'

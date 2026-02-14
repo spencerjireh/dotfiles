@@ -233,12 +233,19 @@ else
     log_warn "Skipping GitHub setup"
 fi
 
+# Git aliases
+log_info "Setting up Git aliases..."
+create_symlink "$DOTFILES_DIR/git/aliases" ~/.gitaliases
+
 # Git configuration
 read -rp "Set up global Git config? [Y/n] " setup_git
 setup_git="${setup_git:-Y}"
 
 if [[ "$setup_git" =~ ^[Yy]$ ]]; then
     log_info "Setting up Git config..."
+
+    git config --global include.path ~/.gitaliases
+    log_info "Included git aliases via include.path"
 
     current_name="$(git config --global user.name 2>/dev/null || true)"
     if [ -n "$current_name" ]; then
