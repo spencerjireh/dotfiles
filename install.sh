@@ -92,6 +92,7 @@ BREW_FORMULAE=(
     zoxide
     pyenv
     imagemagick
+    rust
 )
 
 # trash utility differs by platform

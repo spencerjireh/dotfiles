@@ -9,7 +9,7 @@ fi
 # Auto-start tmux in Ghostty
 # ===========================
 if [[ -z "$TMUX" ]] && [[ -n "$GHOSTTY_RESOURCES_DIR" ]]; then
-  exec tmux new-session -A -s main
+  exec tmux new-session
 fi
 
 # ===========================
