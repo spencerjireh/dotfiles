@@ -280,7 +280,16 @@ alias opc="opencode"
 alias cld="claude"
 alias ccd="claude --dangerously-skip-permissions"
 if command -v trash &>/dev/null; then
-  alias rm="trash"
+  unalias rm 2>/dev/null
+  function rm() {
+    local args=()
+    for arg in "$@"; do
+      [[ "$arg" =~ ^-[rRfdiPWv]+$ ]] && continue
+      [[ "$arg" == --recursive || "$arg" == --force ]] && continue
+      args+=("$arg")
+    done
+    (( ${#args[@]} )) && command trash "${args[@]}"
+  }
 fi
 
 # tmux
