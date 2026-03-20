@@ -112,3 +112,28 @@ window-width = 9999
 
 # Translate cmd+shift+space to ctrl+space for tmux prefix
 keybind = cmd+shift+space=text:\x00
+
+# Cmd+number to switch tmux windows (sends Alt+N)
+# Unbind Ghostty's default goto_tab for these keys
+keybind = cmd+digit_1=unbind
+keybind = cmd+digit_2=unbind
+keybind = cmd+digit_3=unbind
+keybind = cmd+digit_4=unbind
+keybind = cmd+digit_5=unbind
+keybind = cmd+digit_6=unbind
+keybind = cmd+digit_7=unbind
+keybind = cmd+digit_8=unbind
+# Cmd+Shift+A/D to navigate tmux windows (sends prefix+h / prefix+l)
+keybind = cmd+shift+a=text:\x00h
+keybind = cmd+shift+d=unbind
+keybind = cmd+shift+d=text:\x00l
+
+keybind = cmd+one=text:\x1b1
+keybind = cmd+two=text:\x1b2
+keybind = cmd+three=text:\x1b3
+keybind = cmd+four=text:\x1b4
+keybind = cmd+five=text:\x1b5
+keybind = cmd+six=text:\x1b6
+keybind = cmd+seven=text:\x1b7
+keybind = cmd+eight=text:\x1b8
+keybind = cmd+nine=text:\x1b9
