@@ -147,7 +147,7 @@ zstyle ':completion:*' cache-path "$HOME/.zsh/cache"
 # Environment Variables
 # ===========================
 export LANG=en_US.UTF-8
-export EDITOR='vim'
+export EDITOR='nvim'
 
 # Colored man pages - inherits from terminal theme
 export LESS_TERMCAP_md=$'\e[1;36m'    # cyan for bold text
@@ -169,6 +169,7 @@ fi
 # Homebrew paths (differ by platform)
 if [[ "$(uname -s)" == "Darwin" ]]; then
   export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
+  export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 elif [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
@@ -266,9 +267,9 @@ fi
 # ===========================
 
 # Configuration shortcuts
-alias zshconfig="code ~/.zshrc"
+alias zshconfig="nvim ~/.zshrc"
 alias src="source ~/.zshrc"
-alias p10kconfig="code ~/.p10k.zsh"
+alias p10kconfig="nvim ~/.p10k.zsh"
 
 # nvim
 alias vim='nvim'
@@ -279,6 +280,8 @@ alias v='nvim'
 alias opc="opencode"
 alias cld="claude"
 alias ccd="claude --dangerously-skip-permissions"
+alias empty-trash="osascript -e 'tell application \"Finder\" to empty the trash'"
+
 if command -v trash &>/dev/null; then
   unalias rm 2>/dev/null
   function rm() {
