@@ -63,6 +63,7 @@ vim.opt.sidescrolloff = 8  -- Keep 8 columns visible when scrolling horizontally
 vim.opt.fillchars:append({ eob = " " })
 
 -- Auto-reload files changed outside of Neovim
+vim.opt.updatetime = 250 -- Faster CursorHold for quicker external change detection
 vim.opt.autoread = true
 
 -- Trigger checktime on focus/buffer changes
@@ -75,11 +76,17 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHo
   end,
 })
 
--- Notify when file changes externally
+-- Notify only on conflict: buffer modified AND file changed externally
+-- Silent reload is handled by autoread; only surface the dangerous case
 vim.api.nvim_create_autocmd("FileChangedShellPost", {
   pattern = "*",
   callback = function()
-    vim.notify("File changed on disk. Buffer reloaded.", vim.log.levels.WARN)
+    if vim.bo.modified then
+      vim.notify(
+        "CONFLICT: Buffer has unsaved changes but file was modified externally.\nUse <leader>fu (undo history) to reconcile.",
+        vim.log.levels.ERROR
+      )
+    end
   end,
 })
 
@@ -205,6 +212,70 @@ require("lazy").setup({
         vim.api.nvim_set_hl(0, "FloatBorder", { fg = "#80d9c7", bg = "#101010" })
         vim.api.nvim_set_hl(0, "FloatTitle", { fg = "#ffc799", bg = "#101010", bold = true })
       end,
+    },
+
+    -- nvim-notify (toast notifications)
+    {
+      "rcarriga/nvim-notify",
+      lazy = false,
+      priority = 900,
+      config = function()
+        local notify = require("notify")
+        notify.setup({
+          background_colour = "#101010",
+          fps = 30,
+          level = vim.log.levels.INFO,
+          minimum_width = 30,
+          render = "wrapped-compact",
+          stages = "fade_in_slide_out",
+          timeout = 3000,
+          top_down = true,
+        })
+        vim.notify = notify
+
+        -- Vesper-themed highlights for notification levels
+        vim.api.nvim_set_hl(0, "NotifyERRORBorder", { fg = "#ff8080" })
+        vim.api.nvim_set_hl(0, "NotifyWARNBorder", { fg = "#ffc799" })
+        vim.api.nvim_set_hl(0, "NotifyINFOBorder", { fg = "#80d9c7" })
+        vim.api.nvim_set_hl(0, "NotifyDEBUGBorder", { fg = "#505050" })
+        vim.api.nvim_set_hl(0, "NotifyTRACEBorder", { fg = "#505050" })
+        vim.api.nvim_set_hl(0, "NotifyERRORIcon", { fg = "#ff8080" })
+        vim.api.nvim_set_hl(0, "NotifyWARNIcon", { fg = "#ffc799" })
+        vim.api.nvim_set_hl(0, "NotifyINFOIcon", { fg = "#80d9c7" })
+        vim.api.nvim_set_hl(0, "NotifyDEBUGIcon", { fg = "#505050" })
+        vim.api.nvim_set_hl(0, "NotifyTRACEIcon", { fg = "#505050" })
+        vim.api.nvim_set_hl(0, "NotifyERRORTitle", { fg = "#ff8080" })
+        vim.api.nvim_set_hl(0, "NotifyWARNTitle", { fg = "#ffc799" })
+        vim.api.nvim_set_hl(0, "NotifyINFOTitle", { fg = "#80d9c7" })
+        vim.api.nvim_set_hl(0, "NotifyDEBUGTitle", { fg = "#505050" })
+        vim.api.nvim_set_hl(0, "NotifyTRACETitle", { fg = "#505050" })
+      end,
+    },
+
+    -- auto-save.nvim (keep disk in sync with buffer edits)
+    {
+      "okuuva/auto-save.nvim",
+      event = { "InsertLeave", "TextChanged" },
+      opts = {
+        enabled = true,
+        trigger_events = {
+          immediate_save = { "BufLeave", "FocusLost" },
+          defer_save = { "InsertLeave", "TextChanged" },
+        },
+        condition = function(buf)
+          local buftype = vim.bo[buf].buftype
+          if buftype ~= "" then return false end
+          if vim.bo[buf].readonly or not vim.bo[buf].modifiable then return false end
+          local bufname = vim.api.nvim_buf_get_name(buf)
+          if bufname == "" then return false end
+          local ok, stats = pcall(vim.uv.fs_stat, bufname)
+          if ok and stats and stats.size > 1024 * 1024 then return false end
+          return true
+        end,
+        write_all_buffers = false,
+        noautocmd = false,
+        debounce_delay = 1000,
+      },
     },
 
     -- Lualine
@@ -400,10 +471,36 @@ require("lazy").setup({
     -- Telescope
     {
       "nvim-telescope/telescope.nvim",
-      dependencies = { "nvim-lua/plenary.nvim" },
+      dependencies = {
+        "nvim-lua/plenary.nvim",
+        "debugloop/telescope-undo.nvim",
+      },
       config = function()
         local telescope = require("telescope")
-        telescope.setup({})
+        telescope.setup({
+          extensions = {
+            undo = {
+              side_by_side = true,
+              layout_strategy = "vertical",
+              layout_config = {
+                preview_height = 0.6,
+              },
+              mappings = {
+                i = {
+                  ["<cr>"] = require("telescope-undo.actions").restore,
+                  ["<C-y>"] = require("telescope-undo.actions").yank_additions,
+                  ["<C-d>"] = require("telescope-undo.actions").yank_deletions,
+                },
+                n = {
+                  ["<cr>"] = require("telescope-undo.actions").restore,
+                  ["y"] = require("telescope-undo.actions").yank_additions,
+                  ["d"] = require("telescope-undo.actions").yank_deletions,
+                },
+              },
+            },
+          },
+        })
+        telescope.load_extension("undo")
 
         -- Keymaps
         local builtin = require("telescope.builtin")
@@ -411,6 +508,7 @@ require("lazy").setup({
         vim.keymap.set("n", "<leader>fg", builtin.live_grep, { desc = "Live grep" })
         vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Find buffers" })
         vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Help tags" })
+        vim.keymap.set("n", "<leader>fu", "<cmd>Telescope undo<cr>", { desc = "Find undo history" })
       end,
     },
 
@@ -623,6 +721,7 @@ require("lazy").setup({
           { "<leader>fg", desc = "Live grep" },
           { "<leader>fb", desc = "Find buffers" },
           { "<leader>fh", desc = "Help tags" },
+          { "<leader>fu", desc = "Find undo history" },
           { "<leader>xx", desc = "Toggle diagnostics" },
           { "<leader>xX", desc = "Buffer diagnostics" },
           { "<leader>xL", desc = "Location list" },
