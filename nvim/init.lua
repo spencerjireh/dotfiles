@@ -26,6 +26,7 @@ vim.g.python3_host_prog = find_python()
 -- Line numbers
 vim.opt.number = true
 vim.opt.relativenumber = true
+vim.opt.cursorline = true
 
 -- Indentation
 vim.opt.expandtab = true
@@ -118,8 +119,7 @@ vim.keymap.set("n", "<leader>mp", function()
   end
 end, { desc = "Open markdown in browser" })
 
--- Clear search highlights
-vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlights" })
+-- Clear search highlights (also handled by multicursor.nvim's <Esc> cascade)
 
 -- Folding options (for nvim-ufo)
 vim.opt.foldcolumn = "0" -- Disable fold column (we'll use virtual text instead)
@@ -211,6 +211,15 @@ require("lazy").setup({
         vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#101010" })
         vim.api.nvim_set_hl(0, "FloatBorder", { fg = "#80d9c7", bg = "#101010" })
         vim.api.nvim_set_hl(0, "FloatTitle", { fg = "#ffc799", bg = "#101010", bold = true })
+
+        -- Subtle cursorline
+        vim.api.nvim_set_hl(0, "CursorLine", { bg = "#1a1a1a" })
+        vim.api.nvim_set_hl(0, "CursorLineNr", { fg = "#ffc799", bold = true })
+
+        -- vim-illuminate: subtle background for word matches
+        vim.api.nvim_set_hl(0, "IlluminatedWordText", { bg = "#2a2a2a" })
+        vim.api.nvim_set_hl(0, "IlluminatedWordRead", { bg = "#2a2a2a" })
+        vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { bg = "#2a2a2a" })
       end,
     },
 
@@ -231,7 +240,20 @@ require("lazy").setup({
           timeout = 3000,
           top_down = true,
         })
-        vim.notify = notify
+        -- Override vim.notify: ERROR-level notifications are sticky
+        local original_notify = notify
+        vim.notify = function(msg, level, opts)
+          opts = opts or {}
+          if level == vim.log.levels.ERROR then
+            opts.timeout = false
+          end
+          original_notify(msg, level, opts)
+        end
+
+        -- Dismiss all notifications
+        vim.keymap.set("n", "<leader>nd", function()
+          notify.dismiss({ silent = true, pending = true })
+        end, { desc = "Dismiss notifications" })
 
         -- Vesper-themed highlights for notification levels
         vim.api.nvim_set_hl(0, "NotifyERRORBorder", { fg = "#ff8080" })
@@ -298,9 +320,13 @@ require("lazy").setup({
     {
       "nvim-treesitter/nvim-treesitter",
       build = ":TSUpdate",
+      dependencies = {
+        "nvim-treesitter/nvim-treesitter-textobjects",
+      },
       opts = {
         ensure_installed = {
           "c",
+          "cpp",
           "lua",
           "vim",
           "vimdoc",
@@ -309,11 +335,58 @@ require("lazy").setup({
           "markdown_inline",
           "tsx",
           "typescript",
+          "javascript",
           "python",
+          "go",
+          "rust",
+          "java",
+          "json",
+          "yaml",
+          "toml",
+          "bash",
+          "html",
+          "css",
         },
         auto_install = false,
         highlight = { enable = true },
         indent = { enable = true },
+        textobjects = {
+          select = {
+            enable = true,
+            lookahead = true,
+            keymaps = {
+              ["af"] = "@function.outer",
+              ["if"] = "@function.inner",
+              ["ac"] = "@class.outer",
+              ["ic"] = "@class.inner",
+              ["aa"] = "@parameter.outer",
+              ["ia"] = "@parameter.inner",
+              ["ai"] = "@conditional.outer",
+              ["ii"] = "@conditional.inner",
+            },
+          },
+          move = {
+            enable = true,
+            set_jumps = true,
+            goto_next_start = {
+              ["]f"] = "@function.outer",
+              ["]c"] = "@class.outer",
+              ["]a"] = "@parameter.inner",
+              ["]l"] = "@loop.outer",
+            },
+            goto_previous_start = {
+              ["[f"] = "@function.outer",
+              ["[c"] = "@class.outer",
+              ["[a"] = "@parameter.inner",
+              ["[l"] = "@loop.outer",
+            },
+          },
+          swap = {
+            enable = true,
+            swap_next = { ["]s"] = "@parameter.inner" },
+            swap_previous = { ["[s"] = "@parameter.inner" },
+          },
+        },
       },
     },
 
@@ -325,9 +398,20 @@ require("lazy").setup({
         "williamboman/mason-lspconfig.nvim",
       },
       config = function()
-        require("mason").setup()
+        require("mason").setup({
+          ui = { border = "rounded" },
+          log_level = vim.log.levels.WARN,
+        })
         require("mason-lspconfig").setup({
-          ensure_installed = { "lua_ls", "pyright" },
+          ensure_installed = {
+            "lua_ls",
+            "pyright",
+            "ts_ls",
+            "gopls",
+            "rust_analyzer",
+            "jdtls",
+            "clangd",
+          },
         })
 
         -- Get capabilities from cmp
@@ -360,9 +444,25 @@ require("lazy").setup({
         vim.lsp.config("pyright", { capabilities = capabilities })
         vim.lsp.enable("pyright")
 
-        -- Add more LSP servers here as needed
-        -- vim.lsp.config("ts_ls", { capabilities = capabilities })
-        -- vim.lsp.enable("ts_ls")
+        -- TypeScript/JavaScript
+        vim.lsp.config("ts_ls", { capabilities = capabilities })
+        vim.lsp.enable("ts_ls")
+
+        -- Go
+        vim.lsp.config("gopls", { capabilities = capabilities })
+        vim.lsp.enable("gopls")
+
+        -- Rust
+        vim.lsp.config("rust_analyzer", { capabilities = capabilities })
+        vim.lsp.enable("rust_analyzer")
+
+        -- Java
+        vim.lsp.config("jdtls", { capabilities = capabilities })
+        vim.lsp.enable("jdtls")
+
+        -- C/C++
+        vim.lsp.config("clangd", { capabilities = capabilities })
+        vim.lsp.enable("clangd")
 
         -- Keymaps for LSP
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
@@ -474,11 +574,13 @@ require("lazy").setup({
       dependencies = {
         "nvim-lua/plenary.nvim",
         "debugloop/telescope-undo.nvim",
+        { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
       },
       config = function()
         local telescope = require("telescope")
         telescope.setup({
           extensions = {
+            fzf = {},
             undo = {
               side_by_side = true,
               layout_strategy = "vertical",
@@ -501,6 +603,7 @@ require("lazy").setup({
           },
         })
         telescope.load_extension("undo")
+        telescope.load_extension("fzf")
 
         -- Keymaps
         local builtin = require("telescope.builtin")
@@ -594,7 +697,21 @@ require("lazy").setup({
     {
       "lewis6991/gitsigns.nvim",
       config = function()
-        require("gitsigns").setup()
+        require("gitsigns").setup({
+          on_attach = function(bufnr)
+            local gs = require("gitsigns")
+            local map = function(mode, l, r, desc)
+              vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
+            end
+            map("n", "]h", gs.next_hunk, "Next hunk")
+            map("n", "[h", gs.prev_hunk, "Previous hunk")
+            map("n", "<leader>gs", gs.stage_hunk, "Stage hunk")
+            map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
+            map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
+            map("n", "<leader>gb", gs.blame_line, "Blame line")
+            map("n", "<leader>gd", gs.diffthis, "Diff this")
+          end,
+        })
       end,
     },
 
@@ -733,11 +850,37 @@ require("lazy").setup({
           { "<leader>rn", desc = "Rename symbol" },
           { "<leader>io", desc = "Open file externally" },
           { "<leader>tw", desc = "Toggle word wrap" },
+          { "<leader>g", group = "Git" },
+          { "<leader>gs", desc = "Stage hunk" },
+          { "<leader>gr", desc = "Reset hunk" },
+          { "<leader>gp", desc = "Preview hunk" },
+          { "<leader>gb", desc = "Blame line" },
+          { "<leader>gd", desc = "Diff this" },
+          { "]s", desc = "Swap parameter next" },
+          { "[s", desc = "Swap parameter prev" },
+          { "]l", desc = "Next loop" },
+          { "[l", desc = "Previous loop" },
+          { "<leader>n", group = "Notifications" },
+          { "<leader>nd", desc = "Dismiss notifications" },
+          { "<leader>A", desc = "Add cursors to all matches" },
+          { "<leader>ft", desc = "Find TODOs" },
+          { "]h", desc = "Next hunk" },
+          { "[h", desc = "Previous hunk" },
+          { "]f", desc = "Next function" },
+          { "[f", desc = "Previous function" },
+          { "]c", desc = "Next class" },
+          { "[c", desc = "Previous class" },
+          { "]a", desc = "Next argument" },
+          { "[a", desc = "Previous argument" },
+          { "]t", desc = "Next TODO" },
+          { "[t", desc = "Previous TODO" },
+          { "s", desc = "Flash jump", mode = { "n", "x", "o" } },
+          { "S", desc = "Flash Treesitter select", mode = { "n", "x", "o" } },
           { "gd", desc = "Go to definition" },
           { "gh", desc = "Jump back" },
           { "gl", desc = "Jump forward" },
           { "K", desc = "Peek fold or LSP hover" },
-          { "<Esc>", desc = "Clear search highlights" },
+          { "<Esc>", desc = "Clear highlights / cursors" },
           { "-", desc = "Toggle file explorer" },
           { "z", group = "Folds" },
           { "za", desc = "Toggle fold under cursor" },
@@ -977,8 +1120,8 @@ require("lazy").setup({
             markdown = {
               enabled = true,
               clear_in_insert_mode = false,
-              download_remote_images = true,
-              only_render_image_at_cursor = false,
+              download_remote_images = false,
+              only_render_image_at_cursor = true,
               filetypes = { "markdown", "vimwiki" },
             },
             neorg = { enabled = false },
@@ -988,9 +1131,243 @@ require("lazy").setup({
           max_height_window_percentage = 50,
           window_overlap_clear_enabled = false,
           window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
-          hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.svg" },
+          hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp" },
         })
       end,
+    },
+
+    -- nvim-surround (add/change/delete surrounding chars)
+    {
+      "kylechui/nvim-surround",
+      version = "*",
+      event = "VeryLazy",
+      opts = {},
+    },
+
+    -- mini.ai (enhanced text objects with seeking)
+    {
+      "echasnovski/mini.ai",
+      event = "VeryLazy",
+      opts = {
+        n_lines = 500,
+      },
+    },
+
+    -- multicursor.nvim (VS Code-like multi-cursor editing)
+    {
+      "jake-stewart/multicursor.nvim",
+      event = "VeryLazy",
+      config = function()
+        local mc = require("multicursor-nvim")
+        mc.setup()
+        local set = vim.keymap.set
+        set({ "n", "v" }, "<C-n>", function() mc.matchAddCursor(1) end, { desc = "Add cursor at next match" })
+        set({ "n", "v" }, "<C-p>", function() mc.matchSkipCursor(1) end, { desc = "Skip match, add next" })
+        set({ "n", "v" }, "<leader>A", function() mc.matchAllAddCursors() end, { desc = "Add cursors to all matches" })
+        set("n", "<Esc>", function()
+          if not mc.cursorsEnabled() then
+            mc.enableCursors()
+          elseif mc.hasCursors() then
+            mc.clearCursors()
+          else
+            vim.cmd("nohlsearch")
+          end
+        end)
+      end,
+    },
+
+    -- conform.nvim (format on save)
+    {
+      "stevearc/conform.nvim",
+      event = { "BufWritePre" },
+      cmd = { "ConformInfo" },
+      opts = {
+        formatters_by_ft = {
+          lua = { "stylua" },
+          python = { "black" },
+          javascript = { "prettierd", "prettier", stop_after_first = true },
+          typescript = { "prettierd", "prettier", stop_after_first = true },
+          typescriptreact = { "prettierd", "prettier", stop_after_first = true },
+          javascriptreact = { "prettierd", "prettier", stop_after_first = true },
+          go = { "gofmt" },
+          java = { "google-java-format" },
+          c = { "clang-format" },
+          cpp = { "clang-format" },
+          rust = { "rustfmt" },
+        },
+        format_on_save = {
+          timeout_ms = 500,
+          lsp_format = "fallback",
+        },
+      },
+    },
+
+    -- flash.nvim (label-based jumping)
+    {
+      "folke/flash.nvim",
+      event = "VeryLazy",
+      opts = {},
+      keys = {
+        { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
+        { "S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
+      },
+    },
+
+    -- nvim-lint (linting beyond LSP)
+    {
+      "mfussenegger/nvim-lint",
+      event = { "BufReadPre", "BufNewFile" },
+      config = function()
+        local lint = require("lint")
+        lint.linters_by_ft = {
+          python = { "ruff" },
+          javascript = { "eslint_d" },
+          typescript = { "eslint_d" },
+          typescriptreact = { "eslint_d" },
+          javascriptreact = { "eslint_d" },
+        }
+        vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost", "InsertLeave" }, {
+          callback = function()
+            -- Only run linters that exist on PATH
+            local linters = lint.linters_by_ft[vim.bo.filetype] or {}
+            local available = vim.tbl_filter(function(name)
+              return vim.fn.executable(name) == 1
+            end, linters)
+            if #available > 0 then
+              lint.try_lint(available)
+            end
+          end,
+        })
+      end,
+    },
+
+    -- todo-comments (highlight and search TODOs)
+    {
+      "folke/todo-comments.nvim",
+      dependencies = { "nvim-lua/plenary.nvim" },
+      event = "VeryLazy",
+      opts = {},
+      keys = {
+        { "<leader>ft", "<cmd>TodoTelescope<cr>", desc = "Find TODOs" },
+        { "]t", function() require("todo-comments").jump_next() end, desc = "Next TODO" },
+        { "[t", function() require("todo-comments").jump_prev() end, desc = "Previous TODO" },
+      },
+    },
+
+    -- indent-blankline (indent guides)
+    {
+      "lukas-reineke/indent-blankline.nvim",
+      main = "ibl",
+      event = "VeryLazy",
+      opts = {
+        indent = { char = "│" },
+        scope = { enabled = true, show_start = false, show_end = false },
+      },
+    },
+
+    -- noice.nvim (modern UI for cmdline, messages, notifications)
+    {
+      "folke/noice.nvim",
+      event = "VeryLazy",
+      dependencies = {
+        "MunifTanjim/nui.nvim",
+        "rcarriga/nvim-notify",
+      },
+      opts = {
+        cmdline = {
+          enabled = true,
+          view = "cmdline_popup",
+          format = {
+            cmdline = { pattern = "^:", icon = "", lang = "vim" },
+            search_down = { kind = "search", pattern = "^/", icon = " ", lang = "regex" },
+            search_up = { kind = "search", pattern = "^%?", icon = " ", lang = "regex" },
+          },
+        },
+        messages = {
+          enabled = true,
+          view = "notify",
+          view_error = "notify",
+          view_warn = "notify",
+        },
+        popupmenu = {
+          enabled = true,
+          backend = "nui",
+        },
+        lsp = {
+          override = {
+            ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
+            ["vim.lsp.util.stylize_markdown"] = true,
+            ["cmp.entry.get_documentation"] = true,
+          },
+          progress = {
+            enabled = true,
+          },
+        },
+        presets = {
+          bottom_search = false,
+          command_palette = true,
+          long_message_to_split = true,
+          lsp_doc_border = true,
+        },
+      },
+    },
+
+    -- nvim-colorizer (inline color previews)
+    {
+      "norcalli/nvim-colorizer.lua",
+      event = "VeryLazy",
+      config = function()
+        require("colorizer").setup({
+          "*",
+        }, {
+          RGB = true,
+          RRGGBB = true,
+          names = false,
+          RRGGBBAA = true,
+          css = true,
+          css_fn = true,
+        })
+      end,
+    },
+
+    -- treesitter-context (sticky function/class header)
+    {
+      "nvim-treesitter/nvim-treesitter-context",
+      event = "VeryLazy",
+      opts = {
+        enable = true,
+        max_lines = 3,
+        trim_scope = "outer",
+        separator = "─",
+      },
+    },
+
+    -- vim-illuminate (highlight word under cursor)
+    {
+      "RRethy/vim-illuminate",
+      event = "VeryLazy",
+      config = function()
+        require("illuminate").configure({
+          delay = 200,
+          large_file_cutoff = 2000,
+          large_file_overrides = { providers = { "lsp" } },
+        })
+      end,
+    },
+
+    -- neoscroll.nvim (smooth scrolling)
+    {
+      "karb94/neoscroll.nvim",
+      event = "VeryLazy",
+      opts = {
+        mappings = { "<C-u>", "<C-d>", "<C-b>", "<C-f>", "zt", "zz", "zb" },
+        hide_cursor = true,
+        stop_eof = true,
+        respect_scrolloff = false,
+        cursor_scrolls_alone = true,
+        duration_multiplier = 0.4,
+        easing = "quadratic",
+      },
     },
 
     -- Rainbow CSV (CSV/TSV syntax highlighting and querying)
