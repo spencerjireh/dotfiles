@@ -223,54 +223,74 @@ require("lazy").setup({
       end,
     },
 
-    -- nvim-notify (toast notifications)
+    -- snacks.nvim (explorer, notifications, input UI)
     {
-      "rcarriga/nvim-notify",
+      "folke/snacks.nvim",
       lazy = false,
-      priority = 900,
-      config = function()
-        local notify = require("notify")
-        notify.setup({
-          background_colour = "#101010",
-          fps = 30,
-          level = vim.log.levels.INFO,
-          minimum_width = 30,
-          render = "wrapped-compact",
-          stages = "fade_in_slide_out",
+      priority = 1000,
+      opts = {
+        explorer = { enabled = true },
+        picker = {
+          enabled = true,
+          sources = {
+            explorer = {
+              layout = {
+                preset = "sidebar",
+                preview = false,
+                layout = { position = "right", width = 30 },
+              },
+              hidden = true,
+              ignored = true,
+              follow_file = true,
+              git_status = true,
+              trash = true,
+            },
+          },
+        },
+        notifier = {
+          enabled = true,
           timeout = 3000,
-          top_down = true,
-        })
-        -- Override vim.notify: ERROR-level notifications are sticky
-        local original_notify = notify
-        vim.notify = function(msg, level, opts)
-          opts = opts or {}
-          if level == vim.log.levels.ERROR then
-            opts.timeout = false
-          end
-          original_notify(msg, level, opts)
+          style = "compact",
+          top_down = false,
+          width = { min = 30, max = 0.4 },
+          margin = { top = 0, right = 1, bottom = 1 },
+        },
+        input = { enabled = true },
+      },
+      config = function(_, opts)
+        local Snacks = require("snacks")
+        Snacks.setup(opts)
+
+        -- Sticky ERROR notifications (ported from nvim-notify override)
+        local original_notify = vim.notify
+        vim.notify = function(msg, level, o)
+          o = o or {}
+          if level == vim.log.levels.ERROR then o.timeout = false end
+          original_notify(msg, level, o)
         end
 
-        -- Dismiss all notifications
-        vim.keymap.set("n", "<leader>nd", function()
-          notify.dismiss({ silent = true, pending = true })
-        end, { desc = "Dismiss notifications" })
+        -- Explorer keymaps
+        vim.keymap.set("n", "-", function() Snacks.explorer.open() end, { desc = "Toggle file explorer" })
+        vim.keymap.set("n", "<leader>e", function() Snacks.explorer.open() end, { desc = "Focus file explorer" })
 
-        -- Vesper-themed highlights for notification levels
-        vim.api.nvim_set_hl(0, "NotifyERRORBorder", { fg = "#ff8080" })
-        vim.api.nvim_set_hl(0, "NotifyWARNBorder", { fg = "#ffc799" })
-        vim.api.nvim_set_hl(0, "NotifyINFOBorder", { fg = "#80d9c7" })
-        vim.api.nvim_set_hl(0, "NotifyDEBUGBorder", { fg = "#505050" })
-        vim.api.nvim_set_hl(0, "NotifyTRACEBorder", { fg = "#505050" })
-        vim.api.nvim_set_hl(0, "NotifyERRORIcon", { fg = "#ff8080" })
-        vim.api.nvim_set_hl(0, "NotifyWARNIcon", { fg = "#ffc799" })
-        vim.api.nvim_set_hl(0, "NotifyINFOIcon", { fg = "#80d9c7" })
-        vim.api.nvim_set_hl(0, "NotifyDEBUGIcon", { fg = "#505050" })
-        vim.api.nvim_set_hl(0, "NotifyTRACEIcon", { fg = "#505050" })
-        vim.api.nvim_set_hl(0, "NotifyERRORTitle", { fg = "#ff8080" })
-        vim.api.nvim_set_hl(0, "NotifyWARNTitle", { fg = "#ffc799" })
-        vim.api.nvim_set_hl(0, "NotifyINFOTitle", { fg = "#80d9c7" })
-        vim.api.nvim_set_hl(0, "NotifyDEBUGTitle", { fg = "#505050" })
-        vim.api.nvim_set_hl(0, "NotifyTRACETitle", { fg = "#505050" })
+        -- Notification keymaps
+        vim.keymap.set("n", "<leader>nd", function() Snacks.notifier.hide() end, { desc = "Dismiss notifications" })
+        vim.keymap.set("n", "<leader>nh", function() Snacks.notifier.show_history() end, { desc = "Notification history" })
+
+        -- Vesper highlights: notifier
+        local hl = vim.api.nvim_set_hl
+        local levels = {
+          { "Error", "#ff8080" },
+          { "Warn",  "#ffc799" },
+          { "Info",  "#80d9c7" },
+          { "Debug", "#505050" },
+          { "Trace", "#505050" },
+        }
+        for _, l in ipairs(levels) do
+          hl(0, "SnacksNotifier" .. l[1], { fg = l[2], bg = "#101010" })
+          hl(0, "SnacksNotifierBorder" .. l[1], { fg = l[2] })
+          hl(0, "SnacksNotifierIcon" .. l[1], { fg = l[2] })
+        end
       end,
     },
 
@@ -615,67 +635,6 @@ require("lazy").setup({
       end,
     },
 
-    -- Neo-tree
-    {
-      "nvim-neo-tree/neo-tree.nvim",
-      branch = "v3.x",
-      dependencies = {
-        "nvim-lua/plenary.nvim",
-        "nvim-tree/nvim-web-devicons",
-        "MunifTanjim/nui.nvim",
-        { "3rd/image.nvim", optional = true }, -- Image preview support
-      },
-      config = function()
-        require("neo-tree").setup({
-          close_if_last_window = true,
-          window = {
-            position = "right", -- "left", "right", "top", "bottom", "float", "current"
-            width = 30,
-            mappings = {
-              ["<space>"] = "none",
-              ["H"] = "toggle_hidden", -- Shift-H to toggle hidden files
-            },
-          },
-          filesystem = {
-            filtered_items = {
-              visible = true, -- Show hidden files by default
-              hide_dotfiles = false,
-              hide_gitignored = false,
-              hide_by_name = {
-                ".git",
-              },
-              never_show = {
-                ".DS_Store",
-              },
-            },
-            follow_current_file = {
-              enabled = true,
-            },
-            use_libuv_file_watcher = true,
-          },
-        })
-        
-        -- Disable fold column in Neo-tree windows
-        vim.api.nvim_create_autocmd("FileType", {
-          pattern = "neo-tree",
-          callback = function()
-            vim.opt_local.foldcolumn = "0"
-            vim.opt_local.foldenable = false
-          end,
-        })
-        
-        -- Customize Neo-tree colors to match Vesper theme
-        vim.api.nvim_set_hl(0, "NeoTreeFloatBorder", { fg = "#80d9c7", bg = "#101010" })
-        vim.api.nvim_set_hl(0, "NeoTreeFloatTitle", { fg = "#ffc799", bg = "#101010", bold = true })
-        vim.api.nvim_set_hl(0, "NeoTreeTitleBar", { fg = "#ffc799", bg = "#101010", bold = true })
-        vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "NONE" })
-        vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "NONE" })
-        
-        vim.keymap.set("n", "-", "<CMD>Neotree toggle<CR>", { desc = "Toggle Neo-tree" })
-        vim.keymap.set("n", "<leader>e", "<CMD>Neotree focus<CR>", { desc = "Focus Neo-tree" })
-      end,
-    },
-
     -- Comment.nvim
     {
       "numToStr/Comment.nvim",
@@ -862,6 +821,7 @@ require("lazy").setup({
           { "[l", desc = "Previous loop" },
           { "<leader>n", group = "Notifications" },
           { "<leader>nd", desc = "Dismiss notifications" },
+          { "<leader>nh", desc = "Notification history" },
           { "<leader>A", desc = "Add cursors to all matches" },
           { "<leader>ft", desc = "Find TODOs" },
           { "]h", desc = "Next hunk" },
@@ -893,63 +853,6 @@ require("lazy").setup({
           { "zj", desc = "Move to next fold" },
           { "zk", desc = "Move to previous fold" },
           { "*", desc = "Search for visual selection", mode = "v" },
-        })
-      end,
-    },
-
-    -- dressing.nvim (better UI)
-    {
-      "stevearc/dressing.nvim",
-      event = "VeryLazy",
-      config = function()
-        require("dressing").setup({
-          input = {
-            enabled = true,
-            default_prompt = "Input",
-            trim_prompt = true,
-            title_pos = "left",
-            start_in_insert = true,
-            border = "rounded",
-            relative = "cursor",
-            prefer_width = 40,
-            win_options = {
-              wrap = false,
-              list = true,
-              listchars = "precedes:…,extends:…",
-              sidescrolloff = 0,
-            },
-            mappings = {
-              n = {
-                ["<Esc>"] = "Close",
-                ["<CR>"] = "Confirm",
-              },
-              i = {
-                ["<C-c>"] = "Close",
-                ["<CR>"] = "Confirm",
-                ["<Up>"] = "HistoryPrev",
-                ["<Down>"] = "HistoryNext",
-              },
-            },
-          },
-          select = {
-            enabled = true,
-            backend = { "telescope", "fzf_lua", "fzf", "builtin", "nui" },
-            trim_prompt = true,
-            telescope = require("telescope.themes").get_dropdown({
-              borderchars = {
-                prompt = { "─", "│", " ", "│", "╭", "╮", "│", "│" },
-                results = { "─", "│", "─", "│", "├", "┤", "╯", "╰" },
-                preview = { "─", "│", "─", "│", "╭", "╮", "╯", "╰" },
-              },
-              width = 0.8,
-              previewer = false,
-              prompt_title = false,
-            }),
-            builtin = {
-              border = "rounded",
-              relative = "editor",
-            },
-          },
         })
       end,
     },
@@ -1271,7 +1174,6 @@ require("lazy").setup({
       event = "VeryLazy",
       dependencies = {
         "MunifTanjim/nui.nvim",
-        "rcarriga/nvim-notify",
       },
       opts = {
         cmdline = {
@@ -1340,6 +1242,11 @@ require("lazy").setup({
         trim_scope = "outer",
         separator = "─",
       },
+      config = function(_, opts)
+        require("treesitter-context").setup(opts)
+        vim.api.nvim_set_hl(0, "TreesitterContext", { bg = "#181818" })
+        vim.api.nvim_set_hl(0, "TreesitterContextSeparator", { fg = "#2a2a2a" })
+      end,
     },
 
     -- vim-illuminate (highlight word under cursor)

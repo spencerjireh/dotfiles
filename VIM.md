@@ -190,37 +190,36 @@ Powerful fuzzy finder for files, text, buffers, and more.
 
 ---
 
-### 7. Neo-tree (File Explorer)
-**Plugin**: `nvim-neo-tree/neo-tree.nvim`
+### 7. Snacks Explorer (File Explorer)
+**Plugin**: `folke/snacks.nvim` (explorer module)
 
-Modern file explorer with git integration and tree view.
+Persistent sidebar file explorer built on snacks.picker.
 
 **Keybindings**:
-- `-` - Toggle Neo-tree
-- `<Space>e` - Focus Neo-tree
+- `-` - Toggle explorer
+- `<Space>e` - Focus explorer
 
-**Inside Neo-tree**:
-- `Enter` or `o` - Open file or toggle directory
+**Inside Explorer**:
+- `Enter` or `l` - Open file or expand directory
+- `h` - Collapse directory
 - `a` - Add new file/directory (end with `/` for directory)
-- `d` - Delete file/directory
-- `r` - Rename file/directory
-- `y` - Copy file/directory
-- `x` - Cut file/directory
-- `p` - Paste file/directory
-- `c` - Copy file to clipboard
-- `m` - Move file
-- `q` - Close Neo-tree
-- `R` - Refresh tree
+- `d` - Delete (sends to macOS trash)
+- `r` - Rename
+- `c` - Copy file(s)
+- `m` - Move file(s)
+- `y` - Yank (copy to register)
+- `p` - Paste
 - `H` - Toggle hidden files
+- `I` - Toggle ignored files
+- `q` - Close explorer
 - `?` - Show help
 
 **Features**:
-- Tree-style file navigation
-- Git status indicators (modified, added, deleted files)
-- Automatic file watching (updates when files change)
+- Tree-style file navigation (right sidebar, width 30)
+- Git status indicators
 - Follows current file automatically
-- Icons for file types
-- Closes automatically if it's the last window
+- Trash integration (delete sends to macOS trash)
+- Multi-file selection with `<Tab>` for batch operations
 
 ---
 
@@ -342,18 +341,22 @@ Shows available keybindings in a popup as you type.
 
 ---
 
-### 13. dressing.nvim (Better UI)
-**Plugin**: `stevearc/dressing.nvim`
+### 13. Snacks Input/Notifier (Better UI)
+**Plugin**: `folke/snacks.nvim` (input + notifier modules)
 
-Improves the default Neovim UI for inputs and selections.
+Replaces default Neovim UI for inputs and notifications.
+
+**Keybindings**:
+- `<Space>nd` - Dismiss all notifications
+- `<Space>nh` - Notification history
 
 **Features**:
 - Better input prompts (like rename dialog)
-- Integrates with Telescope for selections
-- Rounded borders and cleaner appearance
-- Improved visibility and usability
+- Toast notifications in bottom-right corner
+- ERROR-level notifications are sticky (must dismiss manually)
+- Compact notification style with Vesper theme colors
 
-**Usage**: Works automatically when plugins request user input or selections.
+**Usage**: Works automatically when plugins request user input or send notifications.
 
 ---
 
