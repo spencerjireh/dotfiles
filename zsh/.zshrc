@@ -9,7 +9,7 @@ fi
 # Auto-start tmux in Ghostty
 # ===========================
 if [[ -z "$TMUX" ]] && [[ -n "$GHOSTTY_RESOURCES_DIR" ]]; then
-  exec tmux new-session
+  exec tmux new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')"
 fi
 
 # ===========================
@@ -570,3 +570,5 @@ timezsh() {
 
 # opencode
 export PATH=/Users/spencerjireh.cebrian/.opencode/bin:$PATH
+
+[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
