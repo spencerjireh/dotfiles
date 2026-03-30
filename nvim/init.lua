@@ -216,6 +216,30 @@ require("lazy").setup({
         vim.api.nvim_set_hl(0, "CursorLine", { bg = "#1a1a1a" })
         vim.api.nvim_set_hl(0, "CursorLineNr", { fg = "#ffc799", bold = true })
 
+        -- Transparent snacks explorer sidebar
+        -- Link to Normal (bg=NONE via transparent Vesper) so snacks' default=true won't override
+        local hl = vim.api.nvim_set_hl
+        hl(0, "SnacksNormal", { link = "Normal" })
+        hl(0, "SnacksNormalNC", { link = "Normal" })
+        hl(0, "SnacksPicker", { link = "Normal" })
+        hl(0, "SnacksPickerBox", { link = "Normal" })
+        hl(0, "SnacksPickerList", { link = "Normal" })
+        hl(0, "SnacksPickerInput", { link = "Normal" })
+        hl(0, "SnacksWinBar", { link = "Normal" })
+        hl(0, "SnacksWinBarNC", { link = "Normal" })
+        hl(0, "SnacksFooter", { link = "Normal" })
+        hl(0, "SnacksTitle", { fg = "#ffc799", bold = true })
+        hl(0, "SnacksWinSeparator", { fg = "#505050" })
+        hl(0, "SnacksPickerBorder", { fg = "#505050" })
+        hl(0, "SnacksPickerBoxBorder", { fg = "#505050" })
+        hl(0, "SnacksPickerBoxCursorLine", { bg = "#2a2a2a" })
+        hl(0, "SnacksPickerListBorder", { fg = "#505050" })
+        hl(0, "SnacksPickerListTitle", { fg = "#ffc799", bold = true })
+        hl(0, "SnacksPickerListFooter", { link = "Normal" })
+        hl(0, "SnacksPickerListCursorLine", { bg = "#2a2a2a" })
+        hl(0, "SnacksPickerInputBorder", { fg = "#505050" })
+        hl(0, "SnacksPickerInputFooter", { link = "Normal" })
+
         -- vim-illuminate: subtle background for word matches
         vim.api.nvim_set_hl(0, "IlluminatedWordText", { bg = "#2a2a2a" })
         vim.api.nvim_set_hl(0, "IlluminatedWordRead", { bg = "#2a2a2a" })
@@ -244,6 +268,16 @@ require("lazy").setup({
               follow_file = true,
               git_status = true,
               trash = true,
+              win = {
+                list = {
+                  keys = {
+                    ["x"] = "explorer_cut",
+                    ["c"] = { "explorer_copy", mode = { "n", "x" } },
+                    ["d"] = { "explorer_del", mode = { "n", "x" } },
+                    ["m"] = { "explorer_move", mode = { "n", "x" } },
+                  },
+                },
+              },
             },
           },
         },
