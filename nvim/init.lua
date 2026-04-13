@@ -210,7 +210,7 @@ require("lazy").setup({
         -- Customize floating windows (Harpoon, etc.) to match Vesper theme colors
         vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#101010" })
         vim.api.nvim_set_hl(0, "FloatBorder", { fg = "#80d9c7", bg = "#101010" })
-        vim.api.nvim_set_hl(0, "FloatTitle", { fg = "#ffc799", bg = "#101010", bold = true })
+        vim.api.nvim_set_hl(0, "FloatTitle", { fg = "#ffc799", bg = "NONE", bold = true })
 
         -- Subtle cursorline
         vim.api.nvim_set_hl(0, "CursorLine", { bg = "#1a1a1a" })
