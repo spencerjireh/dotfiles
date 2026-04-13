@@ -572,3 +572,4 @@ timezsh() {
 export PATH=/Users/spencerjireh.cebrian/.opencode/bin:$PATH
 
 [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
+alias soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
