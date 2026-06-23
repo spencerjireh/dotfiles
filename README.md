@@ -21,8 +21,8 @@ All tools share the **Vesper** color scheme (`#101010` bg, `#ffffff` fg, `#ffc79
 ### Setup
 
 ```bash
-git clone git@github.com:spencerjireh/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone git@github.com:spencerjireh/dotfiles.git
+cd dotfiles
 ./install.sh
 ```
 
