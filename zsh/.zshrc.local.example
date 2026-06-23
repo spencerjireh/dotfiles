@@ -1,0 +1,14 @@
+# Machine-local zsh config — NOT tracked by the dotfiles repo.
+#
+# Copied to ~/.zshrc.local on install if one doesn't already exist. Put anything
+# machine- or work-specific here (PATHs, tool installers, private aliases) so the
+# tracked .zshrc stays clean and portable.
+
+# opencode
+export PATH="$HOME/.opencode/bin:$PATH"
+
+# kiro shell integration
+[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
+
+# LibreOffice CLI
+alias soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"

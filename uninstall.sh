@@ -60,6 +60,9 @@ remove_symlink "$HOME/.tmux.conf" "$DOTFILES_DIR/tmux/tmux.conf"
 
 remove_symlink "$HOME/.gitaliases" "$DOTFILES_DIR/git/aliases"
 
+remove_symlink "$HOME/.local/bin/dotup" "$DOTFILES_DIR/update.sh"
+remove_symlink "$HOME/.local/bin/dotdoctor" "$DOTFILES_DIR/doctor.sh"
+
 echo "========================================"
 log_info "Dotfiles symlinks removed."
 echo ""
@@ -70,3 +73,5 @@ echo "  - TPM (~/.tmux/plugins/tpm)"
 echo "  - SSH keys (~/.ssh/id_ed25519_github)"
 echo "  - Git global config"
 echo "  - macOS defaults"
+echo "  - ~/.zshrc.local (machine-specific overrides)"
+echo "  - Claude Code (~/.local/bin/claude or installer location)"

@@ -15,8 +15,7 @@ All tools share the **Vesper** color scheme (`#101010` bg, `#ffffff` fg, `#ffc79
 
 ### Prerequisites
 
-- [Homebrew](https://brew.sh/)
-- [Oh My Zsh](https://ohmyz.sh/)
+None — the installer bootstraps its own foundation. On a fresh machine it installs **Homebrew** (may prompt for your password once), **zsh**, **Oh My Zsh**, and **gum** before the TUI appears. `git` and `curl` (preinstalled on macOS / most Linux) are all you need to start.
 
 ### Setup
 
@@ -28,18 +27,47 @@ cd dotfiles
 
 ### What the Install Script Does
 
-1. **Installs brew packages**: neovim, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, pyenv, imagemagick, trash, GohuFont Nerd Font
-2. **Creates symlinks** (with automatic backup of existing files):
-   - `ghostty/config` → Ghostty config dir (platform-aware)
-   - `tmux/tmux.conf` → `~/.tmux.conf`
-   - `zsh/.zshrc` → `~/.zshrc`
-   - `zsh/.p10k.zsh` → `~/.p10k.zsh`
-   - `nvim/` → `~/.config/nvim`
-3. **Sets up plugins**: TPM (tmux), zsh-autosuggestions, zsh-syntax-highlighting, powerlevel10k
-4. **Optional (interactive prompts)**:
-   - GitHub SSH key + CLI setup
-   - Global Git config (name, email, delta pager)
-   - macOS defaults (key repeat, Finder, Dock, trackpad, screenshots)
+The installer runs a **TUI up front** (powered by [`gum`](https://github.com/charmbracelet/gum), auto-bootstrapped on first run, cross-platform on macOS + Linux): you tick which components to install and fill in any inputs (GitHub/Git name + email), confirm a summary, and then it **runs unattended** — no more mid-install prompts. If `gum` can't be installed it falls back to plain text prompts.
+
+Selectable components (all pre-selected by default):
+
+| Component | What it does |
+|-----------|--------------|
+| Homebrew CLI packages | neovim, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, pyenv, imagemagick, rust, trash |
+| Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` |
+| Claude Code | Installs via the official native installer (self-updating) |
+| Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
+| Neovim config | Symlinks `nvim/` → `~/.config/nvim` |
+| tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins |
+| Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
+| GitHub SSH + CLI | Generates an ed25519 key, writes `~/.ssh/config`, installs `gh` |
+| Git global config | name/email, delta pager, git aliases |
+| macOS defaults | Fastest key repeat + repeat-on-hold, Finder, Dock, trackpad, screenshots (macOS only) |
+
+Symlinks are created with **automatic backup** of any existing file.
+
+Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); casks that are individually toggleable in the TUI (Ghostty, font, `gh`) stay in `install.sh`.
+
+### Maintenance
+
+Two helpers are symlinked onto your PATH (`~/.local/bin`) during install:
+
+```bash
+dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins, update Claude
+dotdoctor   # health check: verifies every symlink + that assumed tools exist
+```
+
+### Machine-specific config
+
+Anything machine- or work-specific (per-machine PATHs, tool installers, private aliases) goes in **`~/.zshrc.local`** (untracked), sourced at the end of `.zshrc`. Install seeds it from `zsh/.zshrc.local.example` if absent — so the tracked `.zshrc` stays clean and portable.
+
+### Tests
+
+```bash
+./tests/run.sh   # dependency-free; runs in a sandbox, installs nothing
+```
+
+Covers script linting, the `lib/` helpers, and `install.sh`'s symlink/selection logic. Runs in CI (GitHub Actions) on every push.
 
 ### Uninstallation
 
@@ -60,8 +88,20 @@ cd dotfiles
 ├── nvim/
 │   ├── init.lua
 │   └── lazy-lock.json
+├── git/
+│   └── aliases
+├── lib/
+│   ├── log.sh        # logging helpers
+│   └── tui.sh        # gum-backed TUI helpers (with plain fallback)
+├── tests/
+│   └── run.sh        # dependency-free test suite
+├── .github/workflows/
+│   └── test.yml      # CI: runs the suite + shellcheck
+├── Brewfile          # declarative package list (brew bundle)
 ├── install.sh
-└── uninstall.sh
+├── uninstall.sh
+├── update.sh         # `dotup` — update everything
+└── doctor.sh         # `dotdoctor` — health check
 ```
 
 ## tmux Keybinds

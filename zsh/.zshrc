@@ -15,8 +15,8 @@ fi
 # ===========================
 # Startup Profiler (optional)
 # ===========================
-# Uncomment the next line to enable startup profiling
-# zmodload zsh/zprof
+# Enabled on demand: run `zsh_profile` (sets ZPROF=true) to see a startup report.
+[[ -n "$ZPROF" ]] && zmodload zsh/zprof
 
 # ===========================
 # Oh My Zsh Configuration
@@ -168,6 +168,8 @@ fi
 # ===========================
 # Homebrew paths (differ by platform)
 if [[ "$(uname -s)" == "Darwin" ]]; then
+  # Apple Silicon brew isn't on the default PATH; load it if present.
+  [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
   export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
   export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 elif [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
@@ -565,11 +567,12 @@ timezsh() {
 # ===========================
 # End Profiler (if enabled)
 # ===========================
-# Uncomment the next line if you uncommented zmodload zsh/zprof at the top
-# [[ -n "$ZPROF" ]] && zprof
+[[ -n "$ZPROF" ]] && zprof
 
-# opencode
-export PATH=/Users/spencerjireh.cebrian/.opencode/bin:$PATH
-
-[[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
-alias soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
+# ===========================
+# Machine-local overrides (untracked)
+# ===========================
+# Machine-specific config (per-machine PATHs, tool installers like opencode/kiro,
+# work-only aliases) lives in ~/.zshrc.local so it never gets committed here.
+# See zsh/.zshrc.local.example for the template.
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
