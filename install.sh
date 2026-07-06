@@ -474,13 +474,25 @@ log_info "Dotfiles installed successfully!"
 echo ""
 log_info "Note: Restart your shell or run 'source ~/.zshrc' to apply changes."
 echo ""
-if command -v gh &>/dev/null && ! gh auth status &>/dev/null; then
-    log_info "GitHub SSH post-setup steps:"
-    if [[ "$OS" == "macos" ]]; then
-        echo "  1. Copy your public key:  pbcopy < ~/.ssh/id_ed25519_github.pub"
+if is_selected "GitHub SSH + CLI" && command -v gh &>/dev/null && ! gh auth status &>/dev/null; then
+    log_info "Almost done — the only step left is logging in to GitHub."
+    log_info "This opens your browser to authenticate gh and upload your SSH public key."
+    if tui_confirm "Launch GitHub login now?"; then
+        # -p ssh: use the SSH protocol (and offer to upload the .pub key)
+        # -w:     web browser OAuth flow
+        if gh auth login -p ssh -h github.com -w; then
+            log_info "GitHub authentication complete."
+        else
+            log_warn "GitHub login didn't finish. Re-run it anytime with:"
+            echo "  gh auth login -p ssh -h github.com -w"
+        fi
     else
-        echo "  1. Copy your public key:  xclip -selection clipboard < ~/.ssh/id_ed25519_github.pub"
+        log_info "Skipped. Finish GitHub setup later with either:"
+        echo "  - Automated:  gh auth login -p ssh -h github.com -w"
+        if [[ "$OS" == "macos" ]]; then
+            echo "  - Manual:     pbcopy < ~/.ssh/id_ed25519_github.pub  ->  https://github.com/settings/keys"
+        else
+            echo "  - Manual:     xclip -selection clipboard < ~/.ssh/id_ed25519_github.pub  ->  https://github.com/settings/keys"
+        fi
     fi
-    echo "  2. Add it to GitHub:      https://github.com/settings/keys"
-    echo "  3. Authenticate gh CLI:   gh auth login -p ssh -h github.com -w"
 fi
