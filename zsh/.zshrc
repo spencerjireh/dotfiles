@@ -33,7 +33,6 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(
   git
   docker
-  docker-compose
   zsh-autosuggestions
   zsh-syntax-highlighting
 )
@@ -56,8 +55,7 @@ setopt HIST_IGNORE_DUPS       # Don't record duplicate commands
 setopt HIST_FIND_NO_DUPS      # Don't show duplicates when searching
 setopt HIST_IGNORE_SPACE      # Don't save commands starting with space
 setopt HIST_VERIFY            # Show command before executing from history
-setopt INC_APPEND_HISTORY     # Write immediately, not on exit
-setopt SHARE_HISTORY          # Share history between sessions
+setopt SHARE_HISTORY          # Share history between sessions (implies incremental append)
 
 # ===========================
 # Directory Navigation
@@ -179,7 +177,6 @@ elif [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
 fi
 
 export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
 # Go binaries
 export PATH="$HOME/go/bin:$PATH"
@@ -280,8 +277,16 @@ alias ccd="claude --dangerously-skip-permissions"
 
 if command -v trash &>/dev/null; then
   unalias rm 2>/dev/null
+  # rm sends to the trash; -r/-f/-d flags are dropped (trash is always recursive
+  # and never prompts). -i keeps real rm so interactive deletes still prompt.
   function rm() {
-    local args=()
+    local args=() arg
+    for arg in "$@"; do
+      if [[ "$arg" == -i || "$arg" == --interactive* || "$arg" =~ ^-[a-zA-Z]*i[a-zA-Z]*$ ]]; then
+        command rm "$@"
+        return
+      fi
+    done
     for arg in "$@"; do
       [[ "$arg" =~ ^-[rRfdiPWv]+$ ]] && continue
       [[ "$arg" == --recursive || "$arg" == --force ]] && continue
