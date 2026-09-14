@@ -43,15 +43,15 @@ vim.opt.mouse = "a"
 vim.opt.termguicolors = true
 
 -- Windows and scrolling
-vim.opt.scrolloff = 8       -- keep 8 lines above/below the cursor
-vim.opt.splitright = true   -- vertical splits open to the right
-vim.opt.splitbelow = true   -- horizontal splits open below
-vim.opt.breakindent = true  -- wrapped lines keep their indent (markdown)
+vim.opt.scrolloff = 8 -- keep 8 lines above/below the cursor
+vim.opt.splitright = true -- vertical splits open to the right
+vim.opt.splitbelow = true -- horizontal splits open below
+vim.opt.breakindent = true -- wrapped lines keep their indent (markdown)
 
 -- Disable word wrap
 vim.opt.wrap = false
-vim.opt.sidescroll = 1  -- Smooth horizontal scrolling
-vim.opt.sidescrolloff = 8  -- Keep 8 columns visible when scrolling horizontally
+vim.opt.sidescroll = 1 -- Smooth horizontal scrolling
+vim.opt.sidescrolloff = 8 -- Keep 8 columns visible when scrolling horizontally
 
 -- Hide end-of-buffer tildes
 vim.opt.fillchars:append({ eob = " " })
@@ -91,11 +91,11 @@ vim.api.nvim_create_autocmd("FileType", {
   group = vim.api.nvim_create_augroup("dotfiles_markdown", { clear = true }),
   pattern = "markdown",
   callback = function()
-    vim.opt_local.conceallevel = 2  -- Hide markup syntax
+    vim.opt_local.conceallevel = 2 -- Hide markup syntax
     vim.opt_local.concealcursor = "" -- Don't reveal on cursor line
-    vim.opt_local.wrap = true        -- Wrap long lines
-    vim.opt_local.linebreak = true   -- Break at word boundaries
-    vim.opt_local.spell = true       -- Enable spell check
+    vim.opt_local.wrap = true -- Wrap long lines
+    vim.opt_local.linebreak = true -- Break at word boundaries
+    vim.opt_local.spell = true -- Enable spell check
   end,
 })
 
@@ -303,39 +303,71 @@ require("lazy").setup({
         local original_notify = vim.notify
         vim.notify = function(msg, level, o)
           o = o or {}
-          if level == vim.log.levels.ERROR then o.timeout = false end
+          if level == vim.log.levels.ERROR then
+            o.timeout = false
+          end
           original_notify(msg, level, o)
         end
 
         -- Explorer keymaps
-        vim.keymap.set("n", "-", function() Snacks.explorer.open() end, { desc = "Toggle file explorer" })
-        vim.keymap.set("n", "<leader>e", function() Snacks.explorer.open() end, { desc = "Focus file explorer" })
+        vim.keymap.set("n", "-", function()
+          Snacks.explorer.open()
+        end, { desc = "Toggle file explorer" })
+        vim.keymap.set("n", "<leader>e", function()
+          Snacks.explorer.open()
+        end, { desc = "Focus file explorer" })
 
         -- Notification keymaps
-        vim.keymap.set("n", "<leader>nd", function() Snacks.notifier.hide() end, { desc = "Dismiss notifications" })
-        vim.keymap.set("n", "<leader>nh", function() Snacks.notifier.show_history() end, { desc = "Notification history" })
+        vim.keymap.set("n", "<leader>nd", function()
+          Snacks.notifier.hide()
+        end, { desc = "Dismiss notifications" })
+        vim.keymap.set("n", "<leader>nh", function()
+          Snacks.notifier.show_history()
+        end, { desc = "Notification history" })
 
         -- Picker keymaps (replaces telescope)
-        vim.keymap.set("n", "<leader>ff", function() Snacks.picker.files() end, { desc = "Find files" })
-        vim.keymap.set("n", "<leader>fg", function() Snacks.picker.grep() end, { desc = "Live grep" })
-        vim.keymap.set("n", "<leader>fb", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
-        vim.keymap.set("n", "<leader>fh", function() Snacks.picker.help() end, { desc = "Help tags" })
-        vim.keymap.set("n", "<leader>fu", function() Snacks.picker.undo() end, { desc = "Undo history" })
-        vim.keymap.set("n", "<leader>fr", function() Snacks.picker.recent() end, { desc = "Recent files" })
-        vim.keymap.set("n", "<leader>fs", function() Snacks.picker.lsp_symbols() end, { desc = "Document symbols" })
-        vim.keymap.set("n", "<leader>fd", function() Snacks.picker.diagnostics() end, { desc = "Diagnostics" })
-        vim.keymap.set("n", "<leader>fk", function() Snacks.picker.keymaps() end, { desc = "Keymaps" })
+        vim.keymap.set("n", "<leader>ff", function()
+          Snacks.picker.files()
+        end, { desc = "Find files" })
+        vim.keymap.set("n", "<leader>fg", function()
+          Snacks.picker.grep()
+        end, { desc = "Live grep" })
+        vim.keymap.set("n", "<leader>fb", function()
+          Snacks.picker.buffers()
+        end, { desc = "Find buffers" })
+        vim.keymap.set("n", "<leader>fh", function()
+          Snacks.picker.help()
+        end, { desc = "Help tags" })
+        vim.keymap.set("n", "<leader>fu", function()
+          Snacks.picker.undo()
+        end, { desc = "Undo history" })
+        vim.keymap.set("n", "<leader>fr", function()
+          Snacks.picker.recent()
+        end, { desc = "Recent files" })
+        vim.keymap.set("n", "<leader>fs", function()
+          Snacks.picker.lsp_symbols()
+        end, { desc = "Document symbols" })
+        vim.keymap.set("n", "<leader>fd", function()
+          Snacks.picker.diagnostics()
+        end, { desc = "Diagnostics" })
+        vim.keymap.set("n", "<leader>fk", function()
+          Snacks.picker.keymaps()
+        end, { desc = "Keymaps" })
 
         -- Words keymaps: jump between LSP references of the word under cursor
-        vim.keymap.set({ "n", "t" }, "]]", function() Snacks.words.jump(vim.v.count1) end, { desc = "Next reference" })
-        vim.keymap.set({ "n", "t" }, "[[", function() Snacks.words.jump(-vim.v.count1) end, { desc = "Previous reference" })
+        vim.keymap.set({ "n", "t" }, "]]", function()
+          Snacks.words.jump(vim.v.count1)
+        end, { desc = "Next reference" })
+        vim.keymap.set({ "n", "t" }, "[[", function()
+          Snacks.words.jump(-vim.v.count1)
+        end, { desc = "Previous reference" })
 
         -- Vesper highlights: notifier
         local hl = vim.api.nvim_set_hl
         local levels = {
           { "Error", "#ff8080" },
-          { "Warn",  "#ffc799" },
-          { "Info",  "#80d9c7" },
+          { "Warn", "#ffc799" },
+          { "Info", "#80d9c7" },
           { "Debug", "#505050" },
           { "Trace", "#505050" },
         }
@@ -359,12 +391,20 @@ require("lazy").setup({
         },
         condition = function(buf)
           local buftype = vim.bo[buf].buftype
-          if buftype ~= "" then return false end
-          if vim.bo[buf].readonly or not vim.bo[buf].modifiable then return false end
+          if buftype ~= "" then
+            return false
+          end
+          if vim.bo[buf].readonly or not vim.bo[buf].modifiable then
+            return false
+          end
           local bufname = vim.api.nvim_buf_get_name(buf)
-          if bufname == "" then return false end
+          if bufname == "" then
+            return false
+          end
           local ok, stats = pcall(vim.uv.fs_stat, bufname)
-          if ok and stats and stats.size > 1024 * 1024 then return false end
+          if ok and stats and stats.size > 1024 * 1024 then
+            return false
+          end
           return true
         end,
         write_all_buffers = false,
@@ -400,9 +440,27 @@ require("lazy").setup({
         ts.setup({}) -- install_dir defaults to stdpath("data") .. "/site"
 
         local ensure = {
-          "c", "cpp", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline",
-          "tsx", "typescript", "javascript", "python", "go", "rust", "java",
-          "json", "yaml", "toml", "bash", "html", "css",
+          "c",
+          "cpp",
+          "lua",
+          "vim",
+          "vimdoc",
+          "query",
+          "markdown",
+          "markdown_inline",
+          "tsx",
+          "typescript",
+          "javascript",
+          "python",
+          "go",
+          "rust",
+          "java",
+          "json",
+          "yaml",
+          "toml",
+          "bash",
+          "html",
+          "css",
         }
         local installed = {}
         for _, lang in ipairs(ts.get_installed("parsers")) do
@@ -552,9 +610,15 @@ require("lazy").setup({
             local function map(lhs, rhs, desc)
               vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, desc = desc })
             end
-            map("gd", function() Snacks.picker.lsp_definitions() end, "Go to definition")
-            map("grr", function() Snacks.picker.lsp_references() end, "References")
-            map("gri", function() Snacks.picker.lsp_implementations() end, "Implementations")
+            map("gd", function()
+              Snacks.picker.lsp_definitions()
+            end, "Go to definition")
+            map("grr", function()
+              Snacks.picker.lsp_references()
+            end, "References")
+            map("gri", function()
+              Snacks.picker.lsp_implementations()
+            end, "Implementations")
             map("<leader>rn", vim.lsp.buf.rename, "Rename")
             map("<leader>ca", vim.lsp.buf.code_action, "Code action")
             map("<leader>th", function()
@@ -645,8 +709,12 @@ require("lazy").setup({
             local map = function(mode, l, r, desc)
               vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
             end
-            map("n", "]h", function() gs.nav_hunk("next") end, "Next hunk")
-            map("n", "[h", function() gs.nav_hunk("prev") end, "Previous hunk")
+            map("n", "]h", function()
+              gs.nav_hunk("next")
+            end, "Next hunk")
+            map("n", "[h", function()
+              gs.nav_hunk("prev")
+            end, "Previous hunk")
             map("n", "<leader>gs", gs.stage_hunk, "Stage hunk")
             map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
             map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
@@ -814,17 +882,17 @@ require("lazy").setup({
         -- UFO uses foldmethod 'expr' internally
         vim.o.foldmethod = "expr"
         vim.o.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-        
+
         local ufo = require("ufo")
-        
+
         -- Custom fold text handler for beautiful inline fold preview
         local handler = function(virtText, lnum, endLnum, width, truncate)
           local newVirtText = {}
-          local suffix = ('  %d lines'):format(endLnum - lnum)
+          local suffix = ("  %d lines"):format(endLnum - lnum)
           local sufWidth = vim.fn.strdisplaywidth(suffix)
           local targetWidth = width - sufWidth
           local curWidth = 0
-          
+
           for _, chunk in ipairs(virtText) do
             local chunkText = chunk[1]
             local chunkWidth = vim.fn.strdisplaywidth(chunkText)
@@ -833,20 +901,20 @@ require("lazy").setup({
             else
               chunkText = truncate(chunkText, targetWidth - curWidth)
               local hlGroup = chunk[2]
-              table.insert(newVirtText, {chunkText, hlGroup})
+              table.insert(newVirtText, { chunkText, hlGroup })
               chunkWidth = vim.fn.strdisplaywidth(chunkText)
               if curWidth + chunkWidth < targetWidth then
-                suffix = suffix .. (' '):rep(targetWidth - curWidth - chunkWidth)
+                suffix = suffix .. (" "):rep(targetWidth - curWidth - chunkWidth)
               end
               break
             end
             curWidth = curWidth + chunkWidth
           end
-          
-          table.insert(newVirtText, {suffix, 'MoreMsg'})
+
+          table.insert(newVirtText, { suffix, "MoreMsg" })
           return newVirtText
         end
-        
+
         -- Tell UFO to use Treesitter as the provider
         ufo.setup({
           fold_virt_text_handler = handler,
@@ -868,7 +936,7 @@ require("lazy").setup({
             },
           },
         })
-        
+
         -- Folding keymaps
         vim.keymap.set("n", "zR", ufo.openAllFolds, { desc = "Open all folds" })
         vim.keymap.set("n", "zM", ufo.closeAllFolds, { desc = "Close all folds" })
@@ -891,7 +959,7 @@ require("lazy").setup({
       config = function()
         require("render-markdown").setup({
           heading = {
-            enabled = false,  -- Disable heading rendering, use native treesitter
+            enabled = false, -- Disable heading rendering, use native treesitter
           },
           code = {
             enabled = true,
@@ -1005,9 +1073,15 @@ require("lazy").setup({
         local mc = require("multicursor-nvim")
         mc.setup()
         local set = vim.keymap.set
-        set({ "n", "v" }, "<C-n>", function() mc.matchAddCursor(1) end, { desc = "Add cursor at next match" })
-        set({ "n", "v" }, "<C-p>", function() mc.matchSkipCursor(1) end, { desc = "Skip match, add next" })
-        set({ "n", "v" }, "<leader>A", function() mc.matchAllAddCursors() end, { desc = "Add cursors to all matches" })
+        set({ "n", "v" }, "<C-n>", function()
+          mc.matchAddCursor(1)
+        end, { desc = "Add cursor at next match" })
+        set({ "n", "v" }, "<C-p>", function()
+          mc.matchSkipCursor(1)
+        end, { desc = "Skip match, add next" })
+        set({ "n", "v" }, "<leader>A", function()
+          mc.matchAllAddCursors()
+        end, { desc = "Add cursors to all matches" })
         set("n", "<Esc>", function()
           if not mc.cursorsEnabled() then
             mc.enableCursors()
@@ -1058,8 +1132,22 @@ require("lazy").setup({
       event = "VeryLazy",
       opts = {},
       keys = {
-        { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
-        { "S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
+        {
+          "s",
+          mode = { "n", "x", "o" },
+          function()
+            require("flash").jump()
+          end,
+          desc = "Flash",
+        },
+        {
+          "S",
+          mode = { "n", "x", "o" },
+          function()
+            require("flash").treesitter()
+          end,
+          desc = "Flash Treesitter",
+        },
       },
     },
 
@@ -1078,8 +1166,16 @@ require("lazy").setup({
         }
         -- eslint_d only makes sense inside a project that configures eslint
         local eslint_markers = {
-          "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs", "eslint.config.ts",
-          ".eslintrc", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json", ".eslintrc.yml", ".eslintrc.yaml",
+          "eslint.config.js",
+          "eslint.config.mjs",
+          "eslint.config.cjs",
+          "eslint.config.ts",
+          ".eslintrc",
+          ".eslintrc.js",
+          ".eslintrc.cjs",
+          ".eslintrc.json",
+          ".eslintrc.yml",
+          ".eslintrc.yaml",
         }
         vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost", "InsertLeave" }, {
           group = vim.api.nvim_create_augroup("dotfiles_lint", { clear = true }),
@@ -1087,8 +1183,12 @@ require("lazy").setup({
             -- Only run linters that exist on PATH and apply to this project
             local linters = lint.linters_by_ft[vim.bo[ev.buf].filetype] or {}
             local available = vim.tbl_filter(function(name)
-              if vim.fn.executable(name) ~= 1 then return false end
-              if name == "eslint_d" and not vim.fs.root(ev.buf, eslint_markers) then return false end
+              if vim.fn.executable(name) ~= 1 then
+                return false
+              end
+              if name == "eslint_d" and not vim.fs.root(ev.buf, eslint_markers) then
+                return false
+              end
               return true
             end, linters)
             if #available > 0 then
@@ -1110,12 +1210,26 @@ require("lazy").setup({
           "<leader>ft",
           function()
             -- todo-comments ships a snacks picker source but does not register it
-            Snacks.picker.pick(vim.tbl_deep_extend("force", require("todo-comments.snacks").source, { title = "TODOs" }))
+            Snacks.picker.pick(
+              vim.tbl_deep_extend("force", require("todo-comments.snacks").source, { title = "TODOs" })
+            )
           end,
           desc = "Find TODOs",
         },
-        { "]t", function() require("todo-comments").jump_next() end, desc = "Next TODO" },
-        { "[t", function() require("todo-comments").jump_prev() end, desc = "Previous TODO" },
+        {
+          "]t",
+          function()
+            require("todo-comments").jump_next()
+          end,
+          desc = "Next TODO",
+        },
+        {
+          "[t",
+          function()
+            require("todo-comments").jump_prev()
+          end,
+          desc = "Previous TODO",
+        },
       },
     },
 
@@ -1207,7 +1321,6 @@ require("lazy").setup({
         require("rainbow_csv").setup()
       end,
     },
-
   },
   install = { colorscheme = { "vesper" } },
   checker = { enabled = false },
