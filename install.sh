@@ -152,6 +152,7 @@ FEATURES=(
     "Claude Code"
     "Nerd Font"
     "Neovim config"
+    "Superfile file manager"
     "tmux + TPM"
     "Zsh + Oh My Zsh"
     "GitHub SSH + CLI"
@@ -269,6 +270,21 @@ if is_selected "Neovim config"; then
     log_info "Setting up Neovim..."
     mkdir -p "$HOME/.config"
     create_symlink "$DOTFILES_DIR/nvim" "$HOME/.config/nvim"
+fi
+
+# Superfile (TUI file manager: app + config + Vesper theme)
+if is_selected "Superfile file manager"; then
+    log_info "Setting up Superfile..."
+    brew_install "" "superfile"
+    if [[ "$OS" == "macos" ]]; then
+        SPF_DIR="$HOME/Library/Application Support/superfile"
+    else
+        SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
+    fi
+    mkdir -p "$SPF_DIR/theme"
+    create_symlink "$DOTFILES_DIR/superfile/config.toml" "$SPF_DIR/config.toml"
+    create_symlink "$DOTFILES_DIR/superfile/hotkeys.toml" "$SPF_DIR/hotkeys.toml"
+    create_symlink "$DOTFILES_DIR/superfile/theme/vesper.toml" "$SPF_DIR/theme/vesper.toml"
 fi
 
 # tmux + TPM

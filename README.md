@@ -8,6 +8,7 @@ Personal development environment for macOS and Linux.
 - **tmux** - Window/pane management, vi-style copy mode
 - **Zsh** - Shell with Oh My Zsh, Powerlevel10k, and vi mode
 - **Neovim** - Single-file config (`init.lua`) with lazy.nvim
+- **Superfile** - TUI file manager (`spf`) with vim-style hotkeys, cd-on-quit, bat previews, zoxide
 
 All tools share the **Vesper** color scheme (`#101010` bg, `#ffffff` fg, `#ffc799` accent).
 
@@ -38,6 +39,7 @@ Selectable components (all pre-selected by default):
 | Claude Code | Installs via the official native installer (self-updating) |
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
 | Neovim config | Symlinks `nvim/` → `~/.config/nvim` |
+| Superfile file manager | Installs `superfile` (brew) + symlinks config, hotkeys, and Vesper theme |
 | tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins |
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
 | GitHub SSH + CLI | Generates an ed25519 key, writes `~/.ssh/config`, installs `gh` |
@@ -88,6 +90,11 @@ Covers script linting, the `lib/` helpers, and `install.sh`'s symlink/selection 
 ├── nvim/
 │   ├── init.lua
 │   └── lazy-lock.json
+├── superfile/
+│   ├── config.toml
+│   ├── hotkeys.toml
+│   └── theme/
+│       └── vesper.toml
 ├── git/
 │   └── aliases
 ├── lib/

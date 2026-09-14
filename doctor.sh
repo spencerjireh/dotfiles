@@ -55,9 +55,14 @@ echo "========================================"
 log_info "Checking symlinks..."
 if [[ "$OS" == "macos" ]]; then
     check_link "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "$DOTFILES_DIR/ghostty/config"
+    SPF_DIR="$HOME/Library/Application Support/superfile"
 else
     check_link "$HOME/.config/ghostty/config" "$DOTFILES_DIR/ghostty/config"
+    SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
 fi
+check_link "$SPF_DIR/config.toml"      "$DOTFILES_DIR/superfile/config.toml"
+check_link "$SPF_DIR/hotkeys.toml"     "$DOTFILES_DIR/superfile/hotkeys.toml"
+check_link "$SPF_DIR/theme/vesper.toml" "$DOTFILES_DIR/superfile/theme/vesper.toml"
 check_link "$HOME/.zshrc"              "$DOTFILES_DIR/zsh/.zshrc"
 check_link "$HOME/.p10k.zsh"           "$DOTFILES_DIR/zsh/.p10k.zsh"
 check_link "$HOME/.config/nvim"        "$DOTFILES_DIR/nvim"
@@ -66,7 +71,7 @@ check_link "$HOME/.gitaliases"         "$DOTFILES_DIR/git/aliases"
 
 echo ""
 log_info "Checking tools..."
-for t in nvim tmux fzf fd eza bat rg delta zoxide git; do
+for t in nvim tmux fzf fd eza bat rg delta zoxide git spf; do
     check_tool "$t"
 done
 check_tool gh "GitHub SSH + CLI feature"

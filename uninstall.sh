@@ -51,6 +51,15 @@ log_info "Removing symlinks..."
 remove_symlink "$HOME/Library/Application Support/com.mitchellh.ghostty/config" \
     "$DOTFILES_DIR/ghostty/config"
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    SPF_DIR="$HOME/Library/Application Support/superfile"
+else
+    SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
+fi
+remove_symlink "$SPF_DIR/config.toml" "$DOTFILES_DIR/superfile/config.toml"
+remove_symlink "$SPF_DIR/hotkeys.toml" "$DOTFILES_DIR/superfile/hotkeys.toml"
+remove_symlink "$SPF_DIR/theme/vesper.toml" "$DOTFILES_DIR/superfile/theme/vesper.toml"
+
 remove_symlink "$HOME/.zshrc" "$DOTFILES_DIR/zsh/.zshrc"
 remove_symlink "$HOME/.p10k.zsh" "$DOTFILES_DIR/zsh/.p10k.zsh"
 

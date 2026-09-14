@@ -1,0 +1,75 @@
+##############################################
+#                                            #
+#                Vesper Theme                #
+#                                            #
+##############################################
+
+# Peppermint & orange flavored dark theme, matching ghostty/config.
+# Palette: bg #101010, fg #ffffff, orange #ffc799, peach #ffcfa8,
+# mint #99ffe4, teal #80d9c7, red #ff8080, grays #505050/#8b8b8b/#a0a0a0.
+
+###############################################################################
+#                           Code Syntax Highlighting                          #
+###############################################################################
+
+# Find one you like at: https://github.com/alecthomas/chroma/blob/master/styles.
+
+code_syntax_highlight = "github-dark"
+
+###############################################################################
+#                                 Base Colors                                 #
+###############################################################################
+
+#-- Full Screen
+full_screen_fg = "#ffffff"
+full_screen_bg = "#101010"
+
+#-- Gradient
+# Note: This currently only supports two colors.
+gradient_color = ["#ffc799", "#99ffe4"]
+
+#-- File Panel
+file_panel_fg = "#ffffff"
+file_panel_bg = "#101010"
+file_panel_border = "#505050"
+file_panel_border_active = "#ffc799"
+file_panel_top_directory_icon = "#99ffe4"
+file_panel_top_path = "#ffc799"
+file_panel_item_selected_fg = "#ffc799"
+file_panel_item_selected_bg = "#2a2a2a"
+
+#-- Footer
+footer_fg = "#a0a0a0"
+footer_bg = "#101010"
+footer_border = "#505050"
+footer_border_active = "#99ffe4"
+
+#-- Sidebar
+sidebar_fg = "#a0a0a0"
+sidebar_bg = "#101010"
+sidebar_title = "#ffc799"
+sidebar_border = "#101010"
+sidebar_border_active = "#ffcfa8"
+sidebar_item_selected_fg = "#ffc799"
+sidebar_item_selected_bg = "#101010"
+sidebar_divider = "#505050"
+
+#-- Modals
+modal_fg = "#ffffff"
+modal_bg = "#101010"
+modal_border_active = "#8b8b8b"
+modal_cancel_fg = "#101010"
+modal_cancel_bg = "#ff8080"
+modal_confirm_fg = "#101010"
+modal_confirm_bg = "#99ffe4"
+
+#-- Help Menu
+help_menu_hotkey = "#99ffe4"
+help_menu_title = "#ffc799"
+
+#-- Special
+cursor = "#ffc799"
+correct = "#99ffe4"
+error = "#ff8080"
+hint = "#80d9c7"
+cancel = "#ff8080"

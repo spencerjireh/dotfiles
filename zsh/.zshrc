@@ -465,6 +465,22 @@ mkcd() {
   mkdir -p "$1" && cd "$1"
 }
 
+# Superfile with cd-on-quit: the shell can't inherit a cwd from a child
+# process, so superfile writes its last directory to a file we source here.
+spf() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    export SPF_LAST_DIR="$HOME/Library/Application Support/superfile/lastdir"
+  else
+    export SPF_LAST_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/superfile/lastdir"
+  fi
+  command spf "$@"
+  [ ! -f "$SPF_LAST_DIR" ] || {
+    . "$SPF_LAST_DIR"
+    # command rm: bypass the rm-to-trash function above for this state file
+    command rm -f -- "$SPF_LAST_DIR" >/dev/null
+  }
+}
+
 # Quick backup of a file
 backup() {
   cp "$1" "$1.backup-$(date +%Y%m%d-%H%M%S)"
