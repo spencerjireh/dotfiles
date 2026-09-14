@@ -37,7 +37,9 @@ This guide covers the plugins, settings, and keybindings in this Neovim configur
 - **Swap files**: Disabled
 - **Mouse support**: Enabled
 - **True color**: Enabled
-- **Word wrap**: Off by default (`<Space>tw` toggles); on for markdown
+- **Word wrap**: Off by default (`<Space>tw` toggles); on for markdown, with `breakindent` so wrapped lines keep their indent
+- **Splits**: New vertical splits open to the right, horizontal splits below; 8 lines of context are kept above and below the cursor (`scrolloff`)
+- **Stock plugins**: netrw, gzip, tar, zip, tohtml and tutor are not loaded. The snacks explorer opens directories; `gx` (open URL under cursor) is a core mapping
 - **External changes**: Files changed on disk reload silently (`autoread` + `checktime` on focus and buffer enter). A notification appears only when the buffer also has unsaved edits; use `<Space>fu` (undo history) to reconcile.
 - **Remote-plugin providers**: Python, Perl, Ruby and Node providers are disabled. Nothing in this config uses them.
 
@@ -95,6 +97,10 @@ Inside the explorer:
 - `<Space>fb` - Find buffers
 - `<Space>fh` - Help tags
 - `<Space>fu` - Undo history (`Enter` restores that state, `Ctrl+y` yanks added lines, `Ctrl+Shift+y` yanks removed lines)
+- `<Space>fr` - Recent files
+- `<Space>fs` - Document symbols (LSP)
+- `<Space>fd` - Diagnostics
+- `<Space>fk` - Keymaps
 - `<Space>ft` - Find TODO/FIXME/NOTE comments (todo-comments source)
 
 Inside a picker:
@@ -107,7 +113,7 @@ Inside a picker:
 - `?` - Show all picker keys
 - `Esc` - Close
 
-Other pickers are available with `:lua Snacks.picker()` (a picker of pickers), for example `git_status`, `diagnostics`, `lsp_symbols`, `zoxide`.
+LSP navigation (`gd`, `grr`, `gri`) also opens pickers, see the LSP section. Other pickers are available with `:lua Snacks.picker()` (a picker of pickers), for example `git_status`, `zoxide`, `lsp_workspace_symbols`.
 
 **Words** (highlights other references of the symbol under the cursor via LSP):
 - `]]` - Jump to next reference
@@ -188,21 +194,24 @@ Missing parsers install asynchronously on the first start; reopen affected buffe
 
 Provides IDE-like features: autocomplete, go-to-definition, hover docs, rename, code actions, diagnostics.
 
-**Servers installed by Mason**: `lua_ls`, `pyright`, `ts_ls`, `gopls`, `rust_analyzer`, `jdtls`, `clangd`.
+**Servers installed by Mason**: `lua_ls`, `pyright`, `tsgo` (TypeScript 7 native server), `gopls`, `rust_analyzer`, `jdtls`, `clangd`. Mason needs `node`, `go` and `java` on `PATH` to install them; the Brewfile provides all three.
 
-mason-lspconfig enables every installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities for all of them; only `lua_ls` has extra settings.
+**ruff** also runs as a language server for Python. Its binary comes from the Brewfile, not Mason, so `init.lua` enables it explicitly. It supplies the fix-all and organize-imports code actions under `<Space>ca`; its hover is disabled so `K` shows pyright only.
+
+mason-lspconfig enables every Mason-installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities (from blink.cmp) for all of them; only `lua_ls` has extra settings.
 
 **Keybindings** (buffer-local, set when a server attaches):
-- `gd` - Go to definition
+- `gd` - Go to definition (snacks picker with preview; jumps directly when there is one result)
+- `grr` - References (snacks picker)
+- `gri` - Implementations (snacks picker)
 - `K` - Peek fold or show LSP hover documentation (context-aware)
 - `<Space>rn` - Rename symbol
 - `<Space>ca` - Code actions
+- `<Space>th` - Toggle inlay hints for this buffer
 
 **Neovim built-in LSP keys** (also available):
 - `grn` - Rename
 - `gra` - Code action
-- `grr` - References
-- `gri` - Implementation
 - `grt` - Type definition
 - `gO` - Document symbols
 - `Ctrl+s` (insert mode) - Signature help
@@ -211,20 +220,22 @@ mason-lspconfig enables every installed server automatically. `vim.lsp.config("*
 
 ---
 
-### 7. nvim-cmp (Autocompletion)
-**Plugin**: `hrsh7th/nvim-cmp`
+### 7. blink.cmp (Autocompletion)
+**Plugin**: `saghen/blink.cmp`
+
+One plugin for completion, with a prebuilt Rust fuzzy matcher (downloaded on first install; `:Lazy build blink.cmp` rebuilds it, or set `build = "cargo build --release"` if the download fails).
 
 **Completion Sources**:
 1. LSP (context-aware completions)
-2. LuaSnip (code snippets)
-3. Buffer (words from open files)
-4. Path (file system paths)
+2. Path (file system paths)
+3. Snippets (LSP-provided, expanded with the built-in `vim.snippet`)
+4. Buffer (words from open files)
 
 **Keybindings** (in insert mode):
 - `Ctrl+Space` - Trigger completion manually
-- `Tab` - Select next item / expand snippet
-- `Shift+Tab` - Select previous item / jump back in snippet
-- `Enter` - Confirm selection
+- `Tab` - Select next item / jump to next snippet placeholder
+- `Shift+Tab` - Select previous item / jump to previous placeholder
+- `Enter` - Confirm selection (first item is preselected)
 - `Ctrl+e` - Close completion menu
 - `Ctrl+f` - Scroll docs down
 - `Ctrl+b` - Scroll docs up
@@ -254,7 +265,7 @@ Formatting runs only when you press `<Space>w`: format the buffer, then write it
 
 Runs on read, write, and leaving insert mode. Only linters found on `PATH` are run.
 - Python: `ruff`
-- JavaScript / TypeScript / JSX / TSX: `eslint_d`
+- JavaScript / TypeScript / JSX / TSX: `eslint_d`, only inside a project that has an eslint config (`eslint.config.*` or `.eslintrc*`)
 
 ---
 
@@ -378,6 +389,8 @@ Shows available keybindings in a popup as you type.
 - `<Space>?` - Show all keymaps
 - `<Space><Space>` - Show leader keymaps
 - Press any key prefix (like `<Space>`, `z`, `g`, `]`) and wait 500ms to see available completions
+
+Every keymap in `init.lua` carries a `desc`, which is what which-key shows; the which-key config itself only defines the groups below and a few built-in keys.
 
 Groups: `<Space>f` Find, `<Space>x` Diagnostics, `<Space>c` Code/LSP, `<Space>g` Git, `<Space>o` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle, `<Space>m` Markdown, `<Space>i` Images/Files.
 
@@ -588,16 +601,17 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `:split` or `:sp` - Horizontal split
 - `:vsplit` or `:vs` - Vertical split
 - `Ctrl+h/j/k/l` - Navigate splits and tmux panes
-- `<Space>h/j/k/l` - Navigate splits
 - `Ctrl+w =` - Equal size splits
 - `Ctrl+w q` - Close current split
 
 ### LSP (configured in this setup)
-- `gd` - Go to definition
+- `gd` - Go to definition (picker)
+- `grr` / `gri` - References / implementations (picker)
 - `K` - Peek fold or LSP hover documentation
 - `<Space>rn` - Rename symbol
-- `<Space>ca` - Code actions
-- `grr` / `gri` / `grt` / `gO` - References / implementation / type definition / document symbols (built-in)
+- `<Space>ca` - Code actions (includes ruff fixes in Python)
+- `<Space>th` - Toggle inlay hints
+- `grt` / `gO` - Type definition / document symbols (built-in)
 
 ### Find (snacks picker)
 - `<Space>ff` - Find files
@@ -605,6 +619,10 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>fb` - Find buffers
 - `<Space>fh` - Help tags
 - `<Space>fu` - Undo history
+- `<Space>fr` - Recent files
+- `<Space>fs` - Document symbols
+- `<Space>fd` - Diagnostics
+- `<Space>fk` - Keymaps
 - `<Space>ft` - Find TODO comments
 
 ### File Explorer (snacks)
@@ -622,8 +640,8 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 
 ### Completion (Insert mode)
 - `Ctrl+Space` - Trigger completion
-- `Tab` - Next item / expand snippet
-- `Shift+Tab` - Previous item
+- `Tab` - Next item / next snippet placeholder
+- `Shift+Tab` - Previous item / previous placeholder
 - `Enter` - Confirm
 - `Ctrl+e` - Close menu
 
@@ -668,7 +686,8 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>tr` - Toggle render markdown (in-buffer)
 
 ### Images and External Files
-- `<Space>io` - Open file externally (PDFs, Office docs)
+- `<Space>io` - Open file externally (PDFs, Office docs; uses `open` on macOS, `xdg-open` on Linux)
+- `gx` - Open the URL or path under the cursor in the system handler
 
 ### Visual Mode
 - `*` - Search for selected text
@@ -776,12 +795,17 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 1. Ensure LSP is running (`:checkhealth vim.lsp`)
 2. Check if you're in insert mode
 3. Try `Ctrl+Space` to trigger manually
-4. Verify cmp sources: `:lua print(vim.inspect(require('cmp').get_config().sources))`
+4. Check blink loaded and its fuzzy binary is present: `:checkhealth blink.cmp`
 
 ### No syntax highlighting or text objects for a language
 1. Check the parser is installed: `:lua print(vim.inspect(require('nvim-treesitter').get_installed('parsers')))`
 2. Install it: `:TSInstall <lang>`, then reopen the buffer with `:e`
 3. If the install fails, check `:TSLog` and that `tree-sitter` is on `PATH` (`dotdoctor`)
+
+### JavaScript/TypeScript has no LSP or shows an initialize error
+1. `tsgo` must be installed: `:Mason`, or `:MasonInstall tsgo`
+2. It needs `node` on `PATH` (`dotdoctor`); the Brewfile installs it
+3. The older `ts_ls` server is not used: its Mason bundle pulls TypeScript 7, which no longer ships the JS `tsserver` it needs
 
 ### Formatting does nothing on `<Space>w`
 1. `:ConformInfo` shows the formatters for the buffer and whether they are available
@@ -832,15 +856,18 @@ Add the server name to `ensure_installed` in the LSP section. Settings go in a `
 | `<Space>fg` | Search in files |
 | `<Space>fb` | Find buffers |
 | `<Space>fu` | Undo history |
+| `<Space>fr` | Recent files |
+| `<Space>fd` | Diagnostics |
 | `<Space>ft` | Find TODOs |
 | `-` | Toggle file explorer |
 | `<Space>e` | Focus file explorer |
 | `<Space>xx` | Toggle diagnostics panel |
-| `gd` | Go to definition |
+| `gd` | Go to definition (picker) |
 | `K` | Peek fold or hover docs |
 | `<Space>rn` | Rename |
 | `<Space>ca` | Code actions |
-| `grr` | References |
+| `<Space>th` | Toggle inlay hints |
+| `grr` / `gri` | References / implementations (picker) |
 | `]]` / `[[` | Next / previous reference |
 | `gcc` | Toggle comment |
 | `s` | Flash jump |
@@ -849,7 +876,6 @@ Add the server name to `ensure_installed` in the LSP section. Settings go in a `
 | `zM` | Close all folds |
 | `zR` | Open all folds |
 | `Ctrl+h/j/k/l` | Split and tmux pane navigation |
-| `<Space>h/j/k/l` | Split navigation |
 | `<Space>gs` / `gr` / `gp` / `gb` | Stage / reset / preview / blame hunk |
 | `<Space>oa` | Add Harpoon mark |
 | `<Space>oo` | Harpoon menu |

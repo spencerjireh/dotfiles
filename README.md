@@ -16,7 +16,7 @@ All tools share the **Vesper** color scheme (`#101010` bg, `#ffffff` fg, `#ffc79
 
 ### Prerequisites
 
-None — the installer bootstraps its own foundation. On a fresh machine it installs **Homebrew** (may prompt for your password once), **zsh**, **Oh My Zsh**, and **gum** before the TUI appears. `git` and `curl` (preinstalled on macOS / most Linux) are all you need to start.
+None — the installer bootstraps its own foundation. On a fresh machine it installs **Homebrew** (may prompt for your password once) and **gum** before the TUI appears; **zsh** and **Oh My Zsh** are installed with the Zsh component. `git` and `curl` (preinstalled on macOS / most Linux) are all you need to start.
 
 ### Setup
 
@@ -34,15 +34,15 @@ Selectable components (all pre-selected by default):
 
 | Component | What it does |
 |-----------|--------------|
-| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rust, trash, plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
-| Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` |
+| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rust, trash, language runtimes for the LSP servers (node, go, openjdk), plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
+| Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` (opens maximized, Option acts as Alt, Cmd keys mapped to tmux) |
 | Claude Code | Installs via the official native installer (self-updating) |
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
 | Neovim config | Symlinks `nvim/` → `~/.config/nvim` |
 | Superfile file manager | Installs `superfile` (brew) + symlinks config, hotkeys, and Vesper theme |
 | tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (resurrect, thumbs; headless, no tmux session needed) |
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
-| GitHub SSH + CLI | Generates an ed25519 key, writes `~/.ssh/config`, installs `gh` |
+| GitHub SSH + CLI | Generates an ed25519 key, writes a `~/.ssh/config` host block (agent + keychain), installs `gh` |
 | Git global config | name/email prompts; everything else (delta pager, pull.rebase, autoSetupRemote, aliases) is tracked in `git/config` and included via `include.path`; `git/ignore` becomes the global ignore |
 | macOS defaults | Fastest key repeat + repeat-on-hold, Finder, Dock, trackpad, screenshots (macOS only) |
 
@@ -55,8 +55,8 @@ Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); cas
 Two helpers are symlinked onto your PATH (`~/.local/bin`) during install:
 
 ```bash
-dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins, update Claude
-dotdoctor   # health check: symlinks, CLI tools, formatters, TPM plugin dirs
+dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins + mason registry, update Claude
+dotdoctor   # health check: symlinks, CLI tools, runtimes, formatters, OMZ plugins, LSP servers, TPM plugin dirs
 ```
 
 ### Machine-specific config
@@ -69,7 +69,7 @@ Anything machine- or work-specific (per-machine PATHs, tool installers, private 
 ./tests/run.sh   # dependency-free; runs in a sandbox, installs nothing
 ```
 
-Covers script linting, the `lib/` helpers, and `install.sh`'s symlink/selection logic. Runs in CI (GitHub Actions) on every push.
+Covers script linting, the `lib/` helpers, `install.sh`'s symlink/selection logic, stylua formatting of `init.lua`, and booting `tmux.conf` on an isolated server. Runs in CI (GitHub Actions) on every push.
 
 ### Uninstallation
 
@@ -89,7 +89,8 @@ Covers script linting, the `lib/` helpers, and `install.sh`'s symlink/selection 
 │   └── .p10k.zsh
 ├── nvim/
 │   ├── init.lua
-│   └── lazy-lock.json
+│   ├── lazy-lock.json
+│   └── .stylua.toml
 ├── superfile/
 │   ├── config.toml
 │   ├── hotkeys.toml
