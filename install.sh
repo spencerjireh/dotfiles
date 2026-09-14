@@ -6,6 +6,7 @@ DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$DOTFILES_DIR/lib/log.sh"
 source "$DOTFILES_DIR/lib/tui.sh"
+source "$DOTFILES_DIR/lib/tmux.sh"
 
 create_symlink() {
     local src="$1"
@@ -300,7 +301,7 @@ if is_selected "tmux + TPM"; then
         git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
         log_info "Installed TPM"
     fi
-    "$HOME/.tmux/plugins/tpm/bin/install_plugins" || log_warn "TPM plugin install failed (is tmux running?)"
+    tpm_run install_plugins || log_warn "TPM plugin install failed"
 fi
 
 # Zsh + Oh My Zsh plugins/theme

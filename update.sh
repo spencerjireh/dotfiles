@@ -15,6 +15,7 @@ done
 DOTFILES_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 
 source "$DOTFILES_DIR/lib/log.sh"
+source "$DOTFILES_DIR/lib/tmux.sh"
 
 echo ""
 echo "Updating dotfiles environment"
@@ -33,10 +34,11 @@ if command -v brew &>/dev/null; then
     brew cleanup
 fi
 
-# tmux plugins (TPM)
-if [ -x "$HOME/.tmux/plugins/tpm/bin/update_plugins" ]; then
-    log_info "Updating tmux plugins..."
-    "$HOME/.tmux/plugins/tpm/bin/update_plugins" all || log_warn "TPM update failed (is tmux running?)"
+# tmux plugins (TPM): install anything new in tmux.conf, then update all
+if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+    log_info "Installing/updating tmux plugins..."
+    tpm_run install_plugins || log_warn "TPM plugin install failed"
+    tpm_run update_plugins all || log_warn "TPM plugin update failed"
 fi
 
 # Oh My Zsh custom plugins + theme

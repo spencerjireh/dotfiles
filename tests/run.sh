@@ -42,12 +42,12 @@ section() { echo ""; echo "── $1 ──"; }
 
 # ---------------------------------------------------------------------------
 section "Lint: bash -n on all scripts"
-for f in install.sh uninstall.sh update.sh doctor.sh lib/log.sh lib/tui.sh tests/run.sh; do
+for f in install.sh uninstall.sh update.sh doctor.sh lib/log.sh lib/tui.sh lib/tmux.sh tests/run.sh; do
     if bash -n "$DOTFILES_DIR/$f" 2>/dev/null; then pass "$f parses"
     else fail "$f parses"; fi
 done
 if command -v shellcheck >/dev/null 2>&1; then
-    if shellcheck -S error "$DOTFILES_DIR/install.sh" "$DOTFILES_DIR/lib/tui.sh" \
+    if shellcheck -S error "$DOTFILES_DIR/install.sh" "$DOTFILES_DIR/lib/tui.sh" "$DOTFILES_DIR/lib/tmux.sh" \
         "$DOTFILES_DIR/uninstall.sh" "$DOTFILES_DIR/update.sh" "$DOTFILES_DIR/doctor.sh" >/dev/null 2>&1
     then pass "shellcheck (no errors)"; else fail "shellcheck (no errors)"; fi
 else

@@ -48,6 +48,15 @@ check_tool() { # cmd [note]
     fi
 }
 
+check_dir() { # dir [note]
+    if [ -d "$1" ]; then
+        log_info "dir ok: ${1/#$HOME/~}"
+    else
+        log_warn "missing dir: ${1/#$HOME/~}${2:+ ($2)}"
+        ISSUES=$((ISSUES + 1))
+    fi
+}
+
 echo ""
 echo "Dotfiles doctor ($OS)"
 echo "========================================"
@@ -76,6 +85,12 @@ for t in nvim tmux fzf fd eza bat rg delta zoxide git spf; do
 done
 check_tool gh "GitHub SSH + CLI feature"
 check_tool claude "Claude Code feature"
+
+echo ""
+log_info "Checking tmux plugins (TPM)..."
+for p in tpm tmux-resurrect tmux-thumbs tmux-prefix-highlight tmux-online-status; do
+    check_dir "$HOME/.tmux/plugins/$p" "run ./install.sh (tmux + TPM) or dotup"
+done
 
 echo "========================================"
 if [ "$ISSUES" -eq 0 ]; then
