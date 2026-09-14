@@ -54,7 +54,7 @@ done
 # Neovim plugins (headless lazy.nvim sync)
 if command -v nvim &>/dev/null; then
     log_info "Syncing Neovim plugins..."
-    nvim --headless "+Lazy! sync" +qa 2>/dev/null || log_warn "nvim plugin sync skipped"
+    NVIM_TS_SYNC=1 nvim --headless "+Lazy! sync" +qa 2>/dev/null || log_warn "nvim plugin sync skipped"
 fi
 
 # Claude Code self-update

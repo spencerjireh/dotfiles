@@ -8,6 +8,7 @@
 
 # --- Core CLI tools ---
 brew "neovim"
+brew "tree-sitter-cli" # required by nvim-treesitter (main) to compile parsers
 brew "tmux"
 brew "fzf"
 brew "fd"

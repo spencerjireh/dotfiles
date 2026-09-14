@@ -370,78 +370,99 @@ require("lazy").setup({
       end,
     },
 
-    -- Treesitter
+    -- Treesitter (main branch: parser/query installer; highlight + indent wired per buffer)
     {
       "nvim-treesitter/nvim-treesitter",
+      branch = "main",
+      lazy = false,
       build = ":TSUpdate",
-      dependencies = {
-        "nvim-treesitter/nvim-treesitter-textobjects",
-      },
+      config = function()
+        local ts = require("nvim-treesitter")
+        ts.setup({}) -- install_dir defaults to stdpath("data") .. "/site"
+
+        local ensure = {
+          "c", "cpp", "lua", "vim", "vimdoc", "query", "markdown", "markdown_inline",
+          "tsx", "typescript", "javascript", "python", "go", "rust", "java",
+          "json", "yaml", "toml", "bash", "html", "css",
+        }
+        local installed = {}
+        for _, lang in ipairs(ts.get_installed("parsers")) do
+          installed[lang] = true
+        end
+        local missing = vim.tbl_filter(function(lang)
+          return not installed[lang]
+        end, ensure)
+        if #missing > 0 then
+          local task = ts.install(missing, { summary = true }) -- async
+          if vim.env.NVIM_TS_SYNC then
+            task:wait(300000) -- bootstrap / dotup: block up to 5 min
+          else
+            task:await(function()
+              vim.schedule(function()
+                vim.notify(
+                  "Treesitter: installed " .. table.concat(missing, ", ") .. " (reopen buffers with :e)",
+                  vim.log.levels.INFO
+                )
+              end)
+            end)
+          end
+        end
+
+        -- Highlight + indent for any filetype that has a parser. Folds are owned by nvim-ufo.
+        vim.api.nvim_create_autocmd("FileType", {
+          group = vim.api.nvim_create_augroup("dotfiles_treesitter", { clear = true }),
+          callback = function(ev)
+            local lang = vim.treesitter.language.get_lang(ev.match) or ev.match
+            if not vim.treesitter.language.add(lang) then
+              return -- no parser for this filetype: silent no-op
+            end
+            pcall(vim.treesitter.start, ev.buf, lang)
+            vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end,
+        })
+      end,
+    },
+
+    -- Treesitter text objects (main branch): move + swap only; selection is handled by mini.ai
+    {
+      "nvim-treesitter/nvim-treesitter-textobjects",
+      branch = "main",
+      event = "VeryLazy",
+      init = function()
+        vim.g.no_plugin_maps = true -- disable built-in ftplugin maps that clash with ]] [[ etc.
+      end,
       opts = {
-        ensure_installed = {
-          "c",
-          "cpp",
-          "lua",
-          "vim",
-          "vimdoc",
-          "query",
-          "markdown",
-          "markdown_inline",
-          "tsx",
-          "typescript",
-          "javascript",
-          "python",
-          "go",
-          "rust",
-          "java",
-          "json",
-          "yaml",
-          "toml",
-          "bash",
-          "html",
-          "css",
-        },
-        auto_install = false,
-        highlight = { enable = true },
-        indent = { enable = true },
-        textobjects = {
-          select = {
-            enable = true,
-            lookahead = true,
-            keymaps = {
-              ["af"] = "@function.outer",
-              ["if"] = "@function.inner",
-              ["ac"] = "@class.outer",
-              ["ic"] = "@class.inner",
-              ["aa"] = "@parameter.outer",
-              ["ia"] = "@parameter.inner",
-              ["ai"] = "@conditional.outer",
-              ["ii"] = "@conditional.inner",
-            },
-          },
-          move = {
-            enable = true,
-            set_jumps = true,
-            goto_next_start = {
-              ["]f"] = "@function.outer",
-              ["]c"] = "@class.outer",
-              ["]a"] = "@parameter.inner",
-              ["]l"] = "@loop.outer",
-            },
-            goto_previous_start = {
-              ["[f"] = "@function.outer",
-              ["[c"] = "@class.outer",
-              ["[a"] = "@parameter.inner",
-              ["[l"] = "@loop.outer",
-            },
-          },
-          swap = {
-            enable = true,
-            swap_next = { ["]s"] = "@parameter.inner" },
-            swap_previous = { ["[s"] = "@parameter.inner" },
-          },
-        },
+        select = { lookahead = true },
+        move = { set_jumps = true },
       },
+      config = function(_, opts)
+        require("nvim-treesitter-textobjects").setup(opts)
+        local move = require("nvim-treesitter-textobjects.move")
+        local swap = require("nvim-treesitter-textobjects.swap")
+
+        local moves = {
+          { "]f", move.goto_next_start, "@function.outer", "Next function" },
+          { "[f", move.goto_previous_start, "@function.outer", "Previous function" },
+          { "]c", move.goto_next_start, "@class.outer", "Next class" },
+          { "[c", move.goto_previous_start, "@class.outer", "Previous class" },
+          { "]a", move.goto_next_start, "@parameter.inner", "Next argument" },
+          { "[a", move.goto_previous_start, "@parameter.inner", "Previous argument" },
+          { "]l", move.goto_next_start, "@loop.outer", "Next loop" },
+          { "[l", move.goto_previous_start, "@loop.outer", "Previous loop" },
+        }
+        for _, m in ipairs(moves) do
+          vim.keymap.set({ "n", "x", "o" }, m[1], function()
+            m[2](m[3], "textobjects")
+          end, { desc = m[4] })
+        end
+
+        vim.keymap.set("n", "]s", function()
+          swap.swap_next("@parameter.inner")
+        end, { desc = "Swap parameter next" })
+        vim.keymap.set("n", "[s", function()
+          swap.swap_previous("@parameter.inner")
+        end, { desc = "Swap parameter prev" })
+      end,
     },
 
     -- LSP
@@ -1081,13 +1102,23 @@ require("lazy").setup({
       opts = {},
     },
 
-    -- mini.ai (enhanced text objects with seeking)
+    -- mini.ai (a/i text objects; treesitter-backed f/c/a/i via textobjects.scm queries)
     {
       "echasnovski/mini.ai",
       event = "VeryLazy",
-      opts = {
-        n_lines = 500,
-      },
+      dependencies = { "nvim-treesitter/nvim-treesitter-textobjects" }, -- provides queries/*/textobjects.scm
+      opts = function()
+        local ai = require("mini.ai")
+        return {
+          n_lines = 500,
+          custom_textobjects = {
+            f = ai.gen_spec.treesitter({ a = "@function.outer", i = "@function.inner" }),
+            c = ai.gen_spec.treesitter({ a = "@class.outer", i = "@class.inner" }),
+            a = ai.gen_spec.treesitter({ a = "@parameter.outer", i = "@parameter.inner" }),
+            i = ai.gen_spec.treesitter({ a = "@conditional.outer", i = "@conditional.inner" }),
+          },
+        }
+      end,
     },
 
     -- multicursor.nvim (VS Code-like multi-cursor editing)
