@@ -58,6 +58,12 @@ done
 if command -v nvim &>/dev/null; then
     log_info "Syncing Neovim plugins..."
     NVIM_TS_SYNC=1 nvim --headless "+Lazy! sync" +qa 2>/dev/null || log_warn "nvim plugin sync skipped"
+    # Refresh the mason registry (server binaries update only when reinstalled).
+    nvim --headless -c 'lua require("mason-registry").refresh(function() vim.cmd.qa() end); vim.defer_fn(function() vim.cmd.qa() end, 30000)' \
+        2>/dev/null || log_warn "mason registry refresh skipped"
+    if [ -n "$(git -C "$DOTFILES_DIR" status --porcelain nvim/lazy-lock.json)" ]; then
+        log_warn "nvim/lazy-lock.json changed: commit it in $DOTFILES_DIR"
+    fi
 fi
 
 # Claude Code self-update

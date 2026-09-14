@@ -135,10 +135,8 @@ echo "========================================"
 # Bootstrap: install the foundation a fresh machine lacks, before anything else.
 # (Homebrew may prompt for your password; everything after the confirm is clean.)
 # ----------------------------------------------------------------------------
-log_info "Bootstrapping foundation (Homebrew, zsh, Oh My Zsh, gum)..."
+log_info "Bootstrapping foundation (Homebrew, gum)..."
 ensure_homebrew
-ensure_zsh
-ensure_omz
 ensure_gum   # TUI library, used by the prompts below
 
 # ----------------------------------------------------------------------------
@@ -206,11 +204,25 @@ if ! tui_confirm "Proceed with installation?"; then
 fi
 
 echo "========================================"
-log_info "Running install (no further prompts)..."
+log_info "Running install (no further prompts, except a password if you opted into chsh)..."
 
 # ----------------------------------------------------------------------------
-# Phase 2: execution. Everything below is non-interactive.
+# Phase 2: execution. Everything below is non-interactive, apart from chsh,
+# which runs first so any password prompt happens up front.
 # ----------------------------------------------------------------------------
+
+if [ "$CHSH_ZSH" = 1 ]; then
+    log_info "Switching login shell to zsh (may ask for your password)..."
+    zsh_path="$(command -v zsh)"
+    if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
+        echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
+    fi
+    if chsh -s "$zsh_path"; then
+        log_info "Default login shell set to zsh ($zsh_path)"
+    else
+        log_warn "Could not change login shell (run: chsh -s $zsh_path)"
+    fi
+fi
 
 # Brew packages (declarative via Brewfile)
 if is_selected "Homebrew CLI packages"; then
@@ -306,6 +318,8 @@ fi
 
 # Zsh + Oh My Zsh plugins/theme
 if is_selected "Zsh + Oh My Zsh"; then
+    ensure_zsh
+    ensure_omz
     log_info "Setting up Zsh..."
     create_symlink "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
     create_symlink "$DOTFILES_DIR/zsh/.p10k.zsh" "$HOME/.p10k.zsh"
@@ -316,19 +330,6 @@ if is_selected "Zsh + Oh My Zsh"; then
         log_info "Created ~/.zshrc.local from template (edit for machine-specific config)"
     else
         log_warn "~/.zshrc.local already exists, leaving it untouched"
-    fi
-
-    # Switch default login shell to zsh if the user opted in earlier.
-    if [ "$CHSH_ZSH" = 1 ]; then
-        zsh_path="$(command -v zsh)"
-        if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
-            echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
-        fi
-        if chsh -s "$zsh_path"; then
-            log_info "Default login shell set to zsh ($zsh_path)"
-        else
-            log_warn "Could not change login shell (run: chsh -s $zsh_path)"
-        fi
     fi
 
     log_info "Setting up Oh My Zsh plugins and theme..."
@@ -369,6 +370,9 @@ Host github.com
     User git
     IdentityFile ~/.ssh/id_ed25519_github
     IdentitiesOnly yes
+    AddKeysToAgent yes
+    IgnoreUnknown UseKeychain
+    UseKeychain yes
 EOF
         log_info "Added GitHub host to $HOME/.ssh/config"
     fi

@@ -10,8 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Install shellcheck and tmux
+        run: sudo apt-get update && sudo apt-get install -y shellcheck tmux
+
+      - name: Install stylua
+        run: |
+          curl -fsSL -o /tmp/stylua.zip \
+            https://github.com/JohnnyMorganz/StyLua/releases/latest/download/stylua-linux-x86_64.zip
+          sudo unzip -o -q /tmp/stylua.zip -d /usr/local/bin
+          sudo chmod +x /usr/local/bin/stylua
 
       - name: Run test suite
         run: ./tests/run.sh

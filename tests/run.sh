@@ -137,6 +137,41 @@ assert_symlink_to "$DEST3" "$SRC" "repoints a symlink aimed elsewhere"
 assert_failure "$?" "errors when source is missing"
 
 # ---------------------------------------------------------------------------
+section "nvim: stylua formatting"
+if command -v stylua >/dev/null 2>&1; then
+    if stylua --check "$DOTFILES_DIR/nvim/init.lua" >/dev/null 2>&1; then pass "init.lua is stylua-clean"
+    else fail "init.lua is stylua-clean" "run: stylua nvim/init.lua"; fi
+else
+    echo -e "  ${DIM}· stylua not installed, skipped${NC}"
+fi
+
+# ---------------------------------------------------------------------------
+section "tmux: config loads on an isolated server"
+if command -v tmux >/dev/null 2>&1; then
+    # Temp HOME so no TPM/plugins exist; bootstrap guard skips the resurrect restore.
+    TMUX_HOME="$SANDBOX/tmux-home"; mkdir -p "$TMUX_HOME"
+    TMUX_SOCK="dotfiles-test-$$"
+    TMUX_ERR="$(HOME="$TMUX_HOME" DOTFILES_TMUX_BOOTSTRAP=1 \
+        tmux -L "$TMUX_SOCK" -f "$DOTFILES_DIR/tmux/tmux.conf" new-session -d -s t -x 80 -y 24 2>&1)"
+    if tmux -L "$TMUX_SOCK" has-session -t t 2>/dev/null; then
+        pass "server starts with tmux.conf"
+        assert_eq "C-Space" "$(tmux -L "$TMUX_SOCK" show-options -gv prefix)" "prefix is C-Space"
+        assert_contains "$(tmux -L "$TMUX_SOCK" show-hooks -g)" "resurrect" "resurrect autosave hooks are set"
+        assert_contains "$(tmux -L "$TMUX_SOCK" list-keys -T prefix)" "send-keys C-l" "prefix + C-l clears the screen"
+        # Config lines that failed to parse show up as "unknown"/"invalid" errors
+        case "$TMUX_ERR" in
+            *"unknown"*|*"invalid"*|*"usage"*) fail "tmux.conf has no parse errors" "$TMUX_ERR" ;;
+            *) pass "tmux.conf has no parse errors" ;;
+        esac
+        tmux -L "$TMUX_SOCK" kill-server 2>/dev/null
+    else
+        fail "server starts with tmux.conf" "$TMUX_ERR"
+    fi
+else
+    echo -e "  ${DIM}· tmux not installed, skipped${NC}"
+fi
+
+# ---------------------------------------------------------------------------
 echo ""
 echo "════════════════════════════════════════"
 echo -e "${GREEN}$PASS passed${NC}, $([ "$FAIL" -gt 0 ] && echo -e "${RED}$FAIL failed${NC}" || echo "$FAIL failed")"

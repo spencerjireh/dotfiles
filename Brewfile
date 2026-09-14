@@ -21,6 +21,11 @@ brew "uv"          # Python toolchain (replaces pyenv)
 brew "imagemagick"
 brew "rust"
 
+# --- Language runtimes (mason-installed LSP servers depend on these) ---
+brew "node"        # pyright, tsgo
+brew "go"          # gopls
+brew "openjdk"     # jdtls, google-java-format
+
 # --- Formatters / linters (conform.nvim + nvim-lint) ---
 brew "stylua"
 brew "ruff"
