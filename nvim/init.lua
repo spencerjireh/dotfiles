@@ -14,6 +14,7 @@ vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.signcolumn = "yes" -- fixed width so gitsigns/diagnostics do not shift text
+vim.o.winborder = "rounded" -- default border for every floating window (hover, signature, pickers)
 
 -- Indentation
 vim.opt.expandtab = true
@@ -619,10 +620,7 @@ require("lazy").setup({
               diagnostics = {
                 globals = { "vim" },
               },
-              workspace = {
-                library = vim.api.nvim_get_runtime_file("", true),
-                checkThirdParty = false,
-              },
+              -- workspace.library is supplied lazily by lazydev.nvim
               telemetry = {
                 enable = false,
               },
@@ -653,7 +651,10 @@ require("lazy").setup({
             map("gri", function()
               Snacks.picker.lsp_implementations()
             end, "Implementations")
-            map("<leader>rn", vim.lsp.buf.rename, "Rename")
+            -- inc-rename: live preview of the rename across the buffer
+            vim.keymap.set("n", "<leader>rn", function()
+              return ":IncRename " .. vim.fn.expand("<cword>")
+            end, { buffer = ev.buf, expr = true, desc = "Rename (live preview)" })
             map("<leader>ca", vim.lsp.buf.code_action, "Code action")
           end,
         })
@@ -715,7 +716,12 @@ require("lazy").setup({
           list = { selection = { preselect = true, auto_insert = false } },
           documentation = { auto_show = true },
         },
-        sources = { default = { "lsp", "path", "snippets", "buffer" } },
+        sources = {
+          default = { "lazydev", "lsp", "path", "snippets", "buffer" },
+          providers = {
+            lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
+          },
+        },
         fuzzy = { implementation = "prefer_rust_with_warning" },
       },
     },
@@ -1304,8 +1310,27 @@ require("lazy").setup({
           command_palette = true,
           long_message_to_split = true,
           lsp_doc_border = true,
+          inc_rename = true, -- IncRename prompt as a cmdline popup
         },
       },
+    },
+
+    -- lazydev.nvim (lua_ls: load only the runtime/plugin sources a file references)
+    {
+      "folke/lazydev.nvim",
+      ft = "lua",
+      opts = {
+        library = {
+          { path = "${3rd}/luv/library", words = { "vim%.uv" } },
+        },
+      },
+    },
+
+    -- inc-rename.nvim (LSP rename with live preview; mapped to <leader>rn on LspAttach)
+    {
+      "smjonas/inc-rename.nvim",
+      cmd = "IncRename",
+      opts = {},
     },
 
     -- nvim-colorizer (inline color previews; catgoose fork, maintained)
