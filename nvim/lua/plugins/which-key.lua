@@ -7,7 +7,7 @@ return {
 
     wk.setup({
       preset = "modern",
-      delay = 500,
+      delay = 200,
       plugins = {
         marks = true,
         registers = true,
@@ -46,6 +46,7 @@ return {
     -- Built-in fold keys and <Esc> have no keymap desc, so they are listed here.
     wk.add({
       { "<leader>f", group = "Find (Snacks)" },
+      { "<leader>b", group = "Buffer" },
       { "<leader>x", group = "Diagnostics (Trouble)" },
       { "<leader>c", group = "Code actions" },
       { "<leader>t", group = "Toggle / tools" },

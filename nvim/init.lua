@@ -138,7 +138,38 @@ vim.keymap.set("n", "<leader>?", "<cmd>WhichKey<cr>", { desc = "Show all keymaps
 vim.keymap.set("n", "<leader><leader>", "<cmd>WhichKey <leader><cr>", { desc = "Show leader keymaps" })
 
 -- Quit (<leader>w = format + save lives in lua/plugins/format.lua)
-vim.keymap.set("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit window" })
+-- <leader>q closes the current window; on the last non-floating window it
+-- quits Neovim instead, so leaving a layout never takes repeated presses.
+-- `confirm` prompts for unsaved buffers rather than failing.
+vim.keymap.set("n", "<leader>q", function()
+  local open = 0
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_get_config(win).relative == "" then
+      open = open + 1
+    end
+  end
+  if open > 1 then
+    vim.cmd.q()
+  else
+    vim.cmd("confirm qall")
+  end
+end, { desc = "Close window (quit if last)" })
+vim.keymap.set("n", "<leader>Q", "<cmd>confirm qall<cr>", { desc = "Quit all" })
+
+-- Buffers: step through open files. The stock H/L (top/bottom of screen)
+-- motions are given up for this. <leader>b* (close buffer) lives in lua/plugins/snacks.lua.
+vim.keymap.set("n", "<S-h>", "<cmd>bprevious<cr>", { desc = "Previous buffer" })
+vim.keymap.set("n", "<S-l>", "<cmd>bnext<cr>", { desc = "Next buffer" })
+
+-- Startup hint (temporary): where the shortcuts are. Remove once the keys are familiar.
+vim.api.nvim_create_autocmd("VimEnter", {
+  group = vim.api.nvim_create_augroup("dotfiles_hint", { clear = true }),
+  callback = function()
+    vim.schedule(function()
+      vim.notify("Space = menu | Space fk = search keys | dot keys nvim in the shell", vim.log.levels.INFO)
+    end)
+  end,
+})
 
 -- Window navigation: <C-h/j/k/l> via vim-tmux-navigator (lua/plugins/tmux-navigator.lua)
 

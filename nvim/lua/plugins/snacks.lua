@@ -1,4 +1,4 @@
--- snacks.nvim (explorer, picker, notifications, input, words, indent, scroll, bigfile)
+-- snacks.nvim (explorer, picker, notifications, input, words, indent, scroll, bigfile, bufdelete)
 return {
   "folke/snacks.nvim",
   lazy = false,
@@ -71,6 +71,14 @@ return {
       end
       original_notify(msg, level, o)
     end
+
+    -- Buffer keymaps: close a file without collapsing its window
+    vim.keymap.set("n", "<leader>bd", function()
+      Snacks.bufdelete()
+    end, { desc = "Close buffer (keep window)" })
+    vim.keymap.set("n", "<leader>bo", function()
+      Snacks.bufdelete.other()
+    end, { desc = "Close other buffers" })
 
     -- Explorer keymaps
     vim.keymap.set("n", "-", function()

@@ -71,7 +71,7 @@ Dark theme with transparent background and italic styling.
 ### 2. snacks.nvim (Explorer, Picker, UI, Editor Helpers)
 **Plugin**: `folke/snacks.nvim`
 
-One plugin providing several modules. Enabled here: `explorer`, `picker`, `notifier`, `input`, `words`, `indent`, `scroll`, `bigfile`, `quickfile`, `zen`, `scratch`, `dim`, plus `toggle`, `gitbrowse` and `lazygit` which need no setup.
+One plugin providing several modules. Enabled here: `explorer`, `picker`, `notifier`, `input`, `words`, `indent`, `scroll`, `bigfile`, `quickfile`, `zen`, `scratch`, `dim`, plus `toggle`, `gitbrowse`, `lazygit` and `bufdelete` which need no setup.
 
 **Explorer** (right sidebar, width 30, follows the current file, git status, trash on delete):
 - `-` - Toggle explorer
@@ -145,11 +145,17 @@ LSP navigation (`gd`, `grr`, `gri`) also opens pickers, see the LSP section. Oth
 - `<Space>.` - Scratch buffer (persisted per project and filetype; run Lua with `<CR>`)
 - `<Space>S` - Pick a scratch buffer
 
+**Buffers** (`Snacks.bufdelete` closes a file without collapsing its window):
+- `<Space>bd` - Close the current buffer, keep the window layout
+- `<Space>bo` - Close every other buffer
+- `Shift+h` / `Shift+l` - Previous / next buffer (defined in `init.lua`)
+
 **Notifier and input**:
 - `<Space>nd` - Dismiss all notifications
 - `<Space>nh` - Notification history
 - ERROR-level notifications are sticky and must be dismissed manually
 - Input prompts (for example LSP rename) use a floating window
+- A one-line hint ("Space = menu | Space fk = search keys | dot keys nvim in the shell") shows on every start. It is marked temporary in `init.lua`; delete the `dotfiles_hint` block once the keys are familiar
 
 ---
 
@@ -412,11 +418,14 @@ Shows available keybindings in a popup as you type.
 **Usage**:
 - `<Space>?` - Show all keymaps
 - `<Space><Space>` - Show leader keymaps
-- Press any key prefix (like `<Space>`, `z`, `g`, `]`) and wait 500ms to see available completions
+- Press any key prefix (like `<Space>`, `z`, `g`, `]`) and wait 200 ms to see available completions
+- `<Space>fk` - Searchable picker of every mapping with its description (type a word like "fold" or "harpoon")
+- `?` inside a picker, the explorer, Trouble or Mason lists that window's own keys
+- From the shell: `dot keys nvim` pages this guide
 
 Every keymap carries a `desc`, which is what which-key shows; `lua/plugins/which-key.lua` only defines the groups below and a few built-in keys.
 
-Groups: `<Space>f` Find, `<Space>x` Diagnostics (Trouble), `<Space>c` Code actions, `<Space>g` Git, `<Space>h` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle / tools, `<Space>m` Markdown, `<Space>i` Images/Files, `<Space>a` Claude, `<Space>d` Debug/Test.
+Groups: `<Space>f` Find, `<Space>b` Buffer, `<Space>x` Diagnostics (Trouble), `<Space>c` Code actions, `<Space>g` Git, `<Space>h` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle / tools, `<Space>m` Markdown, `<Space>i` Images/Files, `<Space>a` Claude, `<Space>d` Debug/Test.
 
 ---
 
@@ -643,7 +652,8 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 
 ### General Editor
 - `<Space>w` - Format and save
-- `<Space>q` - Quit window
+- `<Space>q` - Close the current window; on the last window, quit Neovim (asks about unsaved buffers)
+- `<Space>Q` - Quit everything (asks about unsaved buffers)
 - `<Space>tR` - Reload files from disk (checktime)
 - `<Space>tw` / `<Space>ts` / `<Space>tn` / `<Space>td` / `<Space>th` / `<Space>ti` / `<Space>tD` / `<Space>tz` / `<Space>tT` - Toggles: wrap, spelling, relative numbers, diagnostics, inlay hints, indent guides, dim, zen, treesitter
 - `gh` - Jump back in history
@@ -686,12 +696,19 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `Ctrl+n` - Add multicursor at next match
 - `.` - Repeat last command
 
+### Buffers
+- `Shift+h` / `Shift+l` - Previous / next open file
+- `<Space>bd` - Close the current file, keep the split
+- `<Space>bo` - Close all other files
+- `<Space>fb` - Pick an open file
+- `<Space>fr` - Recent files
+
 ### Windows/Splits
 - `:split` or `:sp` - Horizontal split
 - `:vsplit` or `:vs` - Vertical split
 - `Ctrl+h/j/k/l` - Navigate splits and tmux panes
 - `Ctrl+w =` - Equal size splits
-- `Ctrl+w q` - Close current split
+- `<Space>q` or `Ctrl+w q` - Close current split (`<Space>q` quits when it is the last one)
 
 ### LSP (configured in this setup)
 - `gd` - Go to definition (picker)
@@ -816,8 +833,10 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 1. **Quick File Switching**:
    - Use Harpoon for your 5 most-accessed files: `<Space>ha` to mark, `<Space>h1` to `<Space>h5` to jump
    - `<Space>ff` to find files by name (for everything else)
-   - `<Space>fb` to switch between open buffers
+   - `Shift+h` / `Shift+l` to step through open files, `<Space>fb` to pick one
+   - `<Space>bd` to close a file when you are done with it (the split stays)
    - `-` to toggle the explorer for project navigation
+   - `<Space>q` closes windows one at a time and quits on the last one; `<Space>Q` quits everything at once
 
 2. **Search Across Project**:
    - `<Space>fg` then type search term
@@ -972,7 +991,10 @@ Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go 
 | Command | Action |
 |---------|--------|
 | `<Space>w` | Format and save |
-| `<Space>q` | Quit window |
+| `<Space>q` | Close window (quit if last) |
+| `<Space>Q` | Quit all |
+| `<Space>bd` | Close buffer, keep window |
+| `Shift+h` / `Shift+l` | Previous / next buffer |
 | `<Space>ff` | Find files |
 | `<Space>fg` | Search in files |
 | `<Space>fb` | Find buffers |
