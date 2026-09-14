@@ -34,6 +34,23 @@
     dark = true
     line-numbers = true
 
+# Commit signing with the GitHub SSH key (install.sh writes allowed_signers so
+# git log --show-signature can verify locally).
+[gpg]
+    format = ssh
+
+[gpg "ssh"]
+    allowedSignersFile = ~/.config/git/allowed_signers
+
+[user]
+    signingkey = ~/.ssh/id_ed25519_github.pub
+
+[commit]
+    gpgsign = true
+
+[tag]
+    gpgsign = true
+
 [alias]
     nuke = "!sh -c 'printf \"Nuke working tree? This will reset --hard and remove untracked files. [y/N] \" && read ans && [ \"$ans\" = y ] && git reset --hard HEAD && git clean -fd && echo \"Nuked.\" || echo \"Aborted.\"'"
     wowow = log --oneline --graph --decorate --all

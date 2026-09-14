@@ -423,6 +423,18 @@ if is_selected "Git global config"; then
         git config --global user.email "$GIT_EMAIL"
         log_info "Set git user.email"
     fi
+
+    # Commit signing: git/config signs with the GitHub SSH key. Write the
+    # allowed-signers file so signatures verify locally too. Regenerated on
+    # every run so a new key or email is picked up.
+    signing_email="$(git config --global user.email 2>/dev/null || true)"
+    if [ -f "$HOME/.ssh/id_ed25519_github.pub" ] && [ -n "$signing_email" ]; then
+        printf '%s namespaces="git" %s\n' "$signing_email" "$(cut -d' ' -f1,2 "$HOME/.ssh/id_ed25519_github.pub")" \
+            > "$HOME/.config/git/allowed_signers"
+        log_info "Wrote ~/.config/git/allowed_signers (commits are signed with the GitHub SSH key)"
+    else
+        log_warn "No GitHub SSH key or git email yet; commit signing will fail until both exist"
+    fi
 fi
 
 # macOS defaults
