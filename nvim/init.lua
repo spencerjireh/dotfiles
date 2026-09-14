@@ -2,31 +2,18 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
--- Python provider (use Python 3.10+ for molten)
--- Try to find python3.12, python3.11, python3.10 in order, fallback to python3
-local function find_python()
-  local candidates = {
-    vim.fn.exepath("python3.12"),
-    vim.fn.exepath("python3.11"),
-    vim.fn.exepath("python3.10"),
-    vim.fn.exepath("python3"),
-  }
-
-  for _, python in ipairs(candidates) do
-    if python ~= "" then
-      return python
-    end
-  end
-
-  return "python3" -- fallback
-end
-
-vim.g.python3_host_prog = find_python()
+-- No remote-plugin providers: nothing here uses them, and skipping the lookup
+-- removes provider checks from startup and :checkhealth
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_ruby_provider = 0
+vim.g.loaded_node_provider = 0
 
 -- Line numbers
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
+vim.opt.signcolumn = "yes" -- fixed width so gitsigns/diagnostics do not shift text
 
 -- Indentation
 vim.opt.expandtab = true
@@ -492,8 +479,8 @@ require("lazy").setup({
     {
       "neovim/nvim-lspconfig",
       dependencies = {
-        "williamboman/mason.nvim",
-        "williamboman/mason-lspconfig.nvim",
+        "mason-org/mason.nvim",
+        "mason-org/mason-lspconfig.nvim",
       },
       config = function()
         require("mason").setup({
@@ -512,12 +499,12 @@ require("lazy").setup({
           },
         })
 
-        -- Get capabilities from cmp
+        -- mason-lspconfig v2 enables every installed server automatically;
+        -- only per-server settings need vim.lsp.config here.
         local capabilities = require("cmp_nvim_lsp").default_capabilities()
+        vim.lsp.config("*", { capabilities = capabilities })
 
-        -- Setup lua_ls using new API
         vim.lsp.config("lua_ls", {
-          capabilities = capabilities,
           settings = {
             Lua = {
               runtime = {
@@ -536,37 +523,21 @@ require("lazy").setup({
             },
           },
         })
-        vim.lsp.enable("lua_ls")
 
-        -- Python LSP
-        vim.lsp.config("pyright", { capabilities = capabilities })
-        vim.lsp.enable("pyright")
-
-        -- TypeScript/JavaScript
-        vim.lsp.config("ts_ls", { capabilities = capabilities })
-        vim.lsp.enable("ts_ls")
-
-        -- Go
-        vim.lsp.config("gopls", { capabilities = capabilities })
-        vim.lsp.enable("gopls")
-
-        -- Rust
-        vim.lsp.config("rust_analyzer", { capabilities = capabilities })
-        vim.lsp.enable("rust_analyzer")
-
-        -- Java
-        vim.lsp.config("jdtls", { capabilities = capabilities })
-        vim.lsp.enable("jdtls")
-
-        -- C/C++
-        vim.lsp.config("clangd", { capabilities = capabilities })
-        vim.lsp.enable("clangd")
-
-        -- Keymaps for LSP
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
-        vim.keymap.set("n", "K", vim.lsp.buf.hover, { desc = "Hover documentation" })
-        vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename" })
-        vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
+        -- Buffer-local keymaps. K stays global (nvim-ufo peek, then hover).
+        -- Built-ins also available: grn rename, gra code action, grr references,
+        -- gri implementation, grt type definition, gO document symbols.
+        vim.api.nvim_create_autocmd("LspAttach", {
+          group = vim.api.nvim_create_augroup("dotfiles_lsp", { clear = true }),
+          callback = function(ev)
+            local function map(lhs, rhs, desc)
+              vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, desc = desc })
+            end
+            map("gd", vim.lsp.buf.definition, "Go to definition")
+            map("<leader>rn", vim.lsp.buf.rename, "Rename")
+            map("<leader>ca", vim.lsp.buf.code_action, "Code action")
+          end,
+        })
       end,
     },
 
@@ -666,14 +637,6 @@ require("lazy").setup({
       end,
     },
 
-    -- Comment.nvim
-    {
-      "numToStr/Comment.nvim",
-      config = function()
-        require("Comment").setup()
-      end,
-    },
-
     -- Autopairs
     {
       "windwp/nvim-autopairs",
@@ -719,7 +682,7 @@ require("lazy").setup({
             save_on_toggle = false,
             sync_on_ui_close = true,
             key = function()
-              return vim.loop.cwd()
+              return vim.uv.cwd()
             end,
           },
           menu = {
@@ -1274,22 +1237,21 @@ require("lazy").setup({
       },
     },
 
-    -- nvim-colorizer (inline color previews)
+    -- nvim-colorizer (inline color previews; catgoose fork, maintained)
     {
-      "norcalli/nvim-colorizer.lua",
+      "catgoose/nvim-colorizer.lua",
       event = "VeryLazy",
-      config = function()
-        require("colorizer").setup({
-          "*",
-        }, {
+      opts = {
+        filetypes = { "*" },
+        user_default_options = {
           RGB = true,
           RRGGBB = true,
           names = false,
           RRGGBBAA = true,
           css = true,
           css_fn = true,
-        })
-      end,
+        },
+      },
     },
 
     -- treesitter-context (sticky function/class header)
