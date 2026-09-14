@@ -268,7 +268,6 @@ alias v='nvim'
 alias opc="opencode"
 alias cld="claude"
 alias ccd="claude --dangerously-skip-permissions"
-alias empty-trash="osascript -e 'tell application \"Finder\" to empty the trash'"
 
 if command -v trash &>/dev/null; then
   unalias rm 2>/dev/null
@@ -332,6 +331,7 @@ alias dlog="docker logs -f"
 alias dprune="docker system prune -af"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   alias docker-desktop="open /Applications/Docker.app"
+  alias empty-trash="osascript -e 'tell application \"Finder\" to empty the trash'"
 fi
 
 # Network

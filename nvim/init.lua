@@ -100,7 +100,7 @@ vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wr
 vim.keymap.set("n", "<leader>mp", function()
   local file = vim.fn.expand("%:p")
   if file:match("%.md$") then
-    vim.fn.system({ "open", file })
+    vim.ui.open(file) -- open on macOS, xdg-open on Linux
   else
     vim.notify("Not a markdown file", vim.log.levels.WARN)
   end
@@ -1303,14 +1303,10 @@ vim.keymap.set("n", "<leader>io", function()
     return
   end
 
-  local cmd = string.format("open '%s'", file)
-  vim.fn.jobstart(cmd, {
-    on_exit = function(_, exit_code)
-      if exit_code == 0 then
-        vim.notify("Opened: " .. vim.fn.expand("%:t"), vim.log.levels.INFO)
-      else
-        vim.notify("Failed to open file", vim.log.levels.ERROR)
-      end
-    end,
-  })
+  local _, err = vim.ui.open(file) -- open on macOS, xdg-open on Linux
+  if err then
+    vim.notify("Failed to open file: " .. err, vim.log.levels.ERROR)
+  else
+    vim.notify("Opened: " .. vim.fn.expand("%:t"), vim.log.levels.INFO)
+  end
 end, { desc = "Open file externally" })
