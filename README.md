@@ -34,13 +34,13 @@ Selectable components (all pre-selected by default):
 
 | Component | What it does |
 |-----------|--------------|
-| Homebrew CLI packages | neovim, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, pyenv, imagemagick, rust, trash |
+| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rust, trash, plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
 | Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` |
 | Claude Code | Installs via the official native installer (self-updating) |
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
 | Neovim config | Symlinks `nvim/` → `~/.config/nvim` |
 | Superfile file manager | Installs `superfile` (brew) + symlinks config, hotkeys, and Vesper theme |
-| tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins |
+| tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (headless, no tmux session needed) |
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
 | GitHub SSH + CLI | Generates an ed25519 key, writes `~/.ssh/config`, installs `gh` |
 | Git global config | name/email, delta pager, git aliases |
@@ -56,7 +56,7 @@ Two helpers are symlinked onto your PATH (`~/.local/bin`) during install:
 
 ```bash
 dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins, update Claude
-dotdoctor   # health check: verifies every symlink + that assumed tools exist
+dotdoctor   # health check: symlinks, CLI tools, formatters, TPM plugin dirs
 ```
 
 ### Machine-specific config
@@ -99,7 +99,8 @@ Covers script linting, the `lib/` helpers, and `install.sh`'s symlink/selection 
 │   └── aliases
 ├── lib/
 │   ├── log.sh        # logging helpers
-│   └── tui.sh        # gum-backed TUI helpers (with plain fallback)
+│   ├── tui.sh        # gum-backed TUI helpers (with plain fallback)
+│   └── tmux.sh       # tpm_run: runs TPM scripts against a throwaway server
 ├── tests/
 │   └── run.sh        # dependency-free test suite
 ├── .github/workflows/
@@ -119,10 +120,11 @@ Prefix: `Cmd+Shift+Space` (Ghostty translates to `Ctrl+Space`)
 
 | Action | Keys |
 |--------|------|
-| Seamless pane/vim nav | `C-h/j/k/l` (no prefix) |
-| Navigate panes | `prefix + h/j/k/l` |
-| Window by number | `Alt+1-9` (no prefix) |
-| Next/prev window | `prefix + n/p` |
+| Seamless pane/vim nav | `C-h/j/k/l` (no prefix, vim-tmux-navigator inside Neovim) |
+| Prev/next window | `prefix + h/l` (or `Cmd+Shift+A/D`) |
+| Reorder window | `prefix + j/k` |
+| Window by number | `Alt+1-9` or `Cmd+1-9` (no prefix) |
+| Window switcher | `prefix + p` (fzf, all sessions) |
 
 ### Copy Mode
 
@@ -147,10 +149,14 @@ Prefix: `Cmd+Shift+Space` (Ghostty translates to `Ctrl+Space`)
 | New session | `prefix + S` |
 | Session tree | `prefix + w` |
 | Kill session | `prefix + q` |
+| Save / restore session | `prefix + C-s` / `prefix + C-r` (tmux-resurrect) |
+| Scratch popup | `prefix + g` |
+| Copy last command output | `prefix + y` |
 | Toggle status bar | `prefix + b` |
 | Reload config | `prefix + r` |
+| Keybinding help | `prefix + ?` |
 
-tmux auto-starts when opening Ghostty, attaching to the `main` session.
+tmux auto-starts when opening Ghostty with a timestamped session name (for example `sep14-0930`). Sessions are saved by tmux-resurrect on detach and on window/pane changes, and the last save is restored automatically when the tmux server starts.
 
 ## Shell Aliases
 
@@ -169,6 +175,10 @@ ccd             # claude --dangerously-skip-permissions
 ls → eza        # with icons and git status
 cat → bat       # with syntax highlighting
 rm → trash      # safe delete
+
+# git (Oh My Zsh git plugin): gst, ga, gaa, gc, gcmsg, gp, gl (pull), glog, gd, gco, gb
+# fzf: Ctrl+R history, Ctrl+T files, Alt+C cd; fe/frg/fbr/flog/fkill/fdock helpers
+# python: uv (interpreters, venvs, tools); py = python3
 ```
 
 ## Troubleshooting
@@ -177,4 +187,4 @@ rm → trash      # safe delete
 
 **tmux colors wrong** — Ensure terminal reports 256-color. Config sets `default-terminal` to `tmux-256color`.
 
-**tmux plugins not loaded** — Press `prefix + I` inside tmux to install plugins via TPM.
+**tmux plugins not loaded** — Run `dotup` (or `./install.sh` with the tmux component) to install them headlessly, or press `prefix + I` inside tmux. `dotdoctor` lists any missing plugin directories.
