@@ -1146,7 +1146,7 @@ require("lazy").setup({
       opts = {
         formatters_by_ft = {
           lua = { "stylua" },
-          python = { "black" },
+          python = { "ruff_organize_imports", "ruff_format" },
           javascript = { "prettierd", "prettier", stop_after_first = true },
           typescript = { "prettierd", "prettier", stop_after_first = true },
           typescriptreact = { "prettierd", "prettier", stop_after_first = true },

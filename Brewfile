@@ -17,9 +17,17 @@ brew "bat"
 brew "ripgrep"
 brew "git-delta"
 brew "zoxide"
-brew "pyenv"
+brew "uv"          # Python toolchain (replaces pyenv)
 brew "imagemagick"
 brew "rust"
+
+# --- Formatters / linters (conform.nvim + nvim-lint) ---
+brew "stylua"
+brew "ruff"
+brew "prettierd"
+brew "eslint_d"
+brew "clang-format"
+brew "google-java-format"
 
 # --- Installer / dev tooling ---
 brew "gum"         # TUI used by install.sh

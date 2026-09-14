@@ -48,6 +48,14 @@ check_tool() { # cmd [note]
     fi
 }
 
+check_tool_optional() { # cmd [note] -- warn only, does not count as an issue
+    if command -v "$1" &>/dev/null; then
+        log_info "tool ok: $1"
+    else
+        log_warn "optional tool missing: $1${2:+ ($2)}"
+    fi
+}
+
 check_dir() { # dir [note]
     if [ -d "$1" ]; then
         log_info "dir ok: ${1/#$HOME/~}"
@@ -85,6 +93,14 @@ for t in nvim tmux fzf fd eza bat rg delta zoxide git spf; do
 done
 check_tool gh "GitHub SSH + CLI feature"
 check_tool claude "Claude Code feature"
+
+echo ""
+log_info "Checking formatters/linters (nvim conform + nvim-lint)..."
+for t in uv ruff stylua prettierd eslint_d tree-sitter; do
+    check_tool "$t" "brew bundle"
+done
+check_tool_optional clang-format "C/C++ formatting via conform"
+check_tool_optional google-java-format "Java formatting via conform"
 
 echo ""
 log_info "Checking tmux plugins (TPM)..."
