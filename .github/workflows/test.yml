@@ -22,3 +22,30 @@ jobs:
 
       - name: Run test suite
         run: ./tests/run.sh
+
+  install-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install what the config components need
+        run: brew install neovim tmux tree-sitter-cli
+
+      - name: Run the installer non-interactively (config components only)
+        env:
+          DOTFILES_NONINTERACTIVE: "1"
+          DOTFILES_COMPONENTS: "Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config,Superfile file manager"
+          GIT_NAME: ci
+          GIT_EMAIL: ci@example.com
+        run: ./install.sh
+
+      - name: Check the symlinks and plugin dirs the installer created
+        run: ./doctor.sh --links
+
+      - name: Restore Neovim plugins and compile parsers headlessly
+        run: |
+          NVIM_TS_SYNC=1 nvim --headless "+Lazy! restore" +qa
+          nvim --headless +'lua local n=#require("lazy").plugins(); assert(n > 40, "only "..n.." plugins"); local p=require("nvim-treesitter").get_installed("parsers"); assert(#p >= 20, "only "..#p.." parsers"); io.write("plugins=",n," parsers=",#p,"\n")' +qa
+
+      - name: tmux plugins installed headlessly
+        run: test "$(ls ~/.tmux/plugins | wc -l | tr -d ' ')" = 3

@@ -115,6 +115,13 @@ is_selected() {
     printf '%s\n' "$SELECTED" | grep -qxF "$1"
 }
 
+# Non-interactive mode (CI, scripted installs): DOTFILES_NONINTERACTIVE=1 with
+# DOTFILES_COMPONENTS="Neovim config,tmux + TPM,..." (comma-separated feature
+# labels). Prints the list one per line, trimmed, for $SELECTED.
+components_from_env() {
+    printf '%s\n' "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;/^$/d'
+}
+
 # Allow the test suite to source this file for its helper functions without
 # running the installer. Everything below this guard is the actual install run.
 if [ -n "${DOTFILES_SOURCE_ONLY:-}" ]; then
@@ -136,9 +143,16 @@ echo "========================================"
 # Bootstrap: install the foundation a fresh machine lacks, before anything else.
 # (Homebrew may prompt for your password; everything after the confirm is clean.)
 # ----------------------------------------------------------------------------
+NONINTERACTIVE="${DOTFILES_NONINTERACTIVE:-}"
+
 log_info "Bootstrapping foundation (Homebrew, gum)..."
 ensure_homebrew
-ensure_gum   # TUI library, used by the prompts below
+if [ -n "$NONINTERACTIVE" ]; then
+    # shellcheck disable=SC2034  # read by the sourced lib/tui.sh helpers
+    USE_GUM=0
+else
+    ensure_gum   # TUI library, used by the prompts below
+fi
 
 # ----------------------------------------------------------------------------
 # Phase 1: collect every choice and input up front, then run unattended.
@@ -163,34 +177,43 @@ if [[ "$OS" == "macos" ]]; then
     FEATURES+=("macOS defaults")
 fi
 
-tui_multiselect SELECTED "Components" "${FEATURES[@]}"
+if [ -n "$NONINTERACTIVE" ]; then
+    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-}")"
+    log_info "Non-interactive install (DOTFILES_COMPONENTS)"
+else
+    tui_multiselect SELECTED "Components" "${FEATURES[@]}"
+fi
 
 if [ -z "${SELECTED//[[:space:]]/}" ]; then
     log_warn "Nothing selected. Exiting."
     exit 0
 fi
 
-# Prefill text inputs now so the run never has to stop and ask.
-GITHUB_EMAIL=""
-GIT_NAME=""
-GIT_EMAIL=""
-
-if is_selected "GitHub SSH + CLI" && [ ! -f "$HOME/.ssh/id_ed25519_github" ]; then
-    tui_input GITHUB_EMAIL "GitHub email (for the SSH key):"
-fi
-
-if is_selected "Git global config"; then
-    current_name="$(git config --global user.name 2>/dev/null || true)"
-    [ -z "$current_name" ] && tui_input GIT_NAME "Your full name for Git:"
-    current_email="$(git config --global user.email 2>/dev/null || true)"
-    [ -z "$current_email" ] && tui_input GIT_EMAIL "Your email for Git:"
-fi
-
-# Offer to switch the login shell to zsh (only if not already on it).
+# Prefill text inputs now so the run never has to stop and ask. In
+# non-interactive mode they come from the environment (GITHUB_EMAIL, GIT_NAME,
+# GIT_EMAIL) and nothing prompts.
+GITHUB_EMAIL="${GITHUB_EMAIL:-}"
+GIT_NAME="${GIT_NAME:-}"
+GIT_EMAIL="${GIT_EMAIL:-}"
 CHSH_ZSH=0
-if is_selected "Zsh + Oh My Zsh" && [[ "$SHELL" != *zsh ]]; then
-    if tui_confirm "Make zsh your default login shell? (needs your password)"; then
-        CHSH_ZSH=1
+
+if [ -z "$NONINTERACTIVE" ]; then
+    if is_selected "GitHub SSH + CLI" && [ ! -f "$HOME/.ssh/id_ed25519_github" ]; then
+        tui_input GITHUB_EMAIL "GitHub email (for the SSH key):"
+    fi
+
+    if is_selected "Git global config"; then
+        current_name="$(git config --global user.name 2>/dev/null || true)"
+        [ -z "$current_name" ] && tui_input GIT_NAME "Your full name for Git:"
+        current_email="$(git config --global user.email 2>/dev/null || true)"
+        [ -z "$current_email" ] && tui_input GIT_EMAIL "Your email for Git:"
+    fi
+
+    # Offer to switch the login shell to zsh (only if not already on it).
+    if is_selected "Zsh + Oh My Zsh" && [[ "$SHELL" != *zsh ]]; then
+        if tui_confirm "Make zsh your default login shell? (needs your password)"; then
+            CHSH_ZSH=1
+        fi
     fi
 fi
 
@@ -200,7 +223,7 @@ echo "Selected components:"
 printf '%s\n' "$SELECTED" | sed '/^$/d;s/^/  - /'
 echo ""
 
-if ! tui_confirm "Proceed with installation?"; then
+if [ -z "$NONINTERACTIVE" ] && ! tui_confirm "Proceed with installation?"; then
     log_info "Aborted by user."
     exit 0
 fi
@@ -515,7 +538,7 @@ log_info "Dotfiles installed successfully!"
 echo ""
 log_info "Note: Restart your shell or run 'source ~/.zshrc' to apply changes."
 echo ""
-if is_selected "GitHub SSH + CLI" && command -v gh &>/dev/null && ! gh auth status &>/dev/null; then
+if [ -z "$NONINTERACTIVE" ] && is_selected "GitHub SSH + CLI" && command -v gh &>/dev/null && ! gh auth status &>/dev/null; then
     log_info "Almost done — the only step left is logging in to GitHub."
     log_info "This opens your browser to authenticate gh and upload your SSH public key."
     if tui_confirm "Launch GitHub login now?"; then

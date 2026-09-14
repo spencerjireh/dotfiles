@@ -22,6 +22,10 @@ case "$(uname -s)" in
 esac
 
 ISSUES=0
+# --links: only check what install.sh creates (symlinks, dirs, files); skip
+# tool/formatter/server checks. Used by CI, where the Brewfile is not installed.
+LINKS_ONLY=0
+[ "${1:-}" = "--links" ] && LINKS_ONLY=1
 
 check_link() { # dest expected-target
     local dest="$1" expected="$2"
@@ -107,6 +111,7 @@ for d in plugins/zsh-autosuggestions plugins/zsh-syntax-highlighting themes/powe
     check_dir "$OMZ_CUSTOM/$d" "run ./install.sh (Zsh + Oh My Zsh)"
 done
 
+if [ "$LINKS_ONLY" = 0 ]; then
 echo ""
 log_info "Checking tools..."
 for t in nvim tmux fzf fd eza bat rg delta zoxide git spf lazygit; do
@@ -160,12 +165,14 @@ for a in debugpy dlv js-debug-adapter codelldb; do
     fi
 done
 
+fi # LINKS_ONLY
+
 echo ""
 log_info "Checking tmux plugins (TPM)..."
 for p in tpm tmux-resurrect tmux-thumbs; do
     check_dir "$HOME/.tmux/plugins/$p" "run ./install.sh (tmux + TPM) or dotup"
 done
-check_file "$HOME/.tmux/plugins/tmux-thumbs/target/release/thumbs" "dotup builds it (needs cargo)"
+[ "$LINKS_ONLY" = 0 ] && check_file "$HOME/.tmux/plugins/tmux-thumbs/target/release/thumbs" "dotup builds it (needs cargo)"
 
 echo "========================================"
 if [ "$ISSUES" -eq 0 ]; then

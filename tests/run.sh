@@ -103,6 +103,12 @@ SELECTED=$'Ghostty terminal\nClaude Code\nNeovim config'
 ( is_selected "macOS defaults" ); assert_failure "$?" "is_selected rejects absent item"
 ( is_selected "Claude" ); assert_failure "$?" "is_selected requires exact (no substring) match"
 
+# components_from_env: comma list -> newline list, trimmed, for non-interactive installs
+SELECTED="$(components_from_env "Neovim config, tmux + TPM ,Zsh + Oh My Zsh,")"
+assert_eq "3" "$(printf '%s\n' "$SELECTED" | grep -c .)" "components_from_env yields one line per component"
+( is_selected "tmux + TPM" ); assert_success "$?" "components_from_env trims whitespace"
+( is_selected "" ); assert_failure "$?" "components_from_env drops empty entries"
+
 # ---------------------------------------------------------------------------
 section "create_symlink (sandboxed)"
 SANDBOX="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-test.XXXXXX")"
