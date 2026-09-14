@@ -481,6 +481,7 @@ require("lazy").setup({
       dependencies = {
         "mason-org/mason.nvim",
         "mason-org/mason-lspconfig.nvim",
+        "saghen/blink.cmp",
       },
       config = function()
         require("mason").setup({
@@ -501,7 +502,7 @@ require("lazy").setup({
 
         -- mason-lspconfig v2 enables every installed server automatically;
         -- only per-server settings need vim.lsp.config here.
-        local capabilities = require("cmp_nvim_lsp").default_capabilities()
+        local capabilities = require("blink.cmp").get_lsp_capabilities()
         vim.lsp.config("*", { capabilities = capabilities })
 
         vim.lsp.config("lua_ls", {
@@ -581,60 +582,24 @@ require("lazy").setup({
       },
     },
 
-    -- Completion
+    -- Completion (blink.cmp: LSP, path, snippets, buffer; prebuilt fuzzy matcher)
     {
-      "hrsh7th/nvim-cmp",
-      dependencies = {
-        "hrsh7th/cmp-nvim-lsp",
-        "hrsh7th/cmp-buffer",
-        "hrsh7th/cmp-path",
-        "L3MON4D3/LuaSnip",
-        "saadparwaiz1/cmp_luasnip",
+      "saghen/blink.cmp",
+      version = "1.*", -- release tag pulls the prebuilt Rust fuzzy binary
+      event = "InsertEnter",
+      opts = {
+        keymap = {
+          preset = "enter", -- <CR> accept, <C-e> hide, <C-b>/<C-f> scroll docs, <C-space> show
+          ["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+          ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
+        },
+        completion = {
+          list = { selection = { preselect = true, auto_insert = false } },
+          documentation = { auto_show = true },
+        },
+        sources = { default = { "lsp", "path", "snippets", "buffer" } },
+        fuzzy = { implementation = "prefer_rust_with_warning" },
       },
-      config = function()
-        local cmp = require("cmp")
-        local luasnip = require("luasnip")
-
-        cmp.setup({
-          snippet = {
-            expand = function(args)
-              luasnip.lsp_expand(args.body)
-            end,
-          },
-          mapping = cmp.mapping.preset.insert({
-            ["<C-b>"] = cmp.mapping.scroll_docs(-4),
-            ["<C-f>"] = cmp.mapping.scroll_docs(4),
-            ["<C-Space>"] = cmp.mapping.complete(),
-            ["<C-e>"] = cmp.mapping.abort(),
-            ["<CR>"] = cmp.mapping.confirm({ select = true }),
-            ["<Tab>"] = cmp.mapping(function(fallback)
-              if cmp.visible() then
-                cmp.select_next_item()
-              elseif luasnip.expand_or_jumpable() then
-                luasnip.expand_or_jump()
-              else
-                fallback()
-              end
-            end, { "i", "s" }),
-            ["<S-Tab>"] = cmp.mapping(function(fallback)
-              if cmp.visible() then
-                cmp.select_prev_item()
-              elseif luasnip.jumpable(-1) then
-                luasnip.jump(-1)
-              else
-                fallback()
-              end
-            end, { "i", "s" }),
-          }),
-          sources = cmp.config.sources({
-            { name = "nvim_lsp" },
-            { name = "luasnip" },
-          }, {
-            { name = "buffer" },
-            { name = "path" },
-          }),
-        })
-      end,
     },
 
     -- Autopairs
@@ -1029,7 +994,7 @@ require("lazy").setup({
           },
           max_height_window_percentage = 50,
           window_overlap_clear_enabled = false,
-          window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+          window_overlap_clear_ft_ignore = { "blink-cmp-menu", "blink-cmp-documentation", "" },
           hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp" },
         })
       end,
@@ -1222,7 +1187,6 @@ require("lazy").setup({
           override = {
             ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
             ["vim.lsp.util.stylize_markdown"] = true,
-            ["cmp.entry.get_documentation"] = true,
           },
           progress = {
             enabled = true,
