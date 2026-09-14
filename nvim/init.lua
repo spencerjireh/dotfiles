@@ -42,6 +42,12 @@ vim.opt.mouse = "a"
 -- Terminal colors
 vim.opt.termguicolors = true
 
+-- Windows and scrolling
+vim.opt.scrolloff = 8       -- keep 8 lines above/below the cursor
+vim.opt.splitright = true   -- vertical splits open to the right
+vim.opt.splitbelow = true   -- horizontal splits open below
+vim.opt.breakindent = true  -- wrapped lines keep their indent (markdown)
+
 -- Disable word wrap
 vim.opt.wrap = false
 vim.opt.sidescroll = 1  -- Smooth horizontal scrolling
@@ -56,6 +62,7 @@ vim.opt.autoread = true
 
 -- Trigger checktime on focus/buffer changes
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
+  group = vim.api.nvim_create_augroup("dotfiles_checktime", { clear = true }),
   pattern = "*",
   callback = function()
     if vim.fn.mode() ~= "c" then
@@ -67,6 +74,7 @@ vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHo
 -- Notify only on conflict: buffer modified AND file changed externally
 -- Silent reload is handled by autoread; only surface the dangerous case
 vim.api.nvim_create_autocmd("FileChangedShellPost", {
+  group = vim.api.nvim_create_augroup("dotfiles_conflict", { clear = true }),
   pattern = "*",
   callback = function()
     if vim.bo.modified then
@@ -80,6 +88,7 @@ vim.api.nvim_create_autocmd("FileChangedShellPost", {
 
 -- Markdown-specific settings for better reading
 vim.api.nvim_create_autocmd("FileType", {
+  group = vim.api.nvim_create_augroup("dotfiles_markdown", { clear = true }),
   pattern = "markdown",
   callback = function()
     vim.opt_local.conceallevel = 2  -- Hide markup syntax
@@ -121,11 +130,7 @@ vim.keymap.set("n", "<leader><leader>", "<cmd>WhichKey <leader><cr>", { desc = "
 -- Quit (<leader>w = format + save lives in the conform.nvim spec)
 vim.keymap.set("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit window" })
 
--- Window navigation
-vim.keymap.set("n", "<leader>h", "<C-w>h", { desc = "Move to left window" })
-vim.keymap.set("n", "<leader>j", "<C-w>j", { desc = "Move to bottom window" })
-vim.keymap.set("n", "<leader>k", "<C-w>k", { desc = "Move to top window" })
-vim.keymap.set("n", "<leader>l", "<C-w>l", { desc = "Move to right window" })
+-- Window navigation: <C-h/j/k/l> via vim-tmux-navigator (see its spec below)
 
 -- Jump navigation
 vim.keymap.set("n", "gh", "<C-o>", { desc = "Jump back" })
@@ -640,8 +645,8 @@ require("lazy").setup({
             local map = function(mode, l, r, desc)
               vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
             end
-            map("n", "]h", gs.next_hunk, "Next hunk")
-            map("n", "[h", gs.prev_hunk, "Previous hunk")
+            map("n", "]h", function() gs.nav_hunk("next") end, "Next hunk")
+            map("n", "[h", function() gs.nav_hunk("prev") end, "Previous hunk")
             map("n", "<leader>gs", gs.stage_hunk, "Stage hunk")
             map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
             map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
@@ -745,6 +750,8 @@ require("lazy").setup({
           show_keys = true,
         })
 
+        -- Groups only; every mapping carries its own desc, which-key reads it.
+        -- Built-in fold keys and <Esc> have no keymap desc, so they are listed here.
         wk.add({
           { "<leader>f", group = "Find (Snacks)" },
           { "<leader>x", group = "Diagnostics (Trouble)" },
@@ -753,86 +760,15 @@ require("lazy").setup({
           { "<leader>m", group = "Markdown" },
           { "<leader>i", group = "Images/Files" },
           { "<leader>o", group = "Harpoon" },
-          { "<leader>w", desc = "Format and save" },
-          { "<leader>q", desc = "Quit window" },
-          { "<leader>e", desc = "Focus file explorer" },
-          { "<leader>mp", desc = "Open markdown in browser" },
-          { "<leader>tr", desc = "Toggle render markdown" },
-          { "<leader>oa", desc = "Add to Harpoon" },
-          { "<leader>oo", desc = "Open Harpoon menu" },
-          { "<leader>o1", desc = "Jump to mark 1" },
-          { "<leader>o2", desc = "Jump to mark 2" },
-          { "<leader>o3", desc = "Jump to mark 3" },
-          { "<leader>o4", desc = "Jump to mark 4" },
-          { "<leader>o5", desc = "Jump to mark 5" },
-          { "<leader>on", desc = "Next mark" },
-          { "<leader>op", desc = "Previous mark" },
-          { "<leader>h", desc = "Go to left window" },
-          { "<leader>j", desc = "Go to bottom window" },
-          { "<leader>k", desc = "Go to top window" },
-          { "<leader>l", desc = "Go to right window" },
-          { "<leader>ff", desc = "Find files" },
-          { "<leader>fg", desc = "Live grep" },
-          { "<leader>fb", desc = "Find buffers" },
-          { "<leader>fh", desc = "Help tags" },
-          { "<leader>fu", desc = "Undo history" },
-          { "]]", desc = "Next reference" },
-          { "[[", desc = "Previous reference" },
-          { "<leader>xx", desc = "Toggle diagnostics" },
-          { "<leader>xX", desc = "Buffer diagnostics" },
-          { "<leader>xL", desc = "Location list" },
-          { "<leader>xQ", desc = "Quickfix list" },
-          { "<leader>ca", desc = "Code action" },
-          { "<leader>cs", desc = "Symbols" },
-          { "<leader>cl", desc = "LSP definitions/references" },
-          { "<leader>cr", desc = "Check/reload files" },
-          { "<leader>rn", desc = "Rename symbol" },
-          { "<leader>io", desc = "Open file externally" },
-          { "<leader>tw", desc = "Toggle word wrap" },
           { "<leader>g", group = "Git" },
-          { "<leader>gs", desc = "Stage hunk" },
-          { "<leader>gr", desc = "Reset hunk" },
-          { "<leader>gp", desc = "Preview hunk" },
-          { "<leader>gb", desc = "Blame line" },
-          { "<leader>gd", desc = "Diff this" },
-          { "]s", desc = "Swap parameter next" },
-          { "[s", desc = "Swap parameter prev" },
-          { "]l", desc = "Next loop" },
-          { "[l", desc = "Previous loop" },
           { "<leader>n", group = "Notifications" },
-          { "<leader>nd", desc = "Dismiss notifications" },
-          { "<leader>nh", desc = "Notification history" },
-          { "<leader>A", desc = "Add cursors to all matches" },
-          { "<leader>ft", desc = "Find TODOs" },
-          { "]h", desc = "Next hunk" },
-          { "[h", desc = "Previous hunk" },
-          { "]f", desc = "Next function" },
-          { "[f", desc = "Previous function" },
-          { "]c", desc = "Next class" },
-          { "[c", desc = "Previous class" },
-          { "]a", desc = "Next argument" },
-          { "[a", desc = "Previous argument" },
-          { "]t", desc = "Next TODO" },
-          { "[t", desc = "Previous TODO" },
-          { "s", desc = "Flash jump", mode = { "n", "x", "o" } },
-          { "S", desc = "Flash Treesitter select", mode = { "n", "x", "o" } },
-          { "gd", desc = "Go to definition" },
-          { "gh", desc = "Jump back" },
-          { "gl", desc = "Jump forward" },
-          { "K", desc = "Peek fold or LSP hover" },
           { "<Esc>", desc = "Clear highlights / cursors" },
-          { "-", desc = "Toggle file explorer" },
           { "z", group = "Folds" },
           { "za", desc = "Toggle fold under cursor" },
           { "zc", desc = "Close fold under cursor" },
           { "zo", desc = "Open fold under cursor" },
-          { "zR", desc = "Open all folds" },
-          { "zM", desc = "Close all folds" },
-          { "zr", desc = "Open folds except kinds" },
-          { "zm", desc = "Close folds with" },
           { "zj", desc = "Move to next fold" },
           { "zk", desc = "Move to previous fold" },
-          { "*", desc = "Search for visual selection", mode = "v" },
         })
       end,
     },
@@ -1275,10 +1211,17 @@ require("lazy").setup({
   },
   install = { colorscheme = { "vesper" } },
   checker = { enabled = false },
+  performance = {
+    rtp = {
+      -- netrw is replaced by snacks explorer (replace_netrw) and gx is a core mapping since 0.10
+      disabled_plugins = { "gzip", "tarPlugin", "tohtml", "tutor", "zipPlugin", "netrwPlugin" },
+    },
+  },
 })
 
 -- External file opener for PDFs and Office documents
 vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+  group = vim.api.nvim_create_augroup("dotfiles_binary", { clear = true }),
   pattern = { "*.pdf", "*.docx", "*.xlsx", "*.pptx", "*.doc", "*.xls", "*.ppt" },
   callback = function()
     vim.bo.filetype = "binary"
