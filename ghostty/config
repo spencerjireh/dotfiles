@@ -89,14 +89,12 @@ window-inherit-working-directory = true
 window-inherit-font-size = true
 unfocused-split-opacity = 0.7
 
-# Scrollback & History
-scrollback-limit = 100000000
+# Scrollback & History (tmux owns scrollback; Ghostty keeps its default)
 link-url = true
 mouse-scroll-multiplier = 3
 
-# Terminal Behavior
+# Terminal Behavior (TERM stays xterm-ghostty; tmux sets tmux-256color inside)
 bold-is-bright = true
-term = xterm-256color
 focus-follows-mouse = true
 
 # Image Support
@@ -104,8 +102,13 @@ image-storage-limit = 1000000000
 
 # Font Rendering
 freetype-load-flags = no-hinting
-window-height = 9999
-window-width = 9999
+
+# Open maximized (replaces the old window-height/width = 9999 hack)
+maximize = true
+
+# Option sends Alt sequences (fzf Alt+C, readline Alt-b/f); accented input via
+# Option stops working. Cmd+N below still sends \x1bN by text, independent of this.
+macos-option-as-alt = true
 
 # Window management handled by tmux
 # See ~/.dotfiles/tmux/tmux.conf
@@ -113,21 +116,12 @@ window-width = 9999
 # Translate cmd+shift+space to ctrl+space for tmux prefix
 keybind = cmd+shift+space=text:\x00
 
-# Cmd+number to switch tmux windows (sends Alt+N)
-# Unbind Ghostty's default goto_tab for these keys
-keybind = cmd+digit_1=unbind
-keybind = cmd+digit_2=unbind
-keybind = cmd+digit_3=unbind
-keybind = cmd+digit_4=unbind
-keybind = cmd+digit_5=unbind
-keybind = cmd+digit_6=unbind
-keybind = cmd+digit_7=unbind
-keybind = cmd+digit_8=unbind
 # Cmd+Shift+A/D to navigate tmux windows (sends prefix+h / prefix+l)
 keybind = cmd+shift+a=text:\x00h
-keybind = cmd+shift+d=unbind
 keybind = cmd+shift+d=text:\x00l
 
+# Cmd+number to switch tmux windows (sends Alt+N; a later bind replaces the
+# default goto_tab, so no explicit unbind is needed)
 keybind = cmd+one=text:\x1b1
 keybind = cmd+two=text:\x1b2
 keybind = cmd+three=text:\x1b3

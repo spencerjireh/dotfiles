@@ -219,6 +219,12 @@ ZSH_HIGHLIGHT_STYLES[arg0]='fg=2'                         # green - command name
 # ===========================
 # Tool Initialization
 # ===========================
+# Ghostty shell integration (prompt marks, sudo, title). Ghostty injects this
+# only into the first shell; shells inside tmux need to source it themselves.
+if [[ -n "$GHOSTTY_RESOURCES_DIR" && -r "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
+  builtin source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
+fi
+
 # Initialize zoxide (better cd)
 if command -v zoxide &>/dev/null; then
   eval "$(zoxide init zsh)"
