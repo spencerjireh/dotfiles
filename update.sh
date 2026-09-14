@@ -40,6 +40,7 @@ if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
     tpm_run install_plugins || log_warn "TPM plugin install failed"
     tpm_run update_plugins all || log_warn "TPM plugin update failed"
     tpm_run clean_plugins || log_warn "TPM plugin clean failed"
+    tmux_thumbs_build
 fi
 
 # Oh My Zsh custom plugins + theme

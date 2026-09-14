@@ -27,7 +27,8 @@ create_symlink() {
             log_warn "Replacing existing symlink: $dest -> $current_target"
         fi
     elif [ -e "$dest" ]; then
-        local backup="${dest}.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup
+        backup="${dest}.backup.$(date +%Y%m%d_%H%M%S)"
         log_warn "File exists at $dest, backing up to $backup"
         mv "$dest" "$backup"
     fi
@@ -314,6 +315,7 @@ if is_selected "tmux + TPM"; then
         log_info "Installed TPM"
     fi
     tpm_run install_plugins || log_warn "TPM plugin install failed"
+    tmux_thumbs_build
 fi
 
 # Zsh + Oh My Zsh plugins/theme
@@ -329,7 +331,7 @@ if is_selected "Zsh + Oh My Zsh"; then
         cp "$DOTFILES_DIR/zsh/.zshrc.local.example" "$HOME/.zshrc.local"
         log_info "Created ~/.zshrc.local from template (edit for machine-specific config)"
     else
-        log_warn "~/.zshrc.local already exists, leaving it untouched"
+        log_warn "\$HOME/.zshrc.local already exists, leaving it untouched"
     fi
 
     log_info "Setting up Oh My Zsh plugins and theme..."

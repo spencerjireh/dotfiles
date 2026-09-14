@@ -154,6 +154,7 @@ log_info "Checking tmux plugins (TPM)..."
 for p in tpm tmux-resurrect tmux-thumbs; do
     check_dir "$HOME/.tmux/plugins/$p" "run ./install.sh (tmux + TPM) or dotup"
 done
+check_file "$HOME/.tmux/plugins/tmux-thumbs/target/release/thumbs" "dotup builds it (needs cargo)"
 
 echo "========================================"
 if [ "$ISSUES" -eq 0 ]; then

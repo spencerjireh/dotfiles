@@ -33,3 +33,22 @@ tpm_run() { # <tpm bin script name> [args...]
     [ "$started" = 1 ] && tmux kill-session -t _dotfiles_tpm 2>/dev/null
     return "$rc"
 }
+
+# tmux-thumbs ships as Rust source and normally builds itself through an
+# interactive prompt on first use. Build it here instead so prefix + t works
+# straight away. Re-run after plugin updates (the binary must match the source).
+tmux_thumbs_build() {
+    local dir="$HOME/.tmux/plugins/tmux-thumbs"
+    [ -f "$dir/Cargo.toml" ] || return 0
+    if ! command -v cargo &>/dev/null; then
+        log_warn "cargo not found; tmux-thumbs binary not built (brew bundle installs rust)"
+        return 1
+    fi
+    log_info "Building tmux-thumbs..."
+    if (cd "$dir" && cargo build --release --quiet); then
+        log_info "Built tmux-thumbs"
+    else
+        log_warn "tmux-thumbs build failed"
+        return 1
+    fi
+}

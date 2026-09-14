@@ -461,6 +461,8 @@ require("lazy").setup({
           "bash",
           "html",
           "css",
+          "regex", -- snacks picker input highlighting
+          "latex", -- render-markdown math
         }
         local installed = {}
         for _, lang in ipairs(ts.get_installed("parsers")) do
@@ -1324,6 +1326,7 @@ require("lazy").setup({
   },
   install = { colorscheme = { "vesper" } },
   checker = { enabled = false },
+  rocks = { enabled = false }, -- nothing here needs luarocks; silences the hererocks health check
   performance = {
     rtp = {
       -- netrw is replaced by snacks explorer (replace_netrw) and gx is a core mapping since 0.10

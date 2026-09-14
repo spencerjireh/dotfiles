@@ -47,9 +47,11 @@ for f in install.sh uninstall.sh update.sh doctor.sh lib/log.sh lib/tui.sh lib/t
     else fail "$f parses"; fi
 done
 if command -v shellcheck >/dev/null 2>&1; then
-    if shellcheck -S error "$DOTFILES_DIR/install.sh" "$DOTFILES_DIR/lib/tui.sh" "$DOTFILES_DIR/lib/tmux.sh" \
-        "$DOTFILES_DIR/uninstall.sh" "$DOTFILES_DIR/update.sh" "$DOTFILES_DIR/doctor.sh" >/dev/null 2>&1
-    then pass "shellcheck (no errors)"; else fail "shellcheck (no errors)"; fi
+    if shellcheck -S warning "$DOTFILES_DIR/install.sh" "$DOTFILES_DIR/lib/tui.sh" "$DOTFILES_DIR/lib/tmux.sh" \
+        "$DOTFILES_DIR/lib/log.sh" "$DOTFILES_DIR/uninstall.sh" "$DOTFILES_DIR/update.sh" "$DOTFILES_DIR/doctor.sh" \
+        "$DOTFILES_DIR/tests/run.sh" >/dev/null 2>&1
+    then pass "shellcheck (no warnings)"
+    else fail "shellcheck (no warnings)" "$(shellcheck -S warning "$DOTFILES_DIR"/*.sh "$DOTFILES_DIR"/lib/*.sh "$DOTFILES_DIR"/tests/run.sh 2>&1 | grep -E "^In |SC[0-9]+" | head -6)"; fi
 else
     echo -e "  ${DIM}· shellcheck not installed, skipped${NC}"
 fi
@@ -66,6 +68,7 @@ assert_contains "$(log_error 'hi' 2>&1)" "[ERROR]" "log_error tags [ERROR]"
 section "lib/tui.sh (plain-prompt fallback, USE_GUM=0)"
 # shellcheck source=/dev/null
 source "$DOTFILES_DIR/lib/tui.sh"
+# shellcheck disable=SC2034  # read by the sourced tui_* helpers
 USE_GUM=0
 
 # Here-strings (not pipes) so the helper runs in this shell and its var sticks.
@@ -94,6 +97,7 @@ unset DOTFILES_SOURCE_ONLY
 set +e +u +o pipefail
 
 # is_selected against a newline list
+# shellcheck disable=SC2034  # read by the sourced is_selected
 SELECTED=$'Ghostty terminal\nClaude Code\nNeovim config'
 ( is_selected "Claude Code" ); assert_success "$?" "is_selected finds present item"
 ( is_selected "macOS defaults" ); assert_failure "$?" "is_selected rejects absent item"
