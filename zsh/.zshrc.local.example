@@ -12,3 +12,11 @@ export PATH="$HOME/.opencode/bin:$PATH"
 
 # LibreOffice CLI
 alias soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
+
+# Extra tool PATHs (per-machine; uncomment what this machine has)
+# export PATH="$PATH:$HOME/.maestro/bin"
+# export PATH="/opt/homebrew/share/google-cloud-sdk/bin:$PATH"
+
+# Private credentials live here, never in the tracked .zshrc
+# export COOLIFY_BASE_URL="https://coolify.example.com"
+# export COOLIFY_API_TOKEN="..."
