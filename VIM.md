@@ -1,6 +1,6 @@
 # Neovim Configuration Guide
 
-This guide covers all the plugins, settings, and keybindings in this Neovim configuration.
+This guide covers the plugins, settings, and keybindings in this Neovim configuration (`nvim/init.lua`, Neovim 0.11+).
 
 ## Table of Contents
 - [Basic Settings](#basic-settings)
@@ -8,17 +8,22 @@ This guide covers all the plugins, settings, and keybindings in this Neovim conf
 - [Plugins](#plugins)
 - [LSP Configuration](#lsp-configuration)
 - [Keybindings Reference](#keybindings-reference)
+- [Tips and Tricks](#tips-and-tricks)
+- [Troubleshooting](#troubleshooting)
+- [Customization](#customization)
+- [Quick Reference Card](#quick-reference-card)
 
 ## Basic Settings
 
 ### Line Numbers
 - **Absolute line numbers**: Enabled
 - **Relative line numbers**: Enabled (shows distance from current line)
+- **Sign column**: Always on, so git and diagnostic signs never shift the text
 
 ### Indentation
 - **Tab width**: 2 spaces
 - **Expand tabs to spaces**: Yes
-- **Smart indent**: Enabled (auto-indents new lines)
+- **Smart indent**: Enabled; Treesitter provides `indentexpr` for filetypes with a parser
 
 ### Search
 - **Highlight search**: Enabled (highlights all matches)
@@ -32,6 +37,9 @@ This guide covers all the plugins, settings, and keybindings in this Neovim conf
 - **Swap files**: Disabled
 - **Mouse support**: Enabled
 - **True color**: Enabled
+- **Word wrap**: Off by default (`<Space>tw` toggles); on for markdown
+- **External changes**: Files changed on disk reload silently (`autoread` + `checktime` on focus and buffer enter). A notification appears only when the buffer also has unsaved edits; use `<Space>fu` (undo history) to reconcile.
+- **Remote-plugin providers**: Python, Perl, Ruby and Node providers are disabled. Nothing in this config uses them.
 
 ## Leader Keys
 
@@ -45,105 +53,166 @@ Use leader key for custom commands. Example: `<Space>ff` opens file finder.
 ### 1. Vesper Theme
 **Plugin**: `datsfilipe/vesper.nvim`
 
-A beautiful dark theme with transparent background and italic styling.
+Dark theme with transparent background and italic styling.
 
 **Features**:
 - Transparent background (works with terminal transparency)
 - Italics for comments, keywords, functions, strings, and variables
+- Custom highlight overrides so which-key, floats, snacks windows and LSP reference matches use the same palette
 
 **Usage**: Theme is automatically applied on startup.
 
 ---
 
-### 2. Lualine (Status Line)
+### 2. snacks.nvim (Explorer, Picker, UI, Editor Helpers)
+**Plugin**: `folke/snacks.nvim`
+
+One plugin providing several modules. Enabled here: `explorer`, `picker`, `notifier`, `input`, `words`, `indent`, `scroll`, `bigfile`, `quickfile`.
+
+**Explorer** (right sidebar, width 30, follows the current file, git status, trash on delete):
+- `-` - Toggle explorer
+- `<Space>e` - Focus explorer
+
+Inside the explorer:
+- `Enter` or `l` - Open file or expand directory
+- `h` - Collapse directory
+- `a` - Add new file/directory (end with `/` for directory)
+- `d` - Delete (sends to trash)
+- `r` - Rename
+- `c` - Copy file(s)
+- `m` - Move file(s)
+- `x` - Cut
+- `y` - Yank path
+- `p` - Paste
+- `H` - Toggle hidden files
+- `I` - Toggle ignored files
+- `q` - Close explorer
+- `?` - Show help
+
+**Picker** (fuzzy finder, replaces Telescope):
+- `<Space>ff` - Find files
+- `<Space>fg` - Live grep (search text in files)
+- `<Space>fb` - Find buffers
+- `<Space>fh` - Help tags
+- `<Space>fu` - Undo history (`Enter` restores that state, `Ctrl+y` yanks added lines, `Ctrl+Shift+y` yanks removed lines)
+- `<Space>ft` - Find TODO/FIXME/NOTE comments (todo-comments source)
+
+Inside a picker:
+- `Ctrl+j/k` or `Down/Up` - Navigate results
+- `Enter` - Open selection
+- `Ctrl+s` - Open in horizontal split
+- `Ctrl+v` - Open in vertical split
+- `Ctrl+t` - Open in new tab
+- `Tab` - Select multiple items
+- `?` - Show all picker keys
+- `Esc` - Close
+
+Other pickers are available with `:lua Snacks.picker()` (a picker of pickers), for example `git_status`, `diagnostics`, `lsp_symbols`, `zoxide`.
+
+**Words** (highlights other references of the symbol under the cursor via LSP):
+- `]]` - Jump to next reference
+- `[[` - Jump to previous reference
+
+**Indent**: Indent guides with the current scope highlighted. Animation is off.
+
+**Scroll**: Smooth scrolling for all scroll commands.
+
+**Bigfile**: Files over 1.5 MB open with Treesitter, LSP-heavy features and folding trimmed.
+
+**Notifier and input**:
+- `<Space>nd` - Dismiss all notifications
+- `<Space>nh` - Notification history
+- ERROR-level notifications are sticky and must be dismissed manually
+- Input prompts (for example LSP rename) use a floating window
+
+---
+
+### 3. auto-save.nvim
+**Plugin**: `okuuva/auto-save.nvim`
+
+Writes the buffer to disk one second after you stop editing, and immediately on leaving the buffer or losing focus. Skips special buffers, read-only files, and files over 1 MB.
+
+Auto-save does **not** format. Formatting runs only on `<Space>w` (see conform.nvim).
+
+---
+
+### 4. Lualine (Status Line)
 **Plugin**: `nvim-lualine/lualine.nvim`
 
-Modern statusline showing file info, git branch, diagnostics, and more.
-
-**Features**:
-- Shows current mode (NORMAL, INSERT, VISUAL, etc.)
-- File path and modification status
-- Git branch and changes
-- LSP diagnostics (errors, warnings)
-- File encoding and type
-- Cursor position
-
-**Usage**: Always visible at the bottom of the screen.
+Statusline showing mode, file path and status, git branch and changes, LSP diagnostics, encoding, filetype, and cursor position.
 
 ---
 
-### 3. Treesitter (Syntax Highlighting)
-**Plugin**: `nvim-treesitter/nvim-treesitter`
+### 5. Treesitter (Syntax Highlighting, Indentation, Text Objects)
+**Plugins**:
+- `nvim-treesitter/nvim-treesitter` (`main` branch)
+- `nvim-treesitter/nvim-treesitter-textobjects` (`main` branch)
+- `nvim-treesitter/nvim-treesitter-context`
 
-Advanced syntax highlighting and code understanding.
+The `main` branch of nvim-treesitter is only a parser and query installer. Highlighting and indentation are enabled per buffer by a `FileType` autocmd in `init.lua` for any filetype that has a parser.
 
-**Pre-installed Languages**:
-- C
-- Lua
-- Vim
-- Markdown
-- TypeScript/TSX
-- Python
+**Parsers installed automatically**: c, cpp, lua, vim, vimdoc, query, markdown, markdown_inline, tsx, typescript, javascript, python, go, rust, java, json, yaml, toml, bash, html, css.
 
-**Features**:
-- Superior syntax highlighting
-- Smart indentation
-- Auto-tagging (for HTML/JSX)
-- Code folding support
+Missing parsers install asynchronously on the first start; reopen affected buffers with `:e` when the notification appears. `dotup` runs the install synchronously. Compiling parsers requires the `tree-sitter` CLI (`tree-sitter-cli` in the Brewfile).
 
-**Usage**: Works automatically. Run `:TSUpdate` to update parsers.
-
-**Installing new languages**:
+**Commands**:
 ```vim
-:TSInstall javascript
-:TSInstall rust
+:TSInstall zig      " add a parser
+:TSUpdate           " update all parsers
+:TSUninstall zig
+:TSLog              " install log
 ```
 
+**Text objects** (selection is provided by mini.ai using Treesitter queries; movement and swapping by textobjects):
+- `af` / `if` - Around / inside function
+- `ac` / `ic` - Around / inside class
+- `aa` / `ia` - Around / inside argument
+- `ai` / `ii` - Around / inside conditional
+- `]f` / `[f` - Next / previous function
+- `]c` / `[c` - Next / previous class
+- `]a` / `[a` - Next / previous argument
+- `]l` / `[l` - Next / previous loop
+- `]s` / `[s` - Swap argument with next / previous
+
+**Context**: The enclosing function or class header stays pinned at the top of the window (up to 3 lines).
+
+`vim.g.no_plugin_maps` is set, so built-in filetype plugin maps (for example Python's `]]`) are not defined; `]]` and `[[` belong to snacks.words.
+
 ---
 
-### 4. LSP (Language Server Protocol)
+### 6. LSP (Language Server Protocol)
 **Plugins**:
 - `neovim/nvim-lspconfig`
-- `williamboman/mason.nvim`
-- `williamboman/mason-lspconfig.nvim`
+- `mason-org/mason.nvim`
+- `mason-org/mason-lspconfig.nvim`
 
-Provides IDE-like features: autocomplete, go-to-definition, hover docs, etc.
+Provides IDE-like features: autocomplete, go-to-definition, hover docs, rename, code actions, diagnostics.
 
-**Pre-configured Servers**:
-- `lua_ls` (Lua) - with Neovim-specific configuration
-- `pyright` (Python) - configured for Python 3.10/3.11/3.12
+**Servers installed by Mason**: `lua_ls`, `pyright`, `ts_ls`, `gopls`, `rust_analyzer`, `jdtls`, `clangd`.
 
-**Adding More Language Servers**:
-1. Open Mason: `:Mason`
-2. Search for your language server (use `/` to search)
-3. Press `i` to install
-4. Add configuration in `init.lua`:
-```lua
-vim.lsp.config("pyright", { capabilities = capabilities })
-vim.lsp.enable("pyright")
-```
+mason-lspconfig enables every installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities for all of them; only `lua_ls` has extra settings.
 
-**LSP Keybindings**:
+**Keybindings** (buffer-local, set when a server attaches):
 - `gd` - Go to definition
 - `K` - Peek fold or show LSP hover documentation (context-aware)
 - `<Space>rn` - Rename symbol
 - `<Space>ca` - Code actions
 
-**Common Language Servers**:
-- Python: `pyright` (pre-configured) or `pylsp`
-- JavaScript/TypeScript: `ts_ls`
-- Go: `gopls`
-- Rust: `rust_analyzer`
-- C/C++: `clangd`
+**Neovim built-in LSP keys** (also available):
+- `grn` - Rename
+- `gra` - Code action
+- `grr` - References
+- `gri` - Implementation
+- `grt` - Type definition
+- `gO` - Document symbols
+- `Ctrl+s` (insert mode) - Signature help
 
-**Note**: This configuration searches for Python in the following order: python3.12, python3.11, python3.10, then falls back to python3.
+**Diagnostics**: Shown as virtual text at the end of the line and as underlines; no gutter signs. `<Space>xx` opens the Trouble panel.
 
 ---
 
-### 5. nvim-cmp (Autocompletion)
+### 7. nvim-cmp (Autocompletion)
 **Plugin**: `hrsh7th/nvim-cmp`
-
-Intelligent autocompletion with multiple sources.
 
 **Completion Sources**:
 1. LSP (context-aware completions)
@@ -160,142 +229,120 @@ Intelligent autocompletion with multiple sources.
 - `Ctrl+f` - Scroll docs down
 - `Ctrl+b` - Scroll docs up
 
-**Usage**: Start typing and suggestions appear automatically.
+---
+
+### 8. conform.nvim (Formatting)
+**Plugin**: `stevearc/conform.nvim`
+
+Formatting runs only when you press `<Space>w`: format the buffer, then write it. Falls back to LSP formatting when no formatter is configured for the filetype.
+
+**Formatters by filetype** (all installed via the Brewfile):
+- Lua: `stylua`
+- Python: `ruff_organize_imports`, `ruff_format`
+- JavaScript / TypeScript / JSX / TSX: `prettierd` (falls back to `prettier`)
+- Go: `gofmt`
+- Java: `google-java-format`
+- C / C++: `clang-format`
+- Rust: `rustfmt`
+
+`:ConformInfo` shows which formatters apply to the current buffer and whether they are available.
 
 ---
 
-### 6. Telescope (Fuzzy Finder)
-**Plugin**: `nvim-telescope/telescope.nvim`
+### 9. nvim-lint (Linting)
+**Plugin**: `mfussenegger/nvim-lint`
 
-Powerful fuzzy finder for files, text, buffers, and more.
-
-**Keybindings**:
-- `<Space>ff` - Find files (searches by filename)
-- `<Space>fg` - Live grep (search text in files)
-- `<Space>fb` - Find buffers (switch between open files)
-- `<Space>fh` - Help tags (search Vim help)
-
-**Inside Telescope**:
-- `Ctrl+j/k` or `Down/Up` - Navigate results
-- `Enter` - Open selection
-- `Ctrl+x` - Open in horizontal split
-- `Ctrl+v` - Open in vertical split
-- `Ctrl+t` - Open in new tab
-- `Esc` - Close Telescope
-
-**Tips**:
-- Fuzzy matching: type parts of filename (e.g., "conit" finds "config/init.lua")
-- Use `live_grep` to search within file contents
-- Prefix with `!` to exclude (e.g., "foo !bar" finds "foo" but not "bar")
+Runs on read, write, and leaving insert mode. Only linters found on `PATH` are run.
+- Python: `ruff`
+- JavaScript / TypeScript / JSX / TSX: `eslint_d`
 
 ---
 
-### 7. Snacks Explorer (File Explorer)
-**Plugin**: `folke/snacks.nvim` (explorer module)
-
-Persistent sidebar file explorer built on snacks.picker.
-
-**Keybindings**:
-- `-` - Toggle explorer
-- `<Space>e` - Focus explorer
-
-**Inside Explorer**:
-- `Enter` or `l` - Open file or expand directory
-- `h` - Collapse directory
-- `a` - Add new file/directory (end with `/` for directory)
-- `d` - Delete (sends to macOS trash)
-- `r` - Rename
-- `c` - Copy file(s)
-- `m` - Move file(s)
-- `y` - Yank (copy to register)
-- `p` - Paste
-- `H` - Toggle hidden files
-- `I` - Toggle ignored files
-- `q` - Close explorer
-- `?` - Show help
-
-**Features**:
-- Tree-style file navigation (right sidebar, width 30)
-- Git status indicators
-- Follows current file automatically
-- Trash integration (delete sends to macOS trash)
-- Multi-file selection with `<Tab>` for batch operations
-
----
-
-### 8. Comment.nvim
-**Plugin**: `numToStr/Comment.nvim`
-
-Easy code commenting with smart language detection.
-
-**Keybindings**:
-- `gcc` - Toggle line comment
-- `gc` - Toggle comment (in visual mode)
-- `gbc` - Toggle block comment
-- `gb` - Toggle block comment (in visual mode)
-
-**Examples**:
-- `gcc` on a line: toggles single line comment
-- `gc3j` - Comment current line + 3 lines below
-- Visual select + `gc` - Comment all selected lines
-
-**Language-aware**: Automatically uses correct comment syntax (e.g., `//` for JS, `#` for Python).
-
----
-
-### 9. nvim-autopairs
+### 10. nvim-autopairs
 **Plugin**: `windwp/nvim-autopairs`
 
 Auto-close brackets, quotes, and more.
 
 **Features**:
 - Type `(` and get `()` with cursor in middle
-- Type `)` when next to `)` moves cursor forward (doesn't insert duplicate)
+- Type `)` when next to `)` moves cursor forward (does not insert a duplicate)
 - Works with: `()`, `[]`, `{}`, `''`, `""`, ` `` `
-- Press `Enter` between brackets for formatted expansion:
-  ```javascript
-  function() {|} // cursor at |
-  // Press Enter:
-  function() {
-    |
-  }
-  ```
-
-**Smart features**:
+- Press `Enter` between brackets for formatted expansion
 - Deletes pairs together (backspace after `(` deletes both `(` and `)`)
-- Integrates with nvim-cmp (pairs work in completion)
 
 ---
 
-### 10. Gitsigns
+### 11. nvim-surround
+**Plugin**: `kylechui/nvim-surround`
+
+Add, change, and delete surrounding characters.
+- `ys{motion}{char}` - Add surround (`ysiw"` wraps the word in quotes)
+- `cs{old}{new}` - Change surround (`cs"'` changes double quotes to single)
+- `ds{char}` - Delete surround (`ds(` removes parentheses)
+- `S{char}` (visual mode) - Surround selection
+
+---
+
+### 12. mini.ai (Text Objects)
+**Plugin**: `echasnovski/mini.ai`
+
+Extends `a`/`i` text objects. Searches up to 500 lines forward for the nearest object when the cursor is not inside one.
+
+- `af if ac ic aa ia ai ii` - Treesitter-backed function, class, argument, conditional (see Treesitter)
+- `an` / `in` and `al` / `il` - Next / last instance of any object (for example `cin(` changes inside the next parentheses)
+- `a?` / `i?` - Prompt for a custom delimiter
+- `g[` / `g]` - Move to the start / end of the surrounding object
+
+---
+
+### 13. multicursor.nvim
+**Plugin**: `jake-stewart/multicursor.nvim`
+
+VS Code-style multiple cursors.
+- `Ctrl+n` - Add a cursor at the next match of the word under the cursor (or selection)
+- `Ctrl+p` - Skip the current match, add the next one
+- `<Space>A` - Add cursors to all matches
+- `Esc` - Clear cursors; with no cursors active, clears search highlights
+
+---
+
+### 14. flash.nvim (Jump)
+**Plugin**: `folke/flash.nvim`
+
+- `s` - Jump: type characters, then the label shown next to the target
+- `S` - Treesitter select: pick a syntax node by label
+
+Works in normal, visual, and operator-pending mode (`ds<label>` deletes up to a target).
+
+---
+
+### 15. Comments
+Neovim built-in (no plugin).
+- `gcc` - Toggle line comment
+- `gc{motion}` - Toggle comment over a motion (`gc3j`, `gcap`)
+- `gc` (visual mode) - Toggle comment on selection
+
+Comment strings come from the filetype (`commentstring`).
+
+---
+
+### 16. Gitsigns
 **Plugin**: `lewis6991/gitsigns.nvim`
 
-Git integration showing changes in the gutter.
+Git change markers in the sign column, hunk actions, and blame.
 
-**Features**:
-- Added lines: Green `+` in gutter
-- Modified lines: Blue `~` in gutter
-- Removed lines: Red `_` in gutter
-- Git blame information
-- Diff preview
-
-**Default Keybindings** (can be customized):
-- `]c` - Next hunk (git change)
-- `[c` - Previous hunk
-- `<leader>hs` - Stage hunk
-- `<leader>hu` - Undo stage hunk
-- `<leader>hr` - Reset hunk
-- `<leader>hp` - Preview hunk
-- `<leader>hb` - Blame line
-
-**Usage**: Changes appear automatically in the sign column (gutter).
+**Keybindings**:
+- `]h` / `[h` - Next / previous hunk
+- `<Space>gs` - Stage hunk
+- `<Space>gr` - Reset hunk
+- `<Space>gp` - Preview hunk
+- `<Space>gb` - Blame line
+- `<Space>gd` - Diff this file
 
 ---
 
-### 11. Trouble (Diagnostics Panel)
+### 17. Trouble (Diagnostics Panel)
 **Plugin**: `folke/trouble.nvim`
-
-Beautiful diagnostics panel to view and navigate all errors and warnings.
 
 **Keybindings**:
 - `<Space>xx` - Toggle diagnostics panel (all workspace issues)
@@ -311,19 +358,18 @@ Beautiful diagnostics panel to view and navigate all errors and warnings.
 - `q` - Close Trouble panel
 - `?` - Show help
 
-**Features**:
-- Clean list view of all diagnostics
-- Filter by severity (errors, warnings, info, hints)
-- Jump directly to each issue
-- Shows error messages and locations
-- Icons for different diagnostic types
-- Auto-updates as you code
+---
 
-**Usage**: Press `<Space>xx` to see all diagnostics in your workspace. Navigate with `j/k` and press `Enter` to jump to any issue.
+### 18. todo-comments
+**Plugin**: `folke/todo-comments.nvim`
+
+Highlights `TODO`, `FIXME`, `HACK`, `NOTE`, `PERF`, `WARN` comments.
+- `<Space>ft` - Search all TODO comments in the project (snacks picker)
+- `]t` / `[t` - Next / previous TODO comment
 
 ---
 
-### 12. which-key (Keymap Helper)
+### 19. which-key (Keymap Helper)
 **Plugin**: `folke/which-key.nvim`
 
 Shows available keybindings in a popup as you type.
@@ -331,65 +377,25 @@ Shows available keybindings in a popup as you type.
 **Usage**:
 - `<Space>?` - Show all keymaps
 - `<Space><Space>` - Show leader keymaps
-- Press any key prefix (like `<Space>` or `z`) and wait 500ms to see available completions
+- Press any key prefix (like `<Space>`, `z`, `g`, `]`) and wait 500ms to see available completions
 
-**Features**:
-- Modern, clean interface
-- Organized by groups (Find/Files, Diagnostics, Code/LSP, etc.)
-- Shows key descriptions for easy discovery
-- Helpful for learning new keybindings
+Groups: `<Space>f` Find, `<Space>x` Diagnostics, `<Space>c` Code/LSP, `<Space>g` Git, `<Space>o` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle, `<Space>m` Markdown, `<Space>i` Images/Files.
 
 ---
 
-### 13. Snacks Input/Notifier (Better UI)
-**Plugin**: `folke/snacks.nvim` (input + notifier modules)
-
-Replaces default Neovim UI for inputs and notifications.
-
-**Keybindings**:
-- `<Space>nd` - Dismiss all notifications
-- `<Space>nh` - Notification history
-
-**Features**:
-- Better input prompts (like rename dialog)
-- Toast notifications in bottom-right corner
-- ERROR-level notifications are sticky (must dismiss manually)
-- Compact notification style with Vesper theme colors
-
-**Usage**: Works automatically when plugins request user input or send notifications.
-
----
-
-### 14. Satellite (Scrollbar)
+### 20. Satellite (Scrollbar)
 **Plugin**: `lewis6991/satellite.nvim`
 
-Displays a scrollbar with decorations showing search matches, diagnostics, git changes, and cursor position.
-
-**Features**:
-- Visual scrollbar on the right side
-- Search match indicators
-- Diagnostic locations (errors/warnings)
-- Git change locations
-- Mark positions
-- Cursor position indicator
-
-**Usage**: Always visible on the right side of the window.
+Scrollbar on the right of each window showing cursor position, search matches, diagnostics, git changes, and marks.
 
 ---
 
-### 15. UFO (Code Folding)
-**Plugins**: 
+### 21. UFO (Code Folding)
+**Plugins**:
 - `kevinhwang91/nvim-ufo`
 - `kevinhwang91/promise-async`
 
-Advanced code folding with Treesitter and LSP support.
-
-**Features**:
-- Intelligent folding based on code structure
-- Folds functions, classes, objects, arrays, loops, etc.
-- Preview folded content on hover
-- Works with all Treesitter-supported languages
-- Beautiful fold column indicator
+Folding from Treesitter queries with an indent fallback. Folded lines show the first line plus a line count. All folds start open.
 
 **Keybindings**:
 - `za` - Toggle fold under cursor
@@ -403,41 +409,17 @@ Advanced code folding with Treesitter and LSP support.
 - `zk` - Move to previous fold
 - `K` - Peek folded content (or show LSP hover if not on fold)
 
-**Usage**: 
-1. Navigate to a function or code block
-2. Press `zc` to close/fold it
-3. Press `zo` to open/unfold it
-4. Hover over a fold and press `K` to preview its contents without unfolding
-5. Use `zM` to fold everything, `zR` to unfold everything
-
-**Tips**:
-- Folds are based on syntax, so they work intelligently for each language
-- The fold column on the left shows fold indicators
-- All folds start open by default (foldlevel=99)
-- Preview window appears when you press `K` on a folded line
-
 ---
 
-### 16. Harpoon (Quick File Marks)
-**Plugin**: `ThePrimeagen/harpoon`
+### 22. Harpoon (Quick File Marks)
+**Plugin**: `ThePrimeagen/harpoon` (harpoon2)
 
-Fast file navigation using persistent marks for frequently accessed files.
-
-**Features**:
-- Mark up to 5 frequently used files for instant access
-- Quick menu to view and manage all marks
-- Navigate between marks with single keystrokes
-- Project-specific mark persistence
-- Faster than fuzzy finding for files you access repeatedly
+Per-project list of up to 5 files you jump to with one key.
 
 **Keybindings**:
 - `<Space>oa` - Add current file to Harpoon marks
 - `<Space>oo` - Open Harpoon quick menu
-- `<Space>o1` - Jump to mark 1
-- `<Space>o2` - Jump to mark 2
-- `<Space>o3` - Jump to mark 3
-- `<Space>o4` - Jump to mark 4
-- `<Space>o5` - Jump to mark 5
+- `<Space>o1` to `<Space>o5` - Jump to mark 1 to 5
 - `<Space>on` - Navigate to next mark
 - `<Space>op` - Navigate to previous mark
 
@@ -447,121 +429,64 @@ Fast file navigation using persistent marks for frequently accessed files.
 - `dd` - Remove mark from list
 - `q` or `Esc` - Close menu
 
-**Usage**:
-1. Open a file you frequently access
-2. Press `<Space>oa` to add it to Harpoon
-3. Repeat for up to 5 important files in your project
-4. Use `<Space>o1` through `<Space>o5` to instantly jump between them
-5. Press `<Space>oo` to see all your marks and manage them
+---
 
-**Workflow Tip**: Mark your most-edited files (main file, config, types, tests, etc.) and switch between them instantly without fuzzy finding.
+### 23. vim-tmux-navigator
+**Plugin**: `christoomey/vim-tmux-navigator`
+
+- `Ctrl+h/j/k/l` - Move between Neovim splits and, at the edge of Neovim, into the neighbouring tmux pane
+
+Pairs with the `is_vim` check in `tmux/tmux.conf`, which forwards the same keys into Neovim when a pane runs it.
 
 ---
 
-### 17. Render Markdown
+### 24. Render Markdown
 **Plugin**: `MeanderingProgrammer/render-markdown.nvim`
 
-In-buffer markdown rendering with beautiful syntax and icons.
-
-**Features**:
-- Renders markdown directly in Neovim (no browser needed)
-- Code blocks with language-specific styling
-- Custom bullet point icons
-- Heading colors matching Vesper theme
-- Concealment of markdown syntax (shows formatted result)
-- Tables, links, and emphasis rendering
-- Checkbox rendering for task lists
+In-buffer markdown rendering: code blocks with borders, custom bullets, heading colors from the Vesper palette (headings use native Treesitter highlights).
 
 **Keybindings**:
 - `<Space>tr` - Toggle render markdown on/off
+- `<Space>mp` - Open the markdown file in the default browser
 
-**Auto-enabled for**:
-- All `.md` files automatically show rendered markdown
-- Concealment level set to hide syntax when not editing
-- Word wrap enabled for comfortable reading
-
-**Usage**:
-- Open any markdown file - rendering is automatic
-- Press `<Space>tr` to toggle between raw and rendered view
-- Edit normally - syntax is revealed when cursor is on a line
-- See formatted preview without leaving Neovim
-
-**Features in Detail**:
-- **Code blocks**: Highlighted with custom icons
-- **Headings**: Color-coded (H1-H6) using Vesper theme colors
-- **Lists**: Custom bullet icons for better readability
-- **Links**: Concealed to show just the link text
-- **Emphasis**: Italics and bold rendered properly
+Markdown buffers also get `conceallevel=2`, word wrap, and spell check.
 
 ---
 
-### 18. Image.nvim
+### 25. Image.nvim
 **Plugin**: `3rd/image.nvim`
 
-Inline image viewing within Neovim using Kitty graphics protocol.
+Inline image display through the Kitty graphics protocol (Ghostty supports it; tmux has `allow-passthrough on`).
 
 **Features**:
-- Display images directly in Neovim (Kitty terminal required)
-- Automatic image rendering in markdown files
-- Download and cache remote images
-- Supports PNG, JPG, GIF formats
-- Markdown integration (shows `![alt](image.png)` images)
-- PDF and Office file external opening support
+- Renders the image under the cursor in markdown files
+- Opens `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` files as images
+- Requires ImageMagick (`imagemagick` in the Brewfile)
 
-**Keybindings**:
-- `<Space>io` - Open file externally (for PDFs, Office docs, etc.)
-
-**Supported External Files**:
-- PDFs (`.pdf`)
-- Office documents (`.docx`, `.xlsx`, `.pptx`)
-- Other binary files
-
-**Usage**:
-1. In markdown files, images are automatically displayed inline
-2. For PDFs or Office files, press `<Space>io` to open in default app
-3. Remote images in markdown are downloaded and cached automatically
-4. Works seamlessly while editing documentation
-
-**Requirements**:
-- Kitty terminal for inline image display
-- ImageMagick for image processing
-- Default system apps for external file opening
-
-**Tips**:
-- Great for viewing diagrams while editing documentation
-- Automatically handles both local and remote images
-- Falls back gracefully if Kitty terminal is not available
+**External files**:
+- `<Space>io` - Open the current file with the system default application
+- PDFs and Office documents (`.pdf`, `.docx`, `.xlsx`, `.pptx`, `.doc`, `.xls`, `.ppt`) are detected on open with a hint to use `<Space>io`
 
 ---
 
-### 19. Rainbow CSV
+### 26. noice.nvim (Command Line and Messages)
+**Plugin**: `folke/noice.nvim`
+
+Replaces the command line with a centered popup, routes messages through the snacks notifier, adds borders to LSP hover and signature windows, and shows LSP progress.
+
+---
+
+### 27. nvim-colorizer
+**Plugin**: `catgoose/nvim-colorizer.lua`
+
+Highlights color codes (`#RGB`, `#RRGGBB`, `#RRGGBBAA`, `rgb()`, `hsl()`) with their color in every filetype. Color names are not highlighted.
+
+---
+
+### 28. Rainbow CSV
 **Plugin**: `cameron-wags/rainbow_csv.nvim`
 
-Syntax highlighting for CSV and TSV files with column visualization.
-
-**Features**:
-- Auto-detects CSV and TSV files
-- Color-codes each column differently
-- Makes data structure immediately visible
-- Lightweight and fast
-- Works with various delimiters
-
-**Supported Formats**:
-- CSV (comma-separated values)
-- TSV (tab-separated values)
-- Other delimiter-separated files
-
-**Usage**:
-- Open any `.csv` or `.tsv` file
-- Columns automatically get different colors
-- Navigate and edit data with visual column separation
-- No configuration needed
-
-**Benefits**:
-- Easier to read and edit tabular data
-- Quickly identify column boundaries
-- Reduces errors when working with data files
-- Essential for data analysis and manipulation
+Colors each column of `.csv` and `.tsv` files differently. Loads only for those filetypes.
 
 ---
 
@@ -590,14 +515,12 @@ Language Server Protocol provides IDE features like:
 - Press `U` to update all installed servers
 - Press `g?` for help
 
-**Recommended Setup Flow**:
-1. Install server via Mason (`:Mason`)
-2. Add to config in `init.lua`:
-```lua
-vim.lsp.config("server_name", { capabilities = capabilities })
-vim.lsp.enable("server_name")
-```
-3. Restart Neovim
+**Adding a server**:
+1. Add its name to `ensure_installed` in the LSP section of `init.lua` (or install it once via `:Mason`)
+2. Restart Neovim. mason-lspconfig enables it automatically; no `vim.lsp.enable` call is needed
+3. For server-specific settings, add a `vim.lsp.config("server_name", { settings = { ... } })` block next to the `lua_ls` one
+
+Formatters and linters are not managed by Mason. They come from the Brewfile so they are on `PATH` for the shell too. `dotdoctor` reports any that are missing.
 
 ---
 
@@ -609,7 +532,7 @@ vim.lsp.enable("server_name")
 - `v` - Visual mode
 - `V` - Visual line mode
 - `Ctrl+v` - Visual block mode
-- `:w` - Save
+- `:w` - Save (without formatting)
 - `:q` - Quit
 - `:wq` or `ZZ` - Save and quit
 - `:q!` - Quit without saving
@@ -617,13 +540,13 @@ vim.lsp.enable("server_name")
 - `Ctrl+r` - Redo
 
 ### General Editor
-- `<Space>w` - Save file
+- `<Space>w` - Format and save
 - `<Space>q` - Quit window
 - `<Space>cr` - Check and reload files
 - `<Space>tw` - Toggle word wrap
 - `gh` - Jump back in history
 - `gl` - Jump forward in history
-- `Esc` - Clear search highlights
+- `Esc` - Clear multicursors, then search highlights
 
 ### Navigation
 - `h/j/k/l` - Left/Down/Up/Right
@@ -637,6 +560,12 @@ vim.lsp.enable("server_name")
 - `%` - Jump to matching bracket
 - `Ctrl+d` - Scroll half page down
 - `Ctrl+u` - Scroll half page up
+- `s` - Flash jump
+- `S` - Flash Treesitter select
+- `]]` / `[[` - Next / previous LSP reference of the word under cursor
+- `]f` `[f` `]c` `[c` `]a` `[a` `]l` `[l` - Treesitter function / class / argument / loop motions
+- `]h` / `[h` - Next / previous git hunk
+- `]t` / `[t` - Next / previous TODO comment
 
 ### Editing
 - `dd` - Delete line
@@ -648,16 +577,18 @@ vim.lsp.enable("server_name")
 - `cw` - Change word
 - `ciw` - Change inside word
 - `ci(` - Change inside parentheses
+- `cin(` - Change inside the next parentheses (mini.ai)
+- `daf` / `dif` - Delete a function / its body (Treesitter)
+- `]s` / `[s` - Swap argument with next / previous
+- `ys` `cs` `ds` - Add / change / delete surround
+- `Ctrl+n` - Add multicursor at next match
 - `.` - Repeat last command
 
 ### Windows/Splits
 - `:split` or `:sp` - Horizontal split
 - `:vsplit` or `:vs` - Vertical split
-- `Ctrl+w h/j/k/l` - Navigate between splits
-- `<Space>h` - Move to left split
-- `<Space>j` - Move to bottom split
-- `<Space>k` - Move to top split
-- `<Space>l` - Move to right split
+- `Ctrl+h/j/k/l` - Navigate splits and tmux panes
+- `<Space>h/j/k/l` - Navigate splits
 - `Ctrl+w =` - Equal size splits
 - `Ctrl+w q` - Close current split
 
@@ -666,16 +597,19 @@ vim.lsp.enable("server_name")
 - `K` - Peek fold or LSP hover documentation
 - `<Space>rn` - Rename symbol
 - `<Space>ca` - Code actions
+- `grr` / `gri` / `grt` / `gO` - References / implementation / type definition / document symbols (built-in)
 
-### Telescope (configured in this setup)
+### Find (snacks picker)
 - `<Space>ff` - Find files
 - `<Space>fg` - Live grep (search in files)
 - `<Space>fb` - Find buffers
 - `<Space>fh` - Help tags
+- `<Space>fu` - Undo history
+- `<Space>ft` - Find TODO comments
 
-### File Explorer (Neo-tree)
-- `-` - Toggle Neo-tree
-- `<Space>e` - Focus Neo-tree
+### File Explorer (snacks)
+- `-` - Toggle explorer
+- `<Space>e` - Focus explorer
 
 ### Which-key (Keymap Discovery)
 - `<Space>?` - Show all keymaps
@@ -683,6 +617,7 @@ vim.lsp.enable("server_name")
 
 ### Comments
 - `gcc` - Toggle line comment
+- `gc{motion}` - Toggle comment over a motion
 - `gc` - Toggle comment (visual mode)
 
 ### Completion (Insert mode)
@@ -703,16 +638,30 @@ vim.lsp.enable("server_name")
 - `zj` - Next fold
 - `zk` - Previous fold
 
+### Git (gitsigns)
+- `<Space>gs` - Stage hunk
+- `<Space>gr` - Reset hunk
+- `<Space>gp` - Preview hunk
+- `<Space>gb` - Blame line
+- `<Space>gd` - Diff this file
+
 ### Harpoon (Quick Marks)
 - `<Space>oa` - Add file to Harpoon marks
 - `<Space>oo` - Open Harpoon menu
-- `<Space>o1` - Jump to mark 1
-- `<Space>o2` - Jump to mark 2
-- `<Space>o3` - Jump to mark 3
-- `<Space>o4` - Jump to mark 4
-- `<Space>o5` - Jump to mark 5
+- `<Space>o1` to `<Space>o5` - Jump to mark 1 to 5
 - `<Space>on` - Navigate to next mark
 - `<Space>op` - Navigate to previous mark
+
+### Diagnostics (Trouble)
+- `<Space>xx` - Workspace diagnostics
+- `<Space>xX` - Buffer diagnostics
+- `<Space>cs` - Symbols
+- `<Space>cl` - LSP definitions and references
+- `<Space>xL` / `<Space>xQ` - Location list / quickfix list
+
+### Notifications
+- `<Space>nd` - Dismiss notifications
+- `<Space>nh` - Notification history
 
 ### Markdown
 - `<Space>mp` - Open markdown file in browser
@@ -724,7 +673,9 @@ vim.lsp.enable("server_name")
 ### Visual Mode
 - `*` - Search for selected text
 - `gc` - Toggle comment on selection
-- `gb` - Toggle block comment on selection
+- `S{char}` - Surround selection
+- `Ctrl+n` - Add multicursor at next match of the selection
+- `<Space>A` - Add cursors to all matches
 
 ---
 
@@ -735,120 +686,119 @@ vim.lsp.enable("server_name")
 1. **Quick File Switching**:
    - Use Harpoon for your 5 most-accessed files: `<Space>oa` to mark, `<Space>o1-5` to jump
    - `<Space>ff` to find files by name (for everything else)
-   - `<Space>fb` to switch between recent buffers
-   - `-` to toggle Neo-tree file explorer for project navigation
+   - `<Space>fb` to switch between open buffers
+   - `-` to toggle the explorer for project navigation
 
 2. **Search Across Project**:
    - `<Space>fg` then type search term
-   - Use LSP features: `gd` to jump to definitions
+   - `gd` to jump to definitions, `grr` to list references
    - Visual select + `*` to search for selected text
+   - `]]` / `[[` to walk through references of the symbol under the cursor
 
-3. **Multiple Cursors Alternative**:
-   - Use `cgn` pattern: search with `/pattern`, then `cgn` to change next match, `.` to repeat
+3. **Multiple Cursors**:
+   - `Ctrl+n` on a word to add a cursor at the next occurrence, repeat as needed, then edit
+   - `<Space>A` to grab every occurrence at once
+   - The `cgn` pattern still works: search with `/pattern`, then `cgn` to change the next match, `.` to repeat
 
 4. **Quick Edits**:
    - `ciw` - change word under cursor
    - `ci"` - change inside quotes
-   - `ci{` - change inside braces
-   - `dt,` - delete until comma
+   - `cin{` - change inside the next braces even when the cursor is outside them
+   - `cif` - change a function body
+   - `]s` - swap two arguments without retyping
 
-5. **Git Workflow**:
-   - View changes in gutter with Gitsigns
-   - Use `:Git` if you have vim-fugitive installed
-   - See file history with `<Space>fg` and search for filename
+5. **Saving and Formatting**:
+   - Edits are written to disk automatically after a second of idle time
+   - `<Space>w` formats and writes when you want the formatter to run
 
 6. **Markdown Editing**:
    - In-buffer rendering with `<Space>tr` for quick previews
    - Open in browser with `<Space>mp` for final review
-   - Images display automatically in Kitty terminal
+   - Images render inline (Kitty graphics protocol)
    - Use `<Space>io` to open PDFs or Office docs externally
 
 7. **Code Navigation with Folding**:
    - Open a large file and press `zM` to fold everything
    - Scan the structure, then `zo` on sections you need to see
    - Use `K` to peek inside folds without opening them
-   - Combine with Harpoon: mark files, use folding to understand structure
 
 ### Plugin-Specific Tips
 
-**Telescope**:
-- Use `Ctrl+/` in Telescope to see all keybindings
-- `<Space>fg` searches file contents - great for finding TODO comments
-- Chain with other commands: `<Space>ff`, select file, `Ctrl+x` for horizontal split
+**Picker**:
+- `?` inside any picker lists its keys
+- `<Space>fg` also finds TODO comments, but `<Space>ft` groups them by type
+- `:lua Snacks.picker.git_status()` and `:lua Snacks.picker.diagnostics()` are two useful pickers without a mapping
 
-**Neo-tree**:
-- Press `?` inside Neo-tree to see all available commands
+**Explorer**:
+- Press `?` inside the explorer to see all available commands
 - Use `H` to toggle hidden files (like `.gitignore`, `.env`)
 - Create nested directories with `a`: type `folder/subfolder/` and press Enter
-- Git indicators show file status at a glance
 
 **LSP**:
-- `:LspInfo` - Check LSP status for current buffer
+- `:checkhealth vim.lsp` - Check LSP status for current buffer
 - `:LspLog` - View LSP logs for debugging
 - Hover (`K`) twice to enter hover window (useful for long docs)
 
 **Treesitter**:
 - `:InspectTree` - See syntax tree (great for debugging highlighting)
 - `:Inspect` - Show highlight groups under cursor
+- `:TSLog` - See why a parser install failed
 
 **Code Folding (UFO)**:
 - Use `zM` to fold all code, then `zo` to selectively open sections you're working on
 - Press `K` on a folded line to preview its contents without opening
-- Combine with Telescope: `<Space>ff` to find file, then `zM` to collapse all functions
-- Great for understanding code structure at a glance
-- Folds automatically work for functions, classes, objects, arrays, and more
 
 **Harpoon**:
-- Mark your 5 most-edited files in a project for instant access
-- Use numeric marks (`<Space>o1-5`) instead of fuzzy finding for core project files
 - Common pattern: 1=main/index, 2=config, 3=types, 4=tests, 5=utils
-- Perfect for switching between related files during feature development
-- Much faster than Telescope for files you access constantly
-
-**Markdown Workflow**:
-- Use `<Space>tr` for in-buffer preview while editing
-- Use `<Space>mp` to open the file in your default browser
-- Images render inline automatically in markdown files (Kitty terminal)
-- Great for writing documentation, READMEs, or technical blog posts
+- Marks are stored per working directory
 
 **Rainbow CSV**:
 - Open any `.csv` or `.tsv` file to see automatic column highlighting
-- Each column gets a different color for easy visual separation
-- Navigate with standard Vim motions - colors make it easier to track columns
-- Essential when editing configuration data or analyzing datasets
+- `:RainbowDelim` sets a custom delimiter
 
 ### Learning Resources
 
 - Vim Tutor: Run `vimtutor` in terminal
 - Neovim Docs: Press `<Space>fh` and search
 - Plugin Docs: Visit GitHub repos linked above
-- Practice: Try `vim-be-good` plugin for interactive exercises
 
 ---
 
 ## Troubleshooting
 
 ### LSP not working
-1. Check if server is running: `:LspInfo`
+1. Check if server is running: `:checkhealth vim.lsp`
 2. Verify server is installed: `:Mason`
 3. Check logs: `:LspLog`
 4. Restart LSP: `:LspRestart`
 
 ### Completion not appearing
-1. Ensure LSP is running (`:LspInfo`)
+1. Ensure LSP is running (`:checkhealth vim.lsp`)
 2. Check if you're in insert mode
 3. Try `Ctrl+Space` to trigger manually
 4. Verify cmp sources: `:lua print(vim.inspect(require('cmp').get_config().sources))`
 
-### Telescope not finding files
+### No syntax highlighting or text objects for a language
+1. Check the parser is installed: `:lua print(vim.inspect(require('nvim-treesitter').get_installed('parsers')))`
+2. Install it: `:TSInstall <lang>`, then reopen the buffer with `:e`
+3. If the install fails, check `:TSLog` and that `tree-sitter` is on `PATH` (`dotdoctor`)
+
+### Formatting does nothing on `<Space>w`
+1. `:ConformInfo` shows the formatters for the buffer and whether they are available
+2. Run `dotdoctor` to see which formatter binaries are missing; `brew bundle` installs them
+
+### Picker not finding files
 1. Make sure you're in the right directory (`:pwd`)
-2. Check if files are gitignored (Telescope respects `.gitignore`)
-3. Use `:Telescope find_files hidden=true` for hidden files
+2. Check if files are gitignored (the files picker respects `.gitignore`)
+3. Press `?` inside the picker to find the toggle for hidden and ignored files
+
+### Ctrl+h/j/k/l does not leave Neovim into tmux
+1. Confirm tmux runs the config from this repo (`prefix + r` to reload)
+2. Inside Neovim, `:TmuxNavigateLeft` should exist; if not, run `:Lazy sync`
 
 ### Colors look wrong
 1. Check terminal supports true color: `:echo has('termguicolors')`
-2. Set terminal to use true color (most modern terminals do)
-3. Try different terminal (iTerm2, Alacritty, WezTerm recommended)
+2. Inside tmux, confirm `default-terminal` is `tmux-256color` and the RGB override is set (both are in `tmux.conf`)
 
 ---
 
@@ -861,11 +811,14 @@ This configuration uses `lazy.nvim` as the plugin manager. All config is in `nvi
 2. Restart Neovim or run `:Lazy sync`
 
 **To modify keybindings**:
-Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
+Look for `vim.keymap.set()` calls in `init.lua` and modify as needed. Keys defined in a plugin's `keys = {}` table load that plugin on first use.
 
 **To add LSP servers**:
-1. Install via `:Mason`
-2. Add config in the LSP section using the pattern shown for `lua_ls`
+Add the server name to `ensure_installed` in the LSP section. Settings go in a `vim.lsp.config("name", {...})` block.
+
+**To add a formatter or linter**:
+1. Add the binary to the `Brewfile` and run `brew bundle`
+2. Add it to `formatters_by_ft` (conform) or `linters_by_ft` (nvim-lint) in `init.lua`
 
 ---
 
@@ -873,11 +826,13 @@ Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
 
 | Command | Action |
 |---------|--------|
-| `<Space>w` | Save file |
+| `<Space>w` | Format and save |
 | `<Space>q` | Quit window |
 | `<Space>ff` | Find files |
 | `<Space>fg` | Search in files |
 | `<Space>fb` | Find buffers |
+| `<Space>fu` | Undo history |
+| `<Space>ft` | Find TODOs |
 | `-` | Toggle file explorer |
 | `<Space>e` | Focus file explorer |
 | `<Space>xx` | Toggle diagnostics panel |
@@ -885,11 +840,17 @@ Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
 | `K` | Peek fold or hover docs |
 | `<Space>rn` | Rename |
 | `<Space>ca` | Code actions |
+| `grr` | References |
+| `]]` / `[[` | Next / previous reference |
 | `gcc` | Toggle comment |
+| `s` | Flash jump |
+| `Ctrl+n` | Add multicursor |
 | `za` | Toggle fold |
 | `zM` | Close all folds |
 | `zR` | Open all folds |
-| `<Space>h/j/k/l` | Window navigation |
+| `Ctrl+h/j/k/l` | Split and tmux pane navigation |
+| `<Space>h/j/k/l` | Split navigation |
+| `<Space>gs` / `gr` / `gp` / `gb` | Stage / reset / preview / blame hunk |
 | `<Space>oa` | Add Harpoon mark |
 | `<Space>oo` | Harpoon menu |
 | `<Space>o1-5` | Jump to mark 1-5 |
@@ -903,7 +864,5 @@ Look for `vim.keymap.set()` calls in `init.lua` and modify as needed.
 | `<Space><Space>` | Show leader keymaps |
 | `:Mason` | Manage LSP servers |
 | `:Lazy` | Manage plugins |
-
----
-
-**Made with Neovim** - Happy coding!
+| `:TSInstall <lang>` | Install a Treesitter parser |
+| `:ConformInfo` | Show formatters for this buffer |
