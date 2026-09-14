@@ -170,7 +170,6 @@ fi
 if [[ "$(uname -s)" == "Darwin" ]]; then
   # Apple Silicon brew isn't on the default PATH; load it if present.
   [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
-  export PATH="/opt/homebrew/opt/python@3.12/libexec/bin:$PATH"
   export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 elif [[ -d "/home/linuxbrew/.linuxbrew" ]]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
@@ -181,22 +180,6 @@ export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
 # Go binaries
 export PATH="$HOME/go/bin:$PATH"
-
-# ===========================
-# Pyenv (Lazy Loading)
-# ===========================
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-
-# Lazy load pyenv for faster shell startup
-if command -v pyenv &>/dev/null; then
-  pyenv() {
-    unfunction pyenv
-    eval "$(command pyenv init --path)"
-    eval "$(command pyenv init -)"
-    pyenv "$@"
-  }
-fi
 
 # ===========================
 # Syntax Highlighting Colors
@@ -262,6 +245,9 @@ if command -v fzf &>/dev/null; then
   if command -v fd &>/dev/null; then
     export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
   fi
+
+  # Shell integration: C-r history, C-t files, Alt-c cd (fzf >= 0.48)
+  source <(fzf --zsh)
 fi
 
 # ===========================
@@ -331,26 +317,11 @@ alias cls="clear"
 alias h="history"
 alias hg="history | grep"
 
-# Git shortcuts (complementing Oh My Zsh git plugin)
-alias gs="git status"
-alias ga="git add"
-alias gaa="git add --all"
-alias gc="git commit"
-alias gcm="git commit -m"
-alias gp="git push"
-alias gpl="git pull"
-alias gl="git log --oneline --graph --decorate"
-alias gd="git diff"
-alias gco="git checkout"
-alias gb="git branch"
+# Git shortcuts come from the Oh My Zsh git plugin: gst, ga, gaa, gc, gcmsg,
+# gp, gl (pull), glog, gd, gco, gb. See `alias | grep "^g"`.
 
-# Python shortcuts
-alias py="python"
-alias pip="python -m pip"
-alias venv="python -m venv"
-alias activate="source .venv/bin/activate"
-
-
+# Python (uv manages interpreters and venvs; python3 is the system one)
+alias py="python3"
 
 # Docker shortcuts
 alias dps="docker ps"
@@ -395,34 +366,11 @@ if command -v fzf &>/dev/null; then
     fi
   }
 
-  # Interactive directory navigation
-  fcd() {
-    local dir
-    dir=$(find ${1:-.} -type d 2>/dev/null | fzf --height=40% --reverse --preview 'eza --tree --level=1 {} 2>/dev/null || ls -la {}') &&
-    cd "$dir"
-  }
-
-  # Interactive file finder
-  ff() {
-    local file
-    file=$(find ${1:-.} -type f 2>/dev/null | fzf --height=40% --reverse --preview 'bat --style=numbers --color=always {} 2>/dev/null || cat {}') &&
-    echo "$file"
-  }
-
   # Interactive file finder and open in editor
   fe() {
     local file
     file=$(find ${1:-.} -type f 2>/dev/null | fzf --height=40% --reverse --preview 'bat --style=numbers --color=always {} 2>/dev/null || cat {}') &&
     [[ -n "$file" ]] && $EDITOR "$file"
-  }
-
-  # Interactive history search
-  fh() {
-    local cmd
-    cmd=$(history | sort -rn | awk '{$1=""; print substr($0,2)}' | fzf --height=40% --reverse)
-    if [[ -n "$cmd" ]]; then
-      print -z "$cmd"
-    fi
   }
 
   # Search file contents with ripgrep and fzf
@@ -505,7 +453,7 @@ killport() {
 serve() {
   local port="${1:-8000}"
   echo "Serving on http://localhost:$port"
-  python -m http.server "$port"
+  python3 -m http.server "$port"
 }
 
 # Extract any archive type
