@@ -102,8 +102,7 @@ vim.api.nvim_create_autocmd("FileType", {
 -- Manual reload keymap
 vim.keymap.set("n", "<leader>cr", "<cmd>checktime<cr>", { desc = "Check/reload files" })
 
--- Toggle word wrap
-vim.keymap.set("n", "<leader>tw", "<cmd>set wrap!<cr>", { desc = "Toggle word wrap" })
+-- Toggles (<leader>t...) are defined with Snacks.toggle in the snacks spec
 
 -- Open markdown file in default browser
 vim.keymap.set("n", "<leader>mp", function()
@@ -294,6 +293,9 @@ require("lazy").setup({
           margin = { top = 0, right = 1, bottom = 1 },
         },
         input = { enabled = true },
+        zen = {}, -- distraction-free editing (<leader>tz)
+        scratch = {}, -- persistent scratch buffers (<leader>.)
+        dim = {}, -- dim everything outside the current scope (<leader>tD)
       },
       config = function(_, opts)
         local Snacks = require("snacks")
@@ -361,6 +363,36 @@ require("lazy").setup({
         vim.keymap.set({ "n", "t" }, "[[", function()
           Snacks.words.jump(-vim.v.count1)
         end, { desc = "Previous reference" })
+
+        -- Toggles: which-key shows the current state of each
+        Snacks.toggle.option("wrap", { name = "Wrap" }):map("<leader>tw")
+        Snacks.toggle.option("spell", { name = "Spelling" }):map("<leader>ts")
+        Snacks.toggle.option("relativenumber", { name = "Relative numbers" }):map("<leader>tn")
+        Snacks.toggle.diagnostics():map("<leader>td")
+        Snacks.toggle.inlay_hints():map("<leader>th")
+        Snacks.toggle.indent():map("<leader>ti")
+        Snacks.toggle.dim():map("<leader>tD")
+        Snacks.toggle.zen():map("<leader>tz")
+        Snacks.toggle.treesitter():map("<leader>tT")
+
+        -- Git: lazygit and open-on-GitHub
+        vim.keymap.set("n", "<leader>gg", function()
+          Snacks.lazygit()
+        end, { desc = "Lazygit" })
+        vim.keymap.set("n", "<leader>gl", function()
+          Snacks.lazygit.log_file()
+        end, { desc = "Lazygit file log" })
+        vim.keymap.set({ "n", "x" }, "<leader>go", function()
+          Snacks.gitbrowse()
+        end, { desc = "Open on GitHub" })
+
+        -- Scratch buffers
+        vim.keymap.set("n", "<leader>.", function()
+          Snacks.scratch()
+        end, { desc = "Scratch buffer" })
+        vim.keymap.set("n", "<leader>S", function()
+          Snacks.scratch.select()
+        end, { desc = "Select scratch buffer" })
 
         -- Vesper highlights: notifier
         local hl = vim.api.nvim_set_hl
@@ -623,10 +655,6 @@ require("lazy").setup({
             end, "Implementations")
             map("<leader>rn", vim.lsp.buf.rename, "Rename")
             map("<leader>ca", vim.lsp.buf.code_action, "Code action")
-            map("<leader>th", function()
-              local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = ev.buf })
-              vim.lsp.inlay_hint.enable(not enabled, { bufnr = ev.buf })
-            end, "Toggle inlay hints")
           end,
         })
       end,

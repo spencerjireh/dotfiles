@@ -108,7 +108,7 @@ done
 
 echo ""
 log_info "Checking tools..."
-for t in nvim tmux fzf fd eza bat rg delta zoxide git spf; do
+for t in nvim tmux fzf fd eza bat rg delta zoxide git spf lazygit; do
     check_tool "$t"
 done
 check_tool gh "GitHub SSH + CLI feature"
