@@ -1,0 +1,6 @@
+# Global git ignore, linked to ~/.config/git/ignore (git's default excludes file).
+.DS_Store
+Thumbs.db
+.claude/
+**/.claude/settings.local.json
+*.backup.*

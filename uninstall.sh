@@ -67,7 +67,8 @@ remove_symlink "$HOME/.config/nvim" "$DOTFILES_DIR/nvim"
 
 remove_symlink "$HOME/.tmux.conf" "$DOTFILES_DIR/tmux/tmux.conf"
 
-remove_symlink "$HOME/.gitaliases" "$DOTFILES_DIR/git/aliases"
+remove_symlink "$HOME/.gitconfig.dotfiles" "$DOTFILES_DIR/git/config"
+remove_symlink "$HOME/.config/git/ignore" "$DOTFILES_DIR/git/ignore"
 
 remove_symlink "$HOME/.local/bin/dotup" "$DOTFILES_DIR/update.sh"
 remove_symlink "$HOME/.local/bin/dotdoctor" "$DOTFILES_DIR/doctor.sh"

@@ -43,7 +43,7 @@ Selectable components (all pre-selected by default):
 | tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (headless, no tmux session needed) |
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
 | GitHub SSH + CLI | Generates an ed25519 key, writes `~/.ssh/config`, installs `gh` |
-| Git global config | name/email, delta pager, git aliases |
+| Git global config | name/email prompts; everything else (delta pager, pull.rebase, autoSetupRemote, aliases) is tracked in `git/config` and included via `include.path`; `git/ignore` becomes the global ignore |
 | macOS defaults | Fastest key repeat + repeat-on-hold, Finder, Dock, trackpad, screenshots (macOS only) |
 
 Symlinks are created with **automatic backup** of any existing file.
@@ -96,7 +96,8 @@ Covers script linting, the `lib/` helpers, and `install.sh`'s symlink/selection 
 │   └── theme/
 │       └── vesper.toml
 ├── git/
-│   └── aliases
+│   ├── config        # tracked settings + aliases (included from ~/.gitconfig)
+│   └── ignore        # global gitignore (~/.config/git/ignore)
 ├── lib/
 │   ├── log.sh        # logging helpers
 │   ├── tui.sh        # gum-backed TUI helpers (with plain fallback)

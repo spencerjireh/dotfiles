@@ -381,15 +381,26 @@ EOF
     fi
 fi
 
-# Git aliases (always wired up when git config is selected)
+# Git global config: tracked settings + aliases via include.path, global ignore
 if is_selected "Git global config"; then
-    log_info "Setting up Git aliases..."
-    create_symlink "$DOTFILES_DIR/git/aliases" "$HOME/.gitaliases"
-
     log_info "Setting up Git config..."
+    create_symlink "$DOTFILES_DIR/git/config" "$HOME/.gitconfig.dotfiles"
+    mkdir -p "$HOME/.config/git"
+    create_symlink "$DOTFILES_DIR/git/ignore" "$HOME/.config/git/ignore"
 
-    git config --global include.path "$HOME/.gitaliases"
-    log_info "Included git aliases via include.path"
+    git config --global include.path "$HOME/.gitconfig.dotfiles"
+    log_info "Included git/config via include.path"
+
+    # Migration from the old layout: drop the ~/.gitaliases link and the keys
+    # install.sh used to write directly (they now live in git/config).
+    if [ -L "$HOME/.gitaliases" ] && [[ "$(readlink "$HOME/.gitaliases")" == "$DOTFILES_DIR"/* ]]; then
+        rm "$HOME/.gitaliases"
+        log_info "Removed legacy ~/.gitaliases link"
+    fi
+    for key in core.editor core.pager interactive.diffFilter delta.navigate delta.dark \
+               delta.line-numbers merge.conflictstyle diff.colorMoved init.defaultBranch; do
+        git config --global --unset "$key" 2>/dev/null || true
+    done
 
     current_name="$(git config --global user.name 2>/dev/null || true)"
     if [ -n "$current_name" ]; then
@@ -405,23 +416,6 @@ if is_selected "Git global config"; then
     elif [ -n "$GIT_EMAIL" ]; then
         git config --global user.email "$GIT_EMAIL"
         log_info "Set git user.email"
-    fi
-
-    git config --global core.editor nvim
-    log_info "Set core.editor to nvim"
-
-    git config --global init.defaultBranch main
-    log_info "Set init.defaultBranch to main"
-
-    if command -v delta &>/dev/null; then
-        git config --global core.pager delta
-        git config --global interactive.diffFilter "delta --color-only"
-        git config --global delta.navigate true
-        git config --global delta.dark true
-        git config --global delta.line-numbers true
-        git config --global merge.conflictstyle diff3
-        git config --global diff.colorMoved default
-        log_info "Configured delta as Git pager"
     fi
 fi
 
