@@ -159,6 +159,7 @@ FEATURES=(
     "Git global config"
 )
 if [[ "$OS" == "macos" ]]; then
+    FEATURES+=("Karabiner (Caps Lock as Esc/Ctrl)")
     FEATURES+=("macOS defaults")
 fi
 
@@ -435,6 +436,17 @@ if is_selected "Git global config"; then
     else
         log_warn "No GitHub SSH key or git email yet; commit signing will fail until both exist"
     fi
+fi
+
+# Karabiner-Elements: Caps Lock is Escape when tapped, Control when held.
+# The directory is linked (not the file) because Karabiner rewrites its config
+# with a rename, which would replace a file symlink with a plain file.
+if is_selected "Karabiner (Caps Lock as Esc/Ctrl)"; then
+    log_info "Setting up Karabiner-Elements..."
+    brew_install "cask" "karabiner-elements"
+    mkdir -p "$HOME/.config"
+    create_symlink "$DOTFILES_DIR/karabiner" "$HOME/.config/karabiner"
+    log_warn "Karabiner needs Input Monitoring + driver approval in System Settings on first launch"
 fi
 
 # macOS defaults

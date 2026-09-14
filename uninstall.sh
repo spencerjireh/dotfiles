@@ -56,6 +56,7 @@ else
     SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
 fi
 remove_symlink "$GHOSTTY_DIR/config" "$DOTFILES_DIR/ghostty/config"
+[[ "$(uname -s)" == "Darwin" ]] && remove_symlink "$HOME/.config/karabiner" "$DOTFILES_DIR/karabiner"
 remove_symlink "$SPF_DIR/config.toml" "$DOTFILES_DIR/superfile/config.toml"
 remove_symlink "$SPF_DIR/hotkeys.toml" "$DOTFILES_DIR/superfile/hotkeys.toml"
 remove_symlink "$SPF_DIR/theme/vesper.toml" "$DOTFILES_DIR/superfile/theme/vesper.toml"

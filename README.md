@@ -44,6 +44,7 @@ Selectable components (all pre-selected by default):
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
 | GitHub SSH + CLI | Generates an ed25519 key, writes a `~/.ssh/config` host block (agent + keychain), installs `gh` |
 | Git global config | name/email prompts; everything else (delta pager, pull.rebase, autoSetupRemote, aliases) is tracked in `git/config` and included via `include.path`; `git/ignore` becomes the global ignore |
+| Karabiner (Caps Lock as Esc/Ctrl) | Installs Karabiner-Elements + links `karabiner/` to `~/.config/karabiner`: Caps Lock is Escape when tapped, Control when held (macOS only) |
 | macOS defaults | Fastest key repeat + repeat-on-hold, Finder, Dock, trackpad, screenshots (macOS only) |
 
 Symlinks are created with **automatic backup** of any existing file.

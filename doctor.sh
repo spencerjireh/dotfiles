@@ -81,6 +81,7 @@ echo "========================================"
 log_info "Checking symlinks..."
 if [[ "$OS" == "macos" ]]; then
     check_link "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "$DOTFILES_DIR/ghostty/config"
+    check_link "$HOME/.config/karabiner" "$DOTFILES_DIR/karabiner"
     SPF_DIR="$HOME/Library/Application Support/superfile"
 else
     check_link "$HOME/.config/ghostty/config" "$DOTFILES_DIR/ghostty/config"

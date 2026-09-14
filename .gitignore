@@ -1,3 +1,5 @@
 # Claude settings
 .claude/
 CLAUDE.md
+# Karabiner-Elements writes these next to its config
+karabiner/automatic_backups/
