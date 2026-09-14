@@ -131,8 +131,7 @@ vim.opt.foldenable = true -- Enable folding
 vim.keymap.set("n", "<leader>?", "<cmd>WhichKey<cr>", { desc = "Show all keymaps" })
 vim.keymap.set("n", "<leader><leader>", "<cmd>WhichKey <leader><cr>", { desc = "Show leader keymaps" })
 
--- Save and quit
-vim.keymap.set("n", "<leader>w", "<cmd>w<cr>", { desc = "Save file" })
+-- Quit (<leader>w = format + save lives in the conform.nvim spec)
 vim.keymap.set("n", "<leader>q", "<cmd>q<cr>", { desc = "Quit window" })
 
 -- Window navigation
@@ -807,7 +806,7 @@ require("lazy").setup({
           { "<leader>m", group = "Markdown" },
           { "<leader>i", group = "Images/Files" },
           { "<leader>o", group = "Harpoon" },
-          { "<leader>w", desc = "Save file" },
+          { "<leader>w", desc = "Format and save" },
           { "<leader>q", desc = "Quit window" },
           { "<leader>e", desc = "Focus file explorer" },
           { "<leader>mp", desc = "Open markdown in browser" },
@@ -1138,11 +1137,21 @@ require("lazy").setup({
       end,
     },
 
-    -- conform.nvim (format on save)
+    -- conform.nvim (explicit format + save on <leader>w; auto-save.nvim writes without formatting)
     {
       "stevearc/conform.nvim",
-      event = { "BufWritePre" },
       cmd = { "ConformInfo" },
+      keys = {
+        {
+          "<leader>w",
+          function()
+            -- synchronous when no callback is given, so the write sees the formatted buffer
+            require("conform").format({ lsp_format = "fallback", timeout_ms = 500 })
+            vim.cmd.write()
+          end,
+          desc = "Format and save",
+        },
+      },
       opts = {
         formatters_by_ft = {
           lua = { "stylua" },
@@ -1156,10 +1165,6 @@ require("lazy").setup({
           c = { "clang-format" },
           cpp = { "clang-format" },
           rust = { "rustfmt" },
-        },
-        format_on_save = {
-          timeout_ms = 500,
-          lsp_format = "fallback",
         },
       },
     },
