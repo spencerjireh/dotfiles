@@ -7,16 +7,25 @@ Personal development environment for macOS and Linux.
 - **Ghostty** - GPU-accelerated terminal (renderer only, titlebar hidden)
 - **tmux** - Window/pane management, vi-style copy mode
 - **Zsh** - Shell with Oh My Zsh, Powerlevel10k, and vi mode
-- **Neovim** - Single-file config (`init.lua`) with lazy.nvim
+- **Neovim** - lazy.nvim, one plugin spec per file under `nvim/lua/plugins/`
 - **Superfile** - TUI file manager (`spf`) with vim-style hotkeys, cd-on-quit, bat previews, zoxide
 
 All tools share the **Vesper** color scheme (`#101010` bg, `#ffffff` fg, `#ffc799` accent).
+
+Keybinding and alias references live in [`docs/`](docs/) and are shown by `dot keys`:
+
+| Topic | File | In-app help |
+|-------|------|-------------|
+| Neovim | [docs/nvim.md](docs/nvim.md) | `<Space>?` (which-key), `<Space>fk` (keymap picker) |
+| tmux | [docs/tmux.md](docs/tmux.md) | `prefix + ?` (opens the same file in a popup) |
+| Zsh | [docs/zsh.md](docs/zsh.md) | `dot keys zsh` |
+| Superfile | [docs/superfile.md](docs/superfile.md) | `?` inside `spf` |
 
 ## Installation
 
 ### Prerequisites
 
-None — the installer bootstraps its own foundation. On a fresh machine it installs **Homebrew** (may prompt for your password once) and **gum** before the TUI appears; **zsh** and **Oh My Zsh** are installed with the Zsh component. `git` and `curl` (preinstalled on macOS / most Linux) are all you need to start.
+None. The installer bootstraps its own foundation. On a fresh machine it installs **Homebrew** (may prompt for your password once) and **gum** before the TUI appears; **zsh** and **Oh My Zsh** are installed with the Zsh component. `git` and `curl` (preinstalled on macOS / most Linux) are all you need to start.
 
 ### Setup
 
@@ -26,19 +35,21 @@ cd dotfiles
 ./install.sh
 ```
 
+`./install.sh` forwards to `bin/dot install`. After the first run, `dot` is on your PATH.
+
 ### What the Install Script Does
 
-The installer runs a **TUI up front** (powered by [`gum`](https://github.com/charmbracelet/gum), auto-bootstrapped on first run, cross-platform on macOS + Linux): you tick which components to install and fill in any inputs (GitHub/Git name + email), confirm a summary, and then it **runs unattended** — no more mid-install prompts. If `gum` can't be installed it falls back to plain text prompts.
+The installer runs a **TUI up front** (powered by [`gum`](https://github.com/charmbracelet/gum), auto-bootstrapped on first run, cross-platform on macOS + Linux): you tick which components to install and fill in any inputs (GitHub/Git name + email), confirm a summary, and then it **runs unattended**. If `gum` can't be installed it falls back to plain text prompts.
 
 Selectable components (all pre-selected by default):
 
 | Component | What it does |
 |-----------|--------------|
-| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rust, trash, lazygit, wget, language runtimes for the LSP servers (node, go, openjdk), plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
+| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rustup (+ `rustup default stable`), trash, lazygit, wget, language runtimes for the LSP servers (node, go, openjdk), plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
 | Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` (opens maximized, Option acts as Alt, Cmd keys mapped to tmux) |
 | Claude Code | Installs via the official native installer (self-updating) |
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
-| Neovim config | Symlinks `nvim/` → `~/.config/nvim` |
+| Neovim config | Symlinks `nvim/` to `~/.config/nvim` |
 | Superfile file manager | Installs `superfile` (brew) + symlinks config, hotkeys, and Vesper theme |
 | tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (resurrect, thumbs; headless, no tmux session needed) |
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
@@ -47,19 +58,26 @@ Selectable components (all pre-selected by default):
 | Karabiner (Caps Lock as Esc/Ctrl) | Installs Karabiner-Elements + links `karabiner/` to `~/.config/karabiner`: Caps Lock is Escape when tapped, Control when held (macOS only) |
 | macOS defaults | Fastest key repeat + repeat-on-hold, Finder, Dock, trackpad, screenshots (macOS only) |
 
-Symlinks are created with **automatic backup** of any existing file.
+Symlinks are created with **automatic backup** of any existing file. The selection is recorded in `~/.config/dotfiles/components` so `dot doctor` checks only what this machine has; re-running the installer merges new selections into it.
 
-Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); casks that are individually toggleable in the TUI (Ghostty, font, `gh`) stay in `install.sh`.
+Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); casks that are individually toggleable in the TUI (Ghostty, font, `gh`) stay in `cmd/install.sh`.
 
-### Maintenance
+### The `dot` command
 
-Two helpers are symlinked onto your PATH (`~/.local/bin`) during install:
+Linked to `~/.local/bin/dot` during install. Every script in the repo is reachable through it:
 
 ```bash
-dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins + mason registry, rebuild tmux-thumbs, update Claude
-dotdoctor   # health check: symlinks, CLI tools, runtimes, formatters, OMZ plugins, LSP servers, debug adapters, TPM plugin dirs
-dotdoctor --links   # only the symlinks/dirs the installer creates (used by CI)
+dot install          # the installer (same as ./install.sh)
+dot update           # pull dotfiles, brew bundle + upgrade, tmux/zsh/nvim plugins, mason registry, tmux-thumbs, Claude
+dot doctor           # health check for the recorded components: symlinks, tools, runtimes, formatters, LSP servers, adapters, TPM plugins
+dot doctor --links   # only the symlinks/dirs the installer creates (used by CI)
+dot keys             # list reference topics; dot keys tmux | nvim | zsh | superfile | all
+dot edit [query]     # fzf over the repo's tracked files, open in $EDITOR (zshconfig, nvimconfig, tmuxconfig are shortcuts)
+dot uninstall        # remove the symlinks, restore backups
+dot dir              # print the repo path: cd "$(dot dir)"
 ```
+
+`dotup` and `dotdoctor` remain as zsh aliases for `dot update` and `dot doctor`.
 
 ### Non-interactive install
 
@@ -84,14 +102,14 @@ ssh-keygen -t ed25519 -C "you@example.com" -f ~/.ssh/id_ed25519_github   # choos
 ssh-add --apple-use-keychain ~/.ssh/id_ed25519_github
 gh ssh-key add ~/.ssh/id_ed25519_github.pub --type authentication --title "$(hostname)"
 gh ssh-key add ~/.ssh/id_ed25519_github.pub --type signing --title "$(hostname) signing"
-./install.sh   # Git global config component: rewrites allowed_signers for the new key
+dot install   # Git global config component: rewrites allowed_signers for the new key
 ```
 
 Then delete the old key at github.com/settings/keys.
 
 ### Machine-specific config
 
-Anything machine- or work-specific (per-machine PATHs, tool installers, private aliases) goes in **`~/.zshrc.local`** (untracked), sourced at the end of `.zshrc`. Install seeds it from `zsh/.zshrc.local.example` if absent — so the tracked `.zshrc` stays clean and portable.
+Anything machine- or work-specific (per-machine PATHs, tool installers, private aliases) goes in **`~/.zshrc.local`** (untracked), sourced at the end of `.zshrc`. Install seeds it from `zsh/.zshrc.local.example` if absent, so the tracked zsh config stays clean and portable.
 
 ### Tests
 
@@ -99,131 +117,74 @@ Anything machine- or work-specific (per-machine PATHs, tool installers, private 
 ./tests/run.sh   # dependency-free; runs in a sandbox, installs nothing
 ```
 
-Covers script linting (shellcheck at warning level), the `lib/` helpers, `install.sh`'s symlink/selection logic, stylua formatting of `init.lua`, and booting `tmux.conf` on an isolated server. CI (GitHub Actions) runs it on Ubuntu on every push, and an install job on both macOS and Ubuntu runs `install.sh` non-interactively for the config components, checks the links with `dotdoctor --links`, restores the Neovim plugins with parsers compiled, and confirms TPM installed its plugins. A non-interactive run skips the Homebrew bootstrap when no selected component needs it.
+Covers script linting (shellcheck at warning level), the `lib/` helpers, `bin/dot` dispatch, the installer's symlink/selection/component logic, stylua formatting of `nvim/`, `zsh -n` on the zsh files, booting `tmux.conf` on an isolated server, and drift guards that fail when a keymap, alias or tmux binding is missing from its `docs/` file. CI (GitHub Actions) runs it on Ubuntu on every push, and an install job on both macOS and Ubuntu runs `install.sh` non-interactively for the config components, checks the links with `dot doctor --links`, restores the Neovim plugins with parsers compiled, and confirms TPM installed its plugins.
 
 ### Uninstallation
 
 ```bash
-./uninstall.sh  # Removes symlinks, restores backups
+dot uninstall   # removes symlinks, restores backups, drops the git include and component record
 ```
 
 ## Directory Structure
 
 ```
-├── ghostty/
-│   └── config
-├── tmux/
-│   └── tmux.conf
+├── bin/dot             # the dot command (symlinked to ~/.local/bin/dot)
+├── install.sh          # shim: ./install.sh -> dot install
+├── cmd/
+│   ├── install.sh      # TUI installer
+│   ├── update.sh       # dot update
+│   ├── doctor.sh       # dot doctor
+│   ├── uninstall.sh    # dot uninstall
+│   ├── keys.sh         # dot keys
+│   └── edit.sh         # dot edit
+├── lib/
+│   ├── log.sh          # logging helpers
+│   ├── env.sh          # repo-root resolver, brew/rustup PATH loading
+│   ├── components.sh   # ~/.config/dotfiles/components read/write, is_selected
+│   ├── tui.sh          # gum-backed TUI helpers (with plain fallback)
+│   └── tmux.sh         # tpm_run (TPM scripts on a throwaway server), tmux_thumbs_build
+├── docs/
+│   ├── nvim.md         # Neovim plugins and keys
+│   ├── tmux.md         # tmux keys (shown by prefix + ?)
+│   ├── zsh.md          # aliases and functions
+│   └── superfile.md    # superfile hotkeys
+├── ghostty/config
+├── tmux/tmux.conf
 ├── zsh/
-│   ├── .zshrc
-│   └── .p10k.zsh
+│   ├── .zshrc          # thin: instant prompt, tmux autostart, Oh My Zsh, then sources *.zsh
+│   ├── 10-options.zsh  # history, navigation, vi mode, completion, env
+│   ├── 20-path.zsh     # brew, rustup, ~/.local/bin, go
+│   ├── 30-tools.zsh    # highlight colors, Ghostty integration, zoxide, fzf, delta
+│   ├── 40-aliases.zsh
+│   ├── 50-functions.zsh
+│   ├── .p10k.zsh
+│   └── .zshrc.local.example
 ├── nvim/
-│   ├── init.lua
+│   ├── init.lua        # options, autocmds, keymaps, lazy.nvim bootstrap
+│   ├── lua/plugins/    # one spec per file (snacks.lua, lsp.lua, ...)
 │   ├── lazy-lock.json
 │   └── .stylua.toml
-├── superfile/
-│   ├── config.toml
-│   ├── hotkeys.toml
-│   └── theme/
-│       └── vesper.toml
-├── git/
-│   ├── config        # tracked settings, signing, aliases (included from ~/.gitconfig)
-│   └── ignore        # global gitignore (~/.config/git/ignore)
-├── karabiner/
-│   └── karabiner.json  # Caps Lock as Esc/Ctrl (directory linked to ~/.config/karabiner)
-├── lib/
-│   ├── log.sh        # logging helpers
-│   ├── tui.sh        # gum-backed TUI helpers (with plain fallback)
-│   └── tmux.sh       # tpm_run (TPM scripts on a throwaway server), tmux_thumbs_build
-├── tests/
-│   └── run.sh        # dependency-free test suite
-├── .github/workflows/
-│   └── test.yml      # CI: test suite on Ubuntu, non-interactive install on macOS + Ubuntu
-├── Brewfile          # declarative package list (brew bundle)
-├── install.sh
-├── uninstall.sh
-├── update.sh         # `dotup` — update everything
-└── doctor.sh         # `dotdoctor` — health check
-```
-
-## tmux Keybinds
-
-Prefix: `Cmd+Shift+Space` (Ghostty translates to `Ctrl+Space`)
-
-### Navigation
-
-| Action | Keys |
-|--------|------|
-| Seamless pane/vim nav | `C-h/j/k/l` (no prefix, vim-tmux-navigator inside Neovim) |
-| Prev/next window | `prefix + h/l` (or `Cmd+Shift+A/D`) |
-| Reorder window | `prefix + j/k` |
-| Window by number | `Alt+1-9` or `Cmd+1-9` (no prefix) |
-| Window switcher | `prefix + p` (fzf, all sessions) |
-
-### Copy Mode
-
-| Action | Keys |
-|--------|------|
-| Enter copy mode | `prefix + Enter` |
-| Start selection | `v` |
-| Select line | `V` |
-| Yank to clipboard | `y` |
-| Exit | `Escape` |
-
-### Management
-
-| Action | Keys |
-|--------|------|
-| Split vertical | `prefix + v` or `\|` |
-| Split horizontal | `prefix + s` or `-` |
-| Resize panes | `prefix + H/J/K/L` |
-| New window | `prefix + c` |
-| Close window | `prefix + X` |
-| Close pane | `prefix + x` |
-| New session | `prefix + S` |
-| Session tree | `prefix + w` |
-| Kill session | `prefix + q` |
-| Save / restore session | `prefix + C-s` / `prefix + C-r` (tmux-resurrect) |
-| Scratch popup | `prefix + g` |
-| Copy last command output | `prefix + y` |
-| Toggle status bar | `prefix + b` |
-| Reload config | `prefix + r` |
-| Clear screen | `prefix + C-l` (plain `C-l` is pane navigation) |
-| Keybinding help | `prefix + ?` |
-
-Opening Ghostty attaches to the running tmux server, or starts one with a timestamped session (for example `sep14-0930`) if none is running. Sessions are saved by tmux-resurrect on detach and on window/pane changes, and the last save is restored automatically when the tmux server starts.
-
-## Shell Aliases
-
-```bash
-# tmux
-tm              # attach or create session
-tls             # list sessions
-tks <name>      # kill session
-
-# editors & tools
-v               # nvim
-cld             # claude
-ccd             # claude --dangerously-skip-permissions
-
-# modern replacements
-ls → eza        # with icons and git status
-cat → bat       # with syntax highlighting
-rm → trash      # safe delete
-
-# git (Oh My Zsh git plugin): gst, ga, gaa, gc, gcmsg, gp, gl (pull), glog, gd, gco, gb
-# fzf: Ctrl+R history, Ctrl+T files, Alt+C cd; fe/frg/fbr/flog/fkill/fdock helpers
-# python: uv (interpreters, venvs, tools); py = python3
+├── superfile/          # config.toml, hotkeys.toml, theme/vesper.toml
+├── git/                # config (included from ~/.gitconfig), ignore (global)
+├── karabiner/          # karabiner.json (directory linked to ~/.config/karabiner)
+├── tests/run.sh        # dependency-free test suite
+├── .github/workflows/test.yml
+├── Brewfile            # declarative package list (brew bundle)
+└── CLAUDE.md           # conventions for Claude Code sessions in this repo
 ```
 
 ## Troubleshooting
 
-**Symlinks not working** — Re-run `./install.sh`
+**Symlinks not working** - Run `dot doctor`, then `dot install` to repair.
 
-**tmux colors wrong** — Ensure terminal reports 256-color. Config sets `default-terminal` to `tmux-256color`.
+**`dot: command not found`** - `~/.local/bin` is added to PATH by `zsh/20-path.zsh`; open a new shell, or run `./bin/dot` from the repo.
 
-**tmux plugins not loaded** — Run `dotup` (or `./install.sh` with the tmux component) to install them headlessly, or press `prefix + I` inside tmux. `dotdoctor` lists any missing plugin directories.
+**tmux colors wrong** - Ensure terminal reports 256-color. Config sets `default-terminal` to `tmux-256color`.
 
-**`prefix + t` (tmux-thumbs) shows an installer prompt** — The Rust binary is missing. `dotup` builds it with cargo (`rust` is in the Brewfile); `dotdoctor` reports the missing binary.
+**tmux plugins not loaded** - Run `dot update` (or `dot install` with the tmux component) to install them headlessly, or press `prefix + I` inside tmux. `dot doctor` lists any missing plugin directories.
 
-**Karabiner rule does nothing** — Open Karabiner-Elements once and grant Input Monitoring plus the driver extension in System Settings. The rule is in the "Default" profile, which the tracked config selects.
+**`prefix + t` (tmux-thumbs) shows an installer prompt** - The Rust binary is missing. `dot update` builds it with cargo (`rustup` is in the Brewfile); `dot doctor` reports the missing binary.
+
+**`prefix + ?` shows "dot is not installed"** - The popup runs `~/.local/bin/dot`; run `dot install` (any component) to create the link.
+
+**Karabiner rule does nothing** - Open Karabiner-Elements once and grant Input Monitoring plus the driver extension in System Settings. The rule is in the "Default" profile, which the tracked config selects.

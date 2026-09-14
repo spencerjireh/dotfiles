@@ -111,7 +111,7 @@ maximize = true
 macos-option-as-alt = true
 
 # Window management handled by tmux
-# See ~/.dotfiles/tmux/tmux.conf
+# See tmux/tmux.conf in the dotfiles repo
 
 # Translate cmd+shift+space to ctrl+space for tmux prefix
 keybind = cmd+shift+space=text:\x00

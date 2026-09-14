@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# dot: single entry point for the dotfiles repo. Linked to ~/.local/bin/dot.
+#
+#   dot install     interactive (or DOTFILES_NONINTERACTIVE=1) installer
+#   dot update      pull repo, brew bundle + upgrade, plugins, Claude   (alias: up)
+#   dot doctor      health check; --links checks only symlinks/dirs
+#   dot uninstall   remove the symlinks, restore backups
+#   dot keys [t]    keybinding/alias reference for nvim, tmux, zsh, superfile, all
+#   dot edit [q]    fzf over tracked files, open in $EDITOR
+#   dot dir         print the repo path (cd "$(dot dir)")
+#   dot help        this text
+
+set -uo pipefail
+
+# Resolve the repo root through the ~/.local/bin/dot symlink (portable, no readlink -f).
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+DOTFILES_DIR="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+source "$DOTFILES_DIR/lib/log.sh"
+source "$DOTFILES_DIR/lib/env.sh"
+export DOTFILES_DIR
+
+usage() {
+    sed -n '/^#   dot /,/^#   dot help/p' "${BASH_SOURCE[0]}" | sed 's/^#   //'
+}
+
+sub="${1:-help}"
+[ $# -gt 0 ] && shift
+
+case "$sub" in
+    install|update|doctor|uninstall|keys|edit)
+        load_env
+        exec "$DOTFILES_DIR/cmd/$sub.sh" "$@"
+        ;;
+    up)
+        load_env
+        exec "$DOTFILES_DIR/cmd/update.sh" "$@"
+        ;;
+    dir)
+        echo "$DOTFILES_DIR"
+        ;;
+    help|-h|--help)
+        echo "dot - dotfiles command ($DOTFILES_DIR)"
+        echo ""
+        usage
+        ;;
+    *)
+        log_error "Unknown command: $sub"
+        echo ""
+        usage
+        exit 1
+        ;;
+esac

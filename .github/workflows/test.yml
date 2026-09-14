@@ -65,7 +65,7 @@ jobs:
         run: ./install.sh
 
       - name: Check the symlinks and plugin dirs the installer created
-        run: ./doctor.sh --links
+        run: ./bin/dot doctor --links
 
       - name: Restore Neovim plugins and compile parsers headlessly
         run: |
@@ -74,3 +74,9 @@ jobs:
 
       - name: tmux plugins installed headlessly
         run: test "$(ls ~/.tmux/plugins | wc -l | tr -d ' ')" = 3
+
+      - name: dot command works through its PATH symlink
+        run: |
+          ~/.local/bin/dot help
+          ~/.local/bin/dot keys tmux | head -3
+          test -f ~/.config/dotfiles/components && cat ~/.config/dotfiles/components

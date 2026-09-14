@@ -1,20 +1,15 @@
 #!/bin/bash
 
 # Update everything: dotfiles repo, brew packages, tmux/zsh/nvim plugins, Claude.
-# Installed as `dotup` on your PATH by install.sh.
+# Run as `dot update` (alias `dotup`).
 
 set -uo pipefail
 
-# Resolve the real script dir even when invoked through a symlink.
-SOURCE="${BASH_SOURCE[0]}"
-while [ -L "$SOURCE" ]; do
-    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
-    SOURCE="$(readlink "$SOURCE")"
-    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
-done
-DOTFILES_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/log.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$(dotfiles_dir "${BASH_SOURCE[0]}")}"
+load_env
 
-source "$DOTFILES_DIR/lib/log.sh"
 source "$DOTFILES_DIR/lib/tmux.sh"
 
 echo ""

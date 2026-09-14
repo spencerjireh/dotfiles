@@ -1,5 +1,4 @@
-# Claude settings
+# Claude Code local settings (CLAUDE.md itself is tracked)
 .claude/
-CLAUDE.md
 # Karabiner-Elements writes these next to its config
 karabiner/automatic_backups/

@@ -1,0 +1,598 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Run as `dot install` (or ./install.sh at the repo root, which forwards here).
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/log.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$(dotfiles_dir "${BASH_SOURCE[0]}")}"
+source "$DOTFILES_DIR/lib/tui.sh"
+source "$DOTFILES_DIR/lib/tmux.sh"
+source "$DOTFILES_DIR/lib/components.sh"
+
+create_symlink() {
+    local src="$1"
+    local dest="$2"
+
+    if [ ! -e "$src" ]; then
+        log_error "Source does not exist: $src"
+        return 1
+    fi
+
+    if [ -L "$dest" ]; then
+        local current_target
+        current_target="$(readlink "$dest")"
+        if [ "$current_target" = "$src" ]; then
+            log_warn "Symlink already correct, skipping: $dest"
+            return 0
+        else
+            log_warn "Replacing existing symlink: $dest -> $current_target"
+        fi
+    elif [ -e "$dest" ]; then
+        local backup
+        backup="${dest}.backup.$(date +%Y%m%d_%H%M%S)"
+        log_warn "File exists at $dest, backing up to $backup"
+        mv "$dest" "$backup"
+    fi
+
+    ln -sf "$src" "$dest"
+    log_info "Linked: $dest -> $src"
+}
+
+clone_or_pull() {
+    local dest="$1"; shift
+    if [ ! -d "$dest" ]; then
+        git clone "$@" "$dest"
+        log_info "Installed $(basename "$dest")"
+    else
+        git -C "$dest" pull --quiet
+        log_info "Updated $(basename "$dest")"
+    fi
+}
+
+brew_install() {
+    local type="$1" pkg="$2"
+    if brew list ${type:+--$type} "$pkg" &>/dev/null; then
+        log_warn "$pkg already installed, skipping"
+    else
+        brew install ${type:+--$type} "$pkg"
+        log_info "Installed $pkg"
+    fi
+}
+
+# Bootstrap the foundation a fresh machine lacks. Each is a no-op if present.
+ensure_homebrew() {
+    load_brew_env
+    if command -v brew &>/dev/null; then
+        log_info "Homebrew present"
+        return
+    fi
+    log_warn "Homebrew not found; installing (may prompt for your password)..."
+    NONINTERACTIVE=1 /bin/bash -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    load_brew_env
+    command -v brew &>/dev/null || { log_error "Homebrew install failed"; exit 1; }
+    log_info "Installed Homebrew"
+}
+
+ensure_zsh() {
+    if command -v zsh &>/dev/null; then
+        log_info "zsh present"
+        return
+    fi
+    log_info "Installing zsh..."
+    brew install zsh
+    log_info "Installed zsh"
+}
+
+ensure_omz() {
+    if [ -d "$HOME/.oh-my-zsh" ]; then
+        log_info "Oh My Zsh present"
+        return
+    fi
+    log_info "Installing Oh My Zsh..."
+    # Non-interactive: don't switch shell, don't launch zsh, don't touch .zshrc
+    # (we symlink our own afterward).
+    RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
+        || { log_error "Oh My Zsh install failed"; exit 1; }
+    log_info "Installed Oh My Zsh"
+}
+
+# rustup (Brewfile) is keg-only and conflicts with the `rust` formula. Remove
+# the old formula if present, put rustup on PATH and install a default toolchain.
+ensure_rustup() {
+    if brew list rust &>/dev/null; then
+        log_warn "Removing Homebrew 'rust' (conflicts with rustup)..."
+        brew uninstall rust
+    fi
+    load_rust_env
+    if ! command -v rustup &>/dev/null; then
+        log_warn "rustup not found; skipping toolchain setup"
+        return 0
+    fi
+    if rustup toolchain list 2>/dev/null | grep -q default; then
+        log_info "rustup toolchain present"
+    else
+        log_info "Installing the stable Rust toolchain (rustup default stable)..."
+        rustup default stable
+    fi
+    load_rust_env
+    command -v cargo &>/dev/null && log_info "cargo: $(cargo --version)"
+}
+
+# Non-interactive mode (CI, scripted installs): DOTFILES_NONINTERACTIVE=1 with
+# DOTFILES_COMPONENTS="Neovim config,tmux + TPM,..." (comma-separated feature
+# labels). Prints the list one per line, trimmed, for $SELECTED.
+components_from_env() {
+    printf '%s\n' "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;/^$/d'
+}
+
+# Allow the test suite to source this file for its helper functions without
+# running the installer. Everything below this guard is the actual install run.
+if [ -n "${DOTFILES_SOURCE_ONLY:-}" ]; then
+    return 0 2>/dev/null || true
+fi
+
+# OS detection
+case "$(uname -s)" in
+    Darwin) OS="macos" ;;
+    Linux)  OS="linux" ;;
+    *)      log_error "Unsupported OS: $(uname -s)"; exit 1 ;;
+esac
+
+echo ""
+echo "Installing dotfiles from $DOTFILES_DIR ($OS)"
+echo "========================================"
+
+# ----------------------------------------------------------------------------
+# Bootstrap: install the foundation a fresh machine lacks, before anything else.
+# (Homebrew may prompt for your password; everything after the confirm is clean.)
+# ----------------------------------------------------------------------------
+NONINTERACTIVE="${DOTFILES_NONINTERACTIVE:-}"
+
+# Homebrew is needed for the TUI (gum) and for the brew-backed components. A
+# non-interactive run that selects only config components (symlinks, OMZ, TPM,
+# git) skips it, which matters on Linux where Linuxbrew is a slow install.
+needs_brew=1
+if [ -n "$NONINTERACTIVE" ]; then
+    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-}")"
+    needs_brew=0
+    for c in "Homebrew CLI packages" "Ghostty terminal" "Nerd Font" "Superfile file manager" \
+             "GitHub SSH + CLI" "Karabiner (Caps Lock as Esc/Ctrl)"; do
+        is_selected "$c" && needs_brew=1
+    done
+fi
+
+if [ "$needs_brew" = 1 ]; then
+    log_info "Bootstrapping foundation (Homebrew, gum)..."
+    ensure_homebrew
+else
+    load_brew_env   # use brew if present, but do not install it
+    log_info "Skipping Homebrew bootstrap (no selected component needs it)"
+fi
+if [ -n "$NONINTERACTIVE" ]; then
+    # shellcheck disable=SC2034  # read by the sourced lib/tui.sh helpers
+    USE_GUM=0
+else
+    ensure_gum   # TUI library, used by the prompts below
+fi
+
+# ----------------------------------------------------------------------------
+# Phase 1: collect every choice and input up front, then run unattended.
+# ----------------------------------------------------------------------------
+tui_header "Select what to install"
+
+# Feature labels, built per-OS (some are macOS-only).
+FEATURES=(
+    "Homebrew CLI packages"
+    "Ghostty terminal"
+    "Claude Code"
+    "Nerd Font"
+    "Neovim config"
+    "Superfile file manager"
+    "tmux + TPM"
+    "Zsh + Oh My Zsh"
+    "GitHub SSH + CLI"
+    "Git global config"
+)
+if [[ "$OS" == "macos" ]]; then
+    FEATURES+=("Karabiner (Caps Lock as Esc/Ctrl)")
+    FEATURES+=("macOS defaults")
+fi
+
+if [ -n "$NONINTERACTIVE" ]; then
+    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-}")"
+    log_info "Non-interactive install (DOTFILES_COMPONENTS)"
+else
+    tui_multiselect SELECTED "Components" "${FEATURES[@]}"
+fi
+
+if [ -z "${SELECTED//[[:space:]]/}" ]; then
+    log_warn "Nothing selected. Exiting."
+    exit 0
+fi
+
+# Prefill text inputs now so the run never has to stop and ask. In
+# non-interactive mode they come from the environment (GITHUB_EMAIL, GIT_NAME,
+# GIT_EMAIL) and nothing prompts.
+GITHUB_EMAIL="${GITHUB_EMAIL:-}"
+GIT_NAME="${GIT_NAME:-}"
+GIT_EMAIL="${GIT_EMAIL:-}"
+CHSH_ZSH=0
+
+if [ -z "$NONINTERACTIVE" ]; then
+    if is_selected "GitHub SSH + CLI" && [ ! -f "$HOME/.ssh/id_ed25519_github" ]; then
+        tui_input GITHUB_EMAIL "GitHub email (for the SSH key):"
+    fi
+
+    if is_selected "Git global config"; then
+        current_name="$(git config --global user.name 2>/dev/null || true)"
+        [ -z "$current_name" ] && tui_input GIT_NAME "Your full name for Git:"
+        current_email="$(git config --global user.email 2>/dev/null || true)"
+        [ -z "$current_email" ] && tui_input GIT_EMAIL "Your email for Git:"
+    fi
+
+    # Offer to switch the login shell to zsh (only if not already on it).
+    if is_selected "Zsh + Oh My Zsh" && [[ "$SHELL" != *zsh ]]; then
+        if tui_confirm "Make zsh your default login shell? (needs your password)"; then
+            CHSH_ZSH=1
+        fi
+    fi
+fi
+
+# Summary + single confirmation gate.
+tui_header "Ready to install"
+echo "Selected components:"
+printf '%s\n' "$SELECTED" | sed '/^$/d;s/^/  - /'
+echo ""
+
+if [ -z "$NONINTERACTIVE" ] && ! tui_confirm "Proceed with installation?"; then
+    log_info "Aborted by user."
+    exit 0
+fi
+
+echo "========================================"
+log_info "Running install (no further prompts, except a password if you opted into chsh)..."
+
+# Remember the selection so `dot doctor` checks only what this machine has.
+components_save
+log_info "Recorded components in ${COMPONENTS_FILE/#$HOME/~}"
+
+# ----------------------------------------------------------------------------
+# Phase 2: execution. Everything below is non-interactive, apart from chsh,
+# which runs first so any password prompt happens up front.
+# ----------------------------------------------------------------------------
+
+if [ "$CHSH_ZSH" = 1 ]; then
+    log_info "Switching login shell to zsh (may ask for your password)..."
+    zsh_path="$(command -v zsh)"
+    if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
+        echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
+    fi
+    if chsh -s "$zsh_path"; then
+        log_info "Default login shell set to zsh ($zsh_path)"
+    else
+        log_warn "Could not change login shell (run: chsh -s $zsh_path)"
+    fi
+fi
+
+# Brew packages (declarative via Brewfile)
+if is_selected "Homebrew CLI packages"; then
+    log_info "Installing Homebrew packages (brew bundle)..."
+    brew bundle --file="$DOTFILES_DIR/Brewfile"
+    ensure_rustup
+fi
+
+# Ghostty (app + config)
+if is_selected "Ghostty terminal"; then
+    log_info "Setting up Ghostty..."
+    if [[ "$OS" == "macos" ]]; then
+        brew_install "cask" "ghostty"
+        GHOSTTY_DIR="$HOME/Library/Application Support/com.mitchellh.ghostty"
+    else
+        log_warn "Install the Ghostty app manually on Linux: https://ghostty.org/download"
+        GHOSTTY_DIR="$HOME/.config/ghostty"
+    fi
+    mkdir -p "$GHOSTTY_DIR"
+    create_symlink "$DOTFILES_DIR/ghostty/config" "$GHOSTTY_DIR/config"
+fi
+
+# Claude Code (native installer, self-updating)
+if is_selected "Claude Code"; then
+    log_info "Setting up Claude Code..."
+    if command -v claude &>/dev/null; then
+        log_warn "Claude Code already installed, skipping"
+    else
+        curl -fsSL https://claude.com/install.sh | bash
+        log_info "Installed Claude Code"
+    fi
+fi
+
+# Font installation
+if is_selected "Nerd Font"; then
+    log_info "Installing Nerd Font..."
+    if [[ "$OS" == "macos" ]]; then
+        brew_install "cask" "font-gohufont-nerd-font"
+    else
+        FONT_DIR="$HOME/.local/share/fonts"
+        FONT_NAME="GohuFont"
+        if fc-list | grep -qi "$FONT_NAME"; then
+            log_warn "$FONT_NAME already installed, skipping"
+        else
+            log_info "Installing $FONT_NAME Nerd Font..."
+            mkdir -p "$FONT_DIR"
+            curl -fLo "/tmp/Gohu.tar.xz" \
+                "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Gohu.tar.xz"
+            tar -xf "/tmp/Gohu.tar.xz" -C "$FONT_DIR"
+            rm -f "/tmp/Gohu.tar.xz"
+            fc-cache -fv
+            log_info "Installed $FONT_NAME Nerd Font"
+        fi
+    fi
+fi
+
+# Neovim
+if is_selected "Neovim config"; then
+    log_info "Setting up Neovim..."
+    mkdir -p "$HOME/.config"
+    create_symlink "$DOTFILES_DIR/nvim" "$HOME/.config/nvim"
+fi
+
+# Superfile (TUI file manager: app + config + Vesper theme)
+if is_selected "Superfile file manager"; then
+    log_info "Setting up Superfile..."
+    brew_install "" "superfile"
+    if [[ "$OS" == "macos" ]]; then
+        SPF_DIR="$HOME/Library/Application Support/superfile"
+    else
+        SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
+    fi
+    mkdir -p "$SPF_DIR/theme"
+    create_symlink "$DOTFILES_DIR/superfile/config.toml" "$SPF_DIR/config.toml"
+    create_symlink "$DOTFILES_DIR/superfile/hotkeys.toml" "$SPF_DIR/hotkeys.toml"
+    create_symlink "$DOTFILES_DIR/superfile/theme/vesper.toml" "$SPF_DIR/theme/vesper.toml"
+fi
+
+# tmux + TPM
+if is_selected "tmux + TPM"; then
+    log_info "Setting up tmux..."
+    create_symlink "$DOTFILES_DIR/tmux/tmux.conf" "$HOME/.tmux.conf"
+
+    log_info "Setting up TPM..."
+    if [ -d "$HOME/.tmux/plugins/tpm" ]; then
+        git -C "$HOME/.tmux/plugins/tpm" pull --quiet
+        log_info "Updated TPM"
+    else
+        git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+        log_info "Installed TPM"
+    fi
+    tpm_run install_plugins || log_warn "TPM plugin install failed"
+    tmux_thumbs_build
+fi
+
+# Zsh + Oh My Zsh plugins/theme
+if is_selected "Zsh + Oh My Zsh"; then
+    ensure_zsh
+    ensure_omz
+    log_info "Setting up Zsh..."
+    create_symlink "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
+    create_symlink "$DOTFILES_DIR/zsh/.p10k.zsh" "$HOME/.p10k.zsh"
+
+    # Seed machine-local overrides file (never tracked) if absent.
+    if [ ! -f "$HOME/.zshrc.local" ]; then
+        cp "$DOTFILES_DIR/zsh/.zshrc.local.example" "$HOME/.zshrc.local"
+        log_info "Created ~/.zshrc.local from template (edit for machine-specific config)"
+    else
+        log_warn "\$HOME/.zshrc.local already exists, leaving it untouched"
+    fi
+
+    log_info "Setting up Oh My Zsh plugins and theme..."
+    OMZ_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+
+    clone_or_pull "$OMZ_CUSTOM/plugins/zsh-autosuggestions" \
+        https://github.com/zsh-users/zsh-autosuggestions
+    clone_or_pull "$OMZ_CUSTOM/plugins/zsh-syntax-highlighting" \
+        https://github.com/zsh-users/zsh-syntax-highlighting
+    clone_or_pull "$OMZ_CUSTOM/themes/powerlevel10k" \
+        --depth=1 https://github.com/romkatv/powerlevel10k.git
+fi
+
+# GitHub SSH + CLI
+if is_selected "GitHub SSH + CLI"; then
+    log_info "Setting up GitHub SSH..."
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+
+    if [ -f "$HOME/.ssh/id_ed25519_github" ]; then
+        log_warn "GitHub SSH key already exists, skipping generation"
+    else
+        ssh-keygen -t ed25519 -C "$GITHUB_EMAIL" -f "$HOME/.ssh/id_ed25519_github" -N ""
+        log_info "Generated GitHub SSH key"
+    fi
+
+    touch "$HOME/.ssh/config"
+    chmod 600 "$HOME/.ssh/config"
+
+    if grep -q "Host github.com" "$HOME/.ssh/config" 2>/dev/null; then
+        log_warn "GitHub SSH config already exists, skipping"
+    else
+        cat >> "$HOME/.ssh/config" <<'EOF'
+
+# Personal GitHub
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_github
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    IgnoreUnknown UseKeychain
+    UseKeychain yes
+EOF
+        log_info "Added GitHub host to $HOME/.ssh/config"
+    fi
+
+    if ! command -v gh &>/dev/null; then
+        brew install gh
+        log_info "Installed GitHub CLI"
+    else
+        log_warn "GitHub CLI already installed, skipping"
+    fi
+fi
+
+# Git global config: tracked settings + aliases via include.path, global ignore
+if is_selected "Git global config"; then
+    log_info "Setting up Git config..."
+    create_symlink "$DOTFILES_DIR/git/config" "$HOME/.gitconfig.dotfiles"
+    mkdir -p "$HOME/.config/git"
+    create_symlink "$DOTFILES_DIR/git/ignore" "$HOME/.config/git/ignore"
+
+    git config --global include.path "$HOME/.gitconfig.dotfiles"
+    log_info "Included git/config via include.path"
+
+    # Migration from the old layout: drop the ~/.gitaliases link and the keys
+    # install.sh used to write directly (they now live in git/config).
+    if [ -L "$HOME/.gitaliases" ] && [[ "$(readlink "$HOME/.gitaliases")" == "$DOTFILES_DIR"/* ]]; then
+        rm "$HOME/.gitaliases"
+        log_info "Removed legacy ~/.gitaliases link"
+    fi
+    for key in core.editor core.pager interactive.diffFilter delta.navigate delta.dark \
+               delta.line-numbers merge.conflictstyle diff.colorMoved init.defaultBranch; do
+        git config --global --unset "$key" 2>/dev/null || true
+    done
+
+    current_name="$(git config --global user.name 2>/dev/null || true)"
+    if [ -n "$current_name" ]; then
+        log_warn "Git user.name already set to '$current_name', skipping"
+    elif [ -n "$GIT_NAME" ]; then
+        git config --global user.name "$GIT_NAME"
+        log_info "Set git user.name"
+    fi
+
+    current_email="$(git config --global user.email 2>/dev/null || true)"
+    if [ -n "$current_email" ]; then
+        log_warn "Git user.email already set to '$current_email', skipping"
+    elif [ -n "$GIT_EMAIL" ]; then
+        git config --global user.email "$GIT_EMAIL"
+        log_info "Set git user.email"
+    fi
+
+    # Commit signing: git/config signs with the GitHub SSH key. Write the
+    # allowed-signers file so signatures verify locally too. Regenerated on
+    # every run so a new key or email is picked up.
+    signing_email="$(git config --global user.email 2>/dev/null || true)"
+    if [ -f "$HOME/.ssh/id_ed25519_github.pub" ] && [ -n "$signing_email" ]; then
+        printf '%s namespaces="git" %s\n' "$signing_email" "$(cut -d' ' -f1,2 "$HOME/.ssh/id_ed25519_github.pub")" \
+            > "$HOME/.config/git/allowed_signers"
+        log_info "Wrote ~/.config/git/allowed_signers (commits are signed with the GitHub SSH key)"
+    else
+        log_warn "No GitHub SSH key or git email yet; commit signing will fail until both exist"
+    fi
+fi
+
+# Karabiner-Elements: Caps Lock is Escape when tapped, Control when held.
+# The directory is linked (not the file) because Karabiner rewrites its config
+# with a rename, which would replace a file symlink with a plain file.
+if is_selected "Karabiner (Caps Lock as Esc/Ctrl)"; then
+    log_info "Setting up Karabiner-Elements..."
+    brew_install "cask" "karabiner-elements"
+    mkdir -p "$HOME/.config"
+    create_symlink "$DOTFILES_DIR/karabiner" "$HOME/.config/karabiner"
+    log_warn "Karabiner needs Input Monitoring + driver approval in System Settings on first launch"
+fi
+
+# macOS defaults
+if is_selected "macOS defaults"; then
+    log_info "Applying macOS defaults..."
+
+    # Keyboard: fastest key repeat + repeat on hold (no accent menu popup)
+    defaults write NSGlobalDomain KeyRepeat -int 1
+    defaults write NSGlobalDomain InitialKeyRepeat -int 15
+    defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+    log_info "Set fastest key repeat + repeat-on-hold"
+
+    # Finder
+    defaults write com.apple.finder AppleShowAllFiles -bool true
+    log_info "Finder: show hidden files"
+
+    defaults write com.apple.finder ShowPathbar -bool true
+    log_info "Finder: show path bar"
+
+    defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+    log_info "Finder: show all extensions"
+
+    defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+    log_info "Finder: disable extension change warning"
+
+    # Dock
+    defaults write com.apple.dock autohide -bool true
+    log_info "Dock: auto-hide enabled"
+
+    defaults write com.apple.dock mineffect -string "scale"
+    log_info "Dock: minimize effect set to scale"
+
+    defaults write com.apple.dock show-recents -bool false
+    log_info "Dock: hide recent apps"
+
+    # Trackpad
+    defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+    defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+    log_info "Trackpad: tap to click enabled"
+
+    # Screenshots
+    mkdir -p "$HOME/Screenshots"
+    defaults write com.apple.screencapture location -string "$HOME/Screenshots"
+    log_info "Screenshots: save to ~/Screenshots"
+
+    defaults write com.apple.screencapture disable-shadow -bool true
+    log_info "Screenshots: shadow disabled"
+
+    # Restart affected apps
+    killall Finder 2>/dev/null || true
+    killall Dock 2>/dev/null || true
+    log_info "Restarted Finder and Dock to apply changes"
+
+    log_warn "Keyboard repeat rate change requires logout to take effect"
+fi
+
+# The `dot` command (install/update/doctor/keys/edit), symlinked onto PATH via
+# ~/.local/bin (added to PATH in zsh/20-path.zsh). `dotup` and `dotdoctor` are
+# zsh aliases now; drop the old symlinks if they point into this repo.
+log_info "Installing the dot command..."
+mkdir -p "$HOME/.local/bin"
+create_symlink "$DOTFILES_DIR/bin/dot" "$HOME/.local/bin/dot"
+for legacy in dotup dotdoctor; do
+    if [ -L "$HOME/.local/bin/$legacy" ] && [[ "$(readlink "$HOME/.local/bin/$legacy")" == "$DOTFILES_DIR"/* ]]; then
+        rm "$HOME/.local/bin/$legacy"
+        log_info "Removed legacy ~/.local/bin/$legacy link (now a zsh alias for dot)"
+    fi
+done
+
+echo "========================================"
+log_info "Dotfiles installed successfully!"
+echo ""
+log_info "Note: Restart your shell or run 'source ~/.zshrc' to apply changes."
+log_info "Then: dot help | dot keys | dot doctor"
+echo ""
+if [ -z "$NONINTERACTIVE" ] && is_selected "GitHub SSH + CLI" && command -v gh &>/dev/null && ! gh auth status &>/dev/null; then
+    log_info "Almost done — the only step left is logging in to GitHub."
+    log_info "This opens your browser to authenticate gh and upload your SSH public key."
+    if tui_confirm "Launch GitHub login now?"; then
+        # -p ssh: use the SSH protocol (and offer to upload the .pub key)
+        # -w:     web browser OAuth flow
+        if gh auth login -p ssh -h github.com -w; then
+            log_info "GitHub authentication complete."
+        else
+            log_warn "GitHub login didn't finish. Re-run it anytime with:"
+            echo "  gh auth login -p ssh -h github.com -w"
+        fi
+    else
+        log_info "Skipped. Finish GitHub setup later with either:"
+        echo "  - Automated:  gh auth login -p ssh -h github.com -w"
+        if [[ "$OS" == "macos" ]]; then
+            echo "  - Manual:     pbcopy < ~/.ssh/id_ed25519_github.pub  ->  https://github.com/settings/keys"
+        else
+            echo "  - Manual:     xclip -selection clipboard < ~/.ssh/id_ed25519_github.pub  ->  https://github.com/settings/keys"
+        fi
+    fi
+fi

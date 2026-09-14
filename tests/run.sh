@@ -3,8 +3,9 @@
 # Dependency-free test suite for the dotfiles install machinery.
 #
 # Runs in a sandbox (its own temp HOME) and never installs anything or touches
-# your real config. Covers: script linting, lib/log.sh + lib/tui.sh helpers, and
-# install.sh's create_symlink / is_selected logic (sourced via DOTFILES_SOURCE_ONLY).
+# your real config. Covers: script linting, lib/ helpers, bin/dot dispatch,
+# cmd/install.sh's create_symlink / is_selected / components logic (sourced via
+# DOTFILES_SOURCE_ONLY), zsh syntax, stylua, tmux boot, and docs drift guards.
 #
 # Usage: ./tests/run.sh   (exit code 0 = all passed)
 
@@ -42,19 +43,44 @@ section() { echo ""; echo "── $1 ──"; }
 
 # ---------------------------------------------------------------------------
 section "Lint: bash -n on all scripts"
-for f in install.sh uninstall.sh update.sh doctor.sh lib/log.sh lib/tui.sh lib/tmux.sh tests/run.sh; do
-    if bash -n "$DOTFILES_DIR/$f" 2>/dev/null; then pass "$f parses"
-    else fail "$f parses"; fi
+SCRIPTS=("$DOTFILES_DIR"/bin/dot "$DOTFILES_DIR"/install.sh "$DOTFILES_DIR"/cmd/*.sh "$DOTFILES_DIR"/lib/*.sh "$DOTFILES_DIR"/tests/run.sh)
+for f in "${SCRIPTS[@]}"; do
+    if bash -n "$f" 2>/dev/null; then pass "${f#"$DOTFILES_DIR"/} parses"
+    else fail "${f#"$DOTFILES_DIR"/} parses"; fi
 done
 if command -v shellcheck >/dev/null 2>&1; then
-    if shellcheck -S warning "$DOTFILES_DIR/install.sh" "$DOTFILES_DIR/lib/tui.sh" "$DOTFILES_DIR/lib/tmux.sh" \
-        "$DOTFILES_DIR/lib/log.sh" "$DOTFILES_DIR/uninstall.sh" "$DOTFILES_DIR/update.sh" "$DOTFILES_DIR/doctor.sh" \
-        "$DOTFILES_DIR/tests/run.sh" >/dev/null 2>&1
+    if shellcheck -S warning "${SCRIPTS[@]}" >/dev/null 2>&1
     then pass "shellcheck (no warnings)"
-    else fail "shellcheck (no warnings)" "$(shellcheck -S warning "$DOTFILES_DIR"/*.sh "$DOTFILES_DIR"/lib/*.sh "$DOTFILES_DIR"/tests/run.sh 2>&1 | grep -E "^In |SC[0-9]+" | head -6)"; fi
+    else fail "shellcheck (no warnings)" "$(shellcheck -S warning "${SCRIPTS[@]}" 2>&1 | grep -E "^In |SC[0-9]+" | head -6)"; fi
 else
     echo -e "  ${DIM}· shellcheck not installed, skipped${NC}"
 fi
+if command -v zsh >/dev/null 2>&1; then
+    for f in "$DOTFILES_DIR"/zsh/.zshrc "$DOTFILES_DIR"/zsh/*.zsh; do
+        if zsh -n "$f" 2>/dev/null; then pass "${f#"$DOTFILES_DIR"/} parses (zsh -n)"
+        else fail "${f#"$DOTFILES_DIR"/} parses (zsh -n)" "$(zsh -n "$f" 2>&1 | head -3)"; fi
+    done
+else
+    echo -e "  ${DIM}· zsh not installed, skipped${NC}"
+fi
+
+# ---------------------------------------------------------------------------
+section "bin/dot dispatch"
+DOT="$DOTFILES_DIR/bin/dot"
+OUT="$("$DOT" help 2>&1)"; assert_success "$?" "dot help exits 0"
+for sub in install update doctor uninstall keys edit dir help; do
+    assert_contains "$OUT" "dot $sub" "dot help mentions '$sub'"
+done
+OUT="$("$DOT" 2>&1)"; assert_success "$?" "dot with no args exits 0 (help)"
+"$DOT" nope >/dev/null 2>&1; assert_failure "$?" "dot <unknown> exits 1"
+assert_eq "$DOTFILES_DIR" "$("$DOT" dir)" "dot dir prints the repo root"
+"$DOT" keys nope >/dev/null 2>&1; assert_failure "$?" "dot keys <unknown topic> exits 1"
+OUT="$("$DOT" keys 2>&1)"; assert_success "$?" "dot keys lists topics"
+for t in nvim tmux zsh superfile all; do assert_contains "$OUT" "$t" "dot keys lists '$t'"; done
+for t in nvim tmux zsh superfile; do
+    if [ -f "$DOTFILES_DIR/docs/$t.md" ]; then pass "docs/$t.md exists"; else fail "docs/$t.md exists"; fi
+done
+OUT="$("$DOT" keys tmux 2>&1 </dev/null | head -1)"; assert_contains "$OUT" "#" "dot keys tmux prints docs/tmux.md"
 
 # ---------------------------------------------------------------------------
 section "lib/log.sh"
@@ -87,10 +113,10 @@ printf 'n\n' | tui_confirm "ok?"; assert_failure "$?" "tui_confirm no -> failure
 printf '\n'  | tui_confirm "ok?"; assert_success "$?" "tui_confirm empty defaults to yes"
 
 # ---------------------------------------------------------------------------
-section "install.sh helpers (sourced)"
+section "cmd/install.sh helpers (sourced)"
 export DOTFILES_SOURCE_ONLY=1
 # shellcheck source=/dev/null
-source "$DOTFILES_DIR/install.sh"
+source "$DOTFILES_DIR/cmd/install.sh"
 unset DOTFILES_SOURCE_ONLY
 # install.sh sets `set -euo pipefail`; undo it so intentional failures below
 # (which we assert on) don't abort the test runner.
@@ -108,6 +134,18 @@ SELECTED="$(components_from_env "Neovim config, tmux + TPM ,Zsh + Oh My Zsh,")"
 assert_eq "3" "$(printf '%s\n' "$SELECTED" | grep -c .)" "components_from_env yields one line per component"
 ( is_selected "tmux + TPM" ); assert_success "$?" "components_from_env trims whitespace"
 ( is_selected "" ); assert_failure "$?" "components_from_env drops empty entries"
+
+# components state file: save merges + dedupes, load round-trips
+COMP_HOME="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-comp.XXXXXX")"
+# shellcheck disable=SC2034  # read by the sourced lib/components.sh helpers
+COMPONENTS_FILE="$COMP_HOME/dotfiles/components"
+SELECTED=$'Neovim config\ntmux + TPM'; components_save
+SELECTED=$'tmux + TPM\nZsh + Oh My Zsh\n'; components_save
+assert_eq "3" "$(components_load | grep -c .)" "components_save merges runs without duplicates"
+SELECTED="$(components_load)"
+( is_selected "Neovim config" ); assert_success "$?" "components_load keeps earlier components"
+( is_selected "Zsh + Oh My Zsh" ); assert_success "$?" "components_load includes new components"
+rm -rf "$COMP_HOME"
 
 # ---------------------------------------------------------------------------
 section "create_symlink (sandboxed)"
@@ -149,8 +187,8 @@ assert_failure "$?" "errors when source is missing"
 # ---------------------------------------------------------------------------
 section "nvim: stylua formatting"
 if command -v stylua >/dev/null 2>&1; then
-    if stylua --check "$DOTFILES_DIR/nvim/init.lua" >/dev/null 2>&1; then pass "init.lua is stylua-clean"
-    else fail "init.lua is stylua-clean" "run: stylua nvim/init.lua"; fi
+    if stylua --check "$DOTFILES_DIR/nvim" >/dev/null 2>&1; then pass "nvim/ is stylua-clean"
+    else fail "nvim/ is stylua-clean" "run: stylua nvim/"; fi
 else
     echo -e "  ${DIM}· stylua not installed, skipped${NC}"
 fi
@@ -168,6 +206,7 @@ if command -v tmux >/dev/null 2>&1; then
         assert_eq "C-Space" "$(tmux -L "$TMUX_SOCK" show-options -gv prefix)" "prefix is C-Space"
         assert_contains "$(tmux -L "$TMUX_SOCK" show-hooks -g)" "resurrect" "resurrect autosave hooks are set"
         assert_contains "$(tmux -L "$TMUX_SOCK" list-keys -T prefix)" "send-keys C-l" "prefix + C-l clears the screen"
+        assert_contains "$(tmux -L "$TMUX_SOCK" list-keys -T prefix)" "dot keys tmux" "prefix + ? opens docs/tmux.md via dot keys"
         # Config lines that failed to parse show up as "unknown"/"invalid" errors
         case "$TMUX_ERR" in
             *"unknown"*|*"invalid"*|*"usage"*) fail "tmux.conf has no parse errors" "$TMUX_ERR" ;;
@@ -180,6 +219,35 @@ if command -v tmux >/dev/null 2>&1; then
 else
     echo -e "  ${DIM}· tmux not installed, skipped${NC}"
 fi
+
+# ---------------------------------------------------------------------------
+section "docs drift: every key/alias/binding is documented"
+# nvim: each "<leader>xy" literal in nvim/ must appear as `<Space>xy` in docs/nvim.md
+missing=""
+while read -r k; do
+    grep -qF "\`$k\`" "$DOTFILES_DIR/docs/nvim.md" 2>/dev/null || missing="$missing $k"
+done < <(grep -rhoE '"<leader>[^"]+"' "$DOTFILES_DIR/nvim/init.lua" "$DOTFILES_DIR/nvim/lua" 2>/dev/null \
+         | tr -d '"' | sed 's/<leader>/<Space>/g' | sort -u)
+if [ -z "$missing" ]; then pass "docs/nvim.md documents every <leader> mapping"
+else fail "docs/nvim.md documents every <leader> mapping" "missing:$missing"; fi
+
+# zsh: each alias and function name must appear as `name` in docs/zsh.md
+missing=""
+while read -r n; do
+    [ -n "$n" ] || continue
+    grep -qF "\`$n\`" "$DOTFILES_DIR/docs/zsh.md" || missing="$missing $n"
+done < <({ grep -hoE '^[[:space:]]*alias (-- )?[^=]+=' "$DOTFILES_DIR"/zsh/*.zsh | sed -E 's/^[[:space:]]*alias (-- )?//; s/=$//';
+           grep -hoE '^[[:space:]]*(function )?[A-Za-z_][A-Za-z0-9_-]*\(\)' "$DOTFILES_DIR"/zsh/*.zsh | sed -E 's/^[[:space:]]*(function )?//; s/\(\)//'; } | sort -u)
+if [ -z "$missing" ]; then pass "docs/zsh.md documents every alias and function"
+else fail "docs/zsh.md documents every alias and function" "missing:$missing"; fi
+
+# tmux: each prefix-table bind key must appear as `prefix + KEY` in docs/tmux.md
+missing=""
+while read -r k; do
+    grep -qF "\`prefix + $k\`" "$DOTFILES_DIR/docs/tmux.md" || missing="$missing $k"
+done < <(grep -E '^bind( -r)? [^-]' "$DOTFILES_DIR/tmux/tmux.conf" | awk '{ if ($2=="-r") print $3; else print $2 }' | sort -u)
+if [ -z "$missing" ]; then pass "docs/tmux.md documents every prefix binding"
+else fail "docs/tmux.md documents every prefix binding" "missing:$missing"; fi
 
 # ---------------------------------------------------------------------------
 echo ""

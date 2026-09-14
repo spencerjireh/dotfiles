@@ -1,6 +1,8 @@
 # Neovim Configuration Guide
 
-This guide covers the plugins, settings, and keybindings in this Neovim configuration (`nvim/init.lua`, Neovim 0.11+).
+This guide covers the plugins, settings, and keybindings in this Neovim configuration (Neovim 0.11+).
+
+Layout: `nvim/init.lua` holds options, autocmds, plugin-free keymaps and the lazy.nvim bootstrap. Every plugin lives in its own file under `nvim/lua/plugins/` (for example `lsp.lua`, `git.lua`, `debug.lua`), loaded through `{ import = "plugins" }`. Show this file from the shell with `dot keys nvim`.
 
 ## Table of Contents
 - [Basic Settings](#basic-settings)
@@ -173,11 +175,11 @@ Statusline showing mode, file path and status, git branch and changes, LSP diagn
 - `nvim-treesitter/nvim-treesitter-textobjects` (`main` branch)
 - `nvim-treesitter/nvim-treesitter-context`
 
-The `main` branch of nvim-treesitter is only a parser and query installer. Highlighting and indentation are enabled per buffer by a `FileType` autocmd in `init.lua` for any filetype that has a parser.
+The `main` branch of nvim-treesitter is only a parser and query installer. Highlighting and indentation are enabled per buffer by a `FileType` autocmd in `lua/plugins/treesitter.lua` for any filetype that has a parser.
 
-**Parsers installed automatically**: c, cpp, lua, vim, vimdoc, query, markdown, markdown_inline, tsx, typescript, javascript, python, go, rust, java, json, yaml, toml, bash, html, css.
+**Parsers installed automatically**: c, cpp, lua, vim, vimdoc, query, markdown, markdown_inline, tsx, typescript, javascript, python, go, rust, java, json, yaml, toml, bash, html, css, regex (snacks picker input), latex (render-markdown math).
 
-Missing parsers install asynchronously on the first start; reopen affected buffers with `:e` when the notification appears. `dotup` runs the install synchronously. Compiling parsers requires the `tree-sitter` CLI (`tree-sitter-cli` in the Brewfile).
+Missing parsers install asynchronously on the first start; reopen affected buffers with `:e` when the notification appears. `dot update` runs the install synchronously. Compiling parsers requires the `tree-sitter` CLI (`tree-sitter-cli` in the Brewfile).
 
 **Commands**:
 ```vim
@@ -214,9 +216,9 @@ Provides IDE-like features: autocomplete, go-to-definition, hover docs, rename, 
 
 **Servers installed by Mason**: `lua_ls`, `pyright`, `tsgo` (TypeScript 7 native server), `gopls`, `rust_analyzer`, `jdtls`, `clangd`. Mason needs `node`, `go` and `java` on `PATH` to install them; the Brewfile provides all three.
 
-**ruff** also runs as a language server for Python. Its binary comes from the Brewfile, not Mason, so `init.lua` enables it explicitly. It supplies the fix-all and organize-imports code actions under `<Space>ca`; its hover is disabled so `K` shows pyright only.
+**ruff** also runs as a language server for Python. Its binary comes from the Brewfile, not Mason, so `lua/plugins/lsp.lua` enables it explicitly. It supplies the fix-all and organize-imports code actions under `<Space>ca`; its hover is disabled so `K` shows pyright only.
 
-mason-lspconfig enables every Mason-installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities (from blink.cmp) for all of them; only `lua_ls` has extra settings.
+mason-lspconfig enables every Mason-installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities (from blink.cmp) for all of them; only `lua_ls` has extra settings. All of this is in `lua/plugins/lsp.lua`.
 
 **Keybindings** (buffer-local, set when a server attaches):
 - `gd` - Go to definition (snacks picker with preview; jumps directly when there is one result)
@@ -380,8 +382,8 @@ Git change markers in the sign column, hunk actions, and blame.
 **Keybindings**:
 - `<Space>xx` - Toggle diagnostics panel (all workspace issues)
 - `<Space>xX` - Buffer diagnostics (current file only)
-- `<Space>cs` - Show symbols (functions, variables in current file)
-- `<Space>cl` - LSP definitions and references
+- `<Space>xs` - Show symbols (functions, variables in current file)
+- `<Space>xl` - LSP definitions and references
 - `<Space>xL` - Location list
 - `<Space>xQ` - Quickfix list
 
@@ -412,9 +414,9 @@ Shows available keybindings in a popup as you type.
 - `<Space><Space>` - Show leader keymaps
 - Press any key prefix (like `<Space>`, `z`, `g`, `]`) and wait 500ms to see available completions
 
-Every keymap in `init.lua` carries a `desc`, which is what which-key shows; the which-key config itself only defines the groups below and a few built-in keys.
+Every keymap carries a `desc`, which is what which-key shows; `lua/plugins/which-key.lua` only defines the groups below and a few built-in keys.
 
-Groups: `<Space>f` Find, `<Space>x` Diagnostics, `<Space>c` Code/LSP, `<Space>g` Git, `<Space>o` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle, `<Space>m` Markdown, `<Space>i` Images/Files.
+Groups: `<Space>f` Find, `<Space>x` Diagnostics (Trouble), `<Space>c` Code actions, `<Space>g` Git, `<Space>h` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle / tools, `<Space>m` Markdown, `<Space>i` Images/Files, `<Space>a` Claude, `<Space>d` Debug/Test.
 
 ---
 
@@ -452,11 +454,11 @@ Folding from Treesitter queries with an indent fallback. Folded lines show the f
 Per-project list of up to 5 files you jump to with one key.
 
 **Keybindings**:
-- `<Space>oa` - Add current file to Harpoon marks
-- `<Space>oo` - Open Harpoon quick menu
-- `<Space>o1` to `<Space>o5` - Jump to mark 1 to 5
-- `<Space>on` - Navigate to next mark
-- `<Space>op` - Navigate to previous mark
+- `<Space>ha` - Add current file to Harpoon marks
+- `<Space>hh` - Open Harpoon quick menu
+- `<Space>h1` `<Space>h2` `<Space>h3` `<Space>h4` `<Space>h5` - Jump to mark 1 to 5
+- `<Space>hn` - Navigate to next mark
+- `<Space>hp` - Navigate to previous mark
 
 **Inside Harpoon Menu**:
 - `j/k` or `Down/Up` - Navigate through marks
@@ -616,11 +618,11 @@ Language Server Protocol provides IDE features like:
 - Press `g?` for help
 
 **Adding a server**:
-1. Add its name to `ensure_installed` in the LSP section of `init.lua` (or install it once via `:Mason`)
+1. Add its name to `ensure_installed` in `lua/plugins/lsp.lua` (or install it once via `:Mason`)
 2. Restart Neovim. mason-lspconfig enables it automatically; no `vim.lsp.enable` call is needed
 3. For server-specific settings, add a `vim.lsp.config("server_name", { settings = { ... } })` block next to the `lua_ls` one
 
-Formatters and linters are not managed by Mason. They come from the Brewfile so they are on `PATH` for the shell too. `dotdoctor` reports any that are missing.
+Formatters and linters are not managed by Mason. They come from the Brewfile so they are on `PATH` for the shell too. `dot doctor` reports any that are missing.
 
 ---
 
@@ -642,8 +644,8 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ### General Editor
 - `<Space>w` - Format and save
 - `<Space>q` - Quit window
-- `<Space>cr` - Check and reload files
-- `<Space>tw` / `ts` / `tn` / `td` / `th` / `ti` / `tD` / `tz` / `tT` - Toggles: wrap, spelling, relative numbers, diagnostics, inlay hints, indent guides, dim, zen, treesitter
+- `<Space>tR` - Reload files from disk (checktime)
+- `<Space>tw` / `<Space>ts` / `<Space>tn` / `<Space>td` / `<Space>th` / `<Space>ti` / `<Space>tD` / `<Space>tz` / `<Space>tT` - Toggles: wrap, spelling, relative numbers, diagnostics, inlay hints, indent guides, dim, zen, treesitter
 - `gh` - Jump back in history
 - `gl` - Jump forward in history
 - `Esc` - Clear multicursors, then search highlights
@@ -773,17 +775,17 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>S` - Pick a scratch buffer
 
 ### Harpoon (Quick Marks)
-- `<Space>oa` - Add file to Harpoon marks
-- `<Space>oo` - Open Harpoon menu
-- `<Space>o1` to `<Space>o5` - Jump to mark 1 to 5
-- `<Space>on` - Navigate to next mark
-- `<Space>op` - Navigate to previous mark
+- `<Space>ha` - Add file to Harpoon marks
+- `<Space>hh` - Open Harpoon menu
+- `<Space>h1` to `<Space>h5` - Jump to mark 1 to 5
+- `<Space>hn` - Navigate to next mark
+- `<Space>hp` - Navigate to previous mark
 
 ### Diagnostics (Trouble)
 - `<Space>xx` - Workspace diagnostics
 - `<Space>xX` - Buffer diagnostics
-- `<Space>cs` - Symbols
-- `<Space>cl` - LSP definitions and references
+- `<Space>xs` - Symbols
+- `<Space>xl` - LSP definitions and references
 - `<Space>xL` / `<Space>xQ` - Location list / quickfix list
 
 ### Notifications
@@ -812,7 +814,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ### Workflow Tips
 
 1. **Quick File Switching**:
-   - Use Harpoon for your 5 most-accessed files: `<Space>oa` to mark, `<Space>o1-5` to jump
+   - Use Harpoon for your 5 most-accessed files: `<Space>ha` to mark, `<Space>h1` to `<Space>h5` to jump
    - `<Space>ff` to find files by name (for everything else)
    - `<Space>fb` to switch between open buffers
    - `-` to toggle the explorer for project navigation
@@ -909,10 +911,10 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ### No syntax highlighting or text objects for a language
 1. Check the parser is installed: `:lua print(vim.inspect(require('nvim-treesitter').get_installed('parsers')))`
 2. Install it: `:TSInstall <lang>`, then reopen the buffer with `:e`
-3. If the install fails, check `:TSLog` and that `tree-sitter` is on `PATH` (`dotdoctor`)
+3. If the install fails, check `:TSLog` and that `tree-sitter` is on `PATH` (`dot doctor`)
 
 ### Debugger does not start
-1. `:checkhealth mason` and `ls ~/.local/share/nvim/mason/bin` should show `debugpy`, `dlv`, `js-debug-adapter`, `codelldb`; `dotdoctor` lists them. `:MasonInstall <name>` installs one by hand
+1. `:checkhealth mason` and `ls ~/.local/share/nvim/mason/bin` should show `debugpy`, `dlv`, `js-debug-adapter`, `codelldb`; `dot doctor` lists them. `:MasonInstall <name>` installs one by hand
 2. Mason downloads some adapters with `wget` (in the Brewfile)
 3. `:DapShowLog` shows adapter output; for Python make sure the venv interpreter is the one with your dependencies
 
@@ -923,12 +925,12 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 
 ### JavaScript/TypeScript has no LSP or shows an initialize error
 1. `tsgo` must be installed: `:Mason`, or `:MasonInstall tsgo`
-2. It needs `node` on `PATH` (`dotdoctor`); the Brewfile installs it
+2. It needs `node` on `PATH` (`dot doctor`); the Brewfile installs it
 3. The older `ts_ls` server is not used: its Mason bundle pulls TypeScript 7, which no longer ships the JS `tsserver` it needs
 
 ### Formatting does nothing on `<Space>w`
 1. `:ConformInfo` shows the formatters for the buffer and whether they are available
-2. Run `dotdoctor` to see which formatter binaries are missing; `brew bundle` installs them
+2. Run `dot doctor` to see which formatter binaries are missing; `brew bundle` installs them
 
 ### Picker not finding files
 1. Make sure you're in the right directory (`:pwd`)
@@ -947,21 +949,21 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 
 ## Customization
 
-This configuration uses `lazy.nvim` as the plugin manager. All config is in `nvim/init.lua`.
+This configuration uses `lazy.nvim` as the plugin manager. `nvim/init.lua` holds options, autocmds and plugin-free keymaps; each plugin is a file in `nvim/lua/plugins/`.
 
 **To add a new plugin**:
-1. Add to the `require("lazy").setup({})` table in `init.lua`
-2. Restart Neovim or run `:Lazy sync`
+1. Create `nvim/lua/plugins/<name>.lua` that returns a lazy.nvim spec table (or a list of them), for example `return { "author/plugin.nvim", opts = {} }`
+2. Restart Neovim or run `:Lazy sync` (commit the updated `lazy-lock.json`)
 
 **To modify keybindings**:
-Look for `vim.keymap.set()` calls in `init.lua` and modify as needed. Keys defined in a plugin's `keys = {}` table load that plugin on first use.
+Plugin-free keymaps are `vim.keymap.set()` calls in `init.lua`; plugin keymaps live in that plugin's file under `lua/plugins/`. Keys defined in a plugin's `keys = {}` table load that plugin on first use. Give every mapping a `desc`: which-key shows it and `dot keys nvim` documents it.
 
 **To add LSP servers**:
-Add the server name to `ensure_installed` in the LSP section. Settings go in a `vim.lsp.config("name", {...})` block.
+Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go in a `vim.lsp.config("name", {...})` block next to `lua_ls`.
 
 **To add a formatter or linter**:
 1. Add the binary to the `Brewfile` and run `brew bundle`
-2. Add it to `formatters_by_ft` (conform) or `linters_by_ft` (nvim-lint) in `init.lua`
+2. Add it to `formatters_by_ft` in `lua/plugins/format.lua` (conform) or `linters_by_ft` in `lua/plugins/lint.lua` (nvim-lint)
 
 ---
 
@@ -981,6 +983,7 @@ Add the server name to `ensure_installed` in the LSP section. Settings go in a `
 | `-` | Toggle file explorer |
 | `<Space>e` | Focus file explorer |
 | `<Space>xx` | Toggle diagnostics panel |
+| `<Space>xs` / `<Space>xl` | Symbols / LSP panels (Trouble) |
 | `gd` | Go to definition (picker) |
 | `K` | Peek fold or hover docs |
 | `<Space>rn` | Rename |
@@ -1003,10 +1006,10 @@ Add the server name to `ensure_installed` in the LSP section. Settings go in a `
 | `<Space>du` / `de` | Debug UI / eval |
 | `<Space>dt` / `dT` / `ds` | Test nearest / file / summary |
 | `<Space>.` | Scratch buffer |
-| `<Space>oa` | Add Harpoon mark |
-| `<Space>oo` | Harpoon menu |
-| `<Space>o1-5` | Jump to mark 1-5 |
-| `<Space>on/op` | Next/previous mark |
+| `<Space>ha` | Add Harpoon mark |
+| `<Space>hh` | Harpoon menu |
+| `<Space>h1` to `<Space>h5` | Jump to mark 1-5 |
+| `<Space>hn` / `<Space>hp` | Next/previous mark |
 | `<Space>mp` | Open markdown in browser |
 | `<Space>tr` | Toggle markdown render |
 | `<Space>io` | Open file externally |

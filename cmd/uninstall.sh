@@ -2,9 +2,14 @@
 
 set -euo pipefail
 
-DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-source "$DOTFILES_DIR/lib/log.sh"
+# Run as `dot uninstall`. Removes the symlinks the installer created and
+# restores the most recent backup of each; leaves packages and plugins alone.
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/log.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+DOTFILES_DIR="${DOTFILES_DIR:-$(dotfiles_dir "${BASH_SOURCE[0]}")}"
+source "$DOTFILES_DIR/lib/tui.sh"
+source "$DOTFILES_DIR/lib/components.sh"
+load_env
 
 remove_symlink() {
     local dest="$1"
@@ -38,10 +43,10 @@ echo ""
 echo "Uninstalling dotfiles from $DOTFILES_DIR"
 echo "========================================"
 
-read -rp "Are you sure you want to remove dotfiles symlinks? [y/N] " confirm
-confirm="${confirm:-N}"
-
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+# gum only if it is already there; never install anything while uninstalling.
+# shellcheck disable=SC2034  # read by the sourced lib/tui.sh helpers
+command -v gum &>/dev/null && USE_GUM=1
+if ! tui_confirm "Remove the dotfiles symlinks (backups are restored)?"; then
     log_info "Aborted."
     exit 0
 fi
@@ -71,8 +76,25 @@ remove_symlink "$HOME/.tmux.conf" "$DOTFILES_DIR/tmux/tmux.conf"
 remove_symlink "$HOME/.gitconfig.dotfiles" "$DOTFILES_DIR/git/config"
 remove_symlink "$HOME/.config/git/ignore" "$DOTFILES_DIR/git/ignore"
 
+remove_symlink "$HOME/.local/bin/dot" "$DOTFILES_DIR/bin/dot"
+# Legacy links from before the dot command
 remove_symlink "$HOME/.local/bin/dotup" "$DOTFILES_DIR/update.sh"
 remove_symlink "$HOME/.local/bin/dotdoctor" "$DOTFILES_DIR/doctor.sh"
+
+# Git: drop the include of the (now removed) tracked config and the signers file
+if [ "$(git config --global --get include.path 2>/dev/null)" = "$HOME/.gitconfig.dotfiles" ]; then
+    git config --global --unset include.path
+    log_info "Removed include.path from ~/.gitconfig"
+fi
+if [ -f "$HOME/.config/git/allowed_signers" ]; then
+    rm "$HOME/.config/git/allowed_signers"
+    log_info "Removed ~/.config/git/allowed_signers"
+fi
+
+if [ -f "$COMPONENTS_FILE" ]; then
+    rm "$COMPONENTS_FILE"
+    log_info "Removed ${COMPONENTS_FILE/#$HOME/~}"
+fi
 
 echo "========================================"
 log_info "Dotfiles symlinks removed."
@@ -82,7 +104,7 @@ echo "  - Homebrew packages"
 echo "  - Oh My Zsh plugins (~/.oh-my-zsh/custom/plugins/)"
 echo "  - TPM (~/.tmux/plugins/tpm)"
 echo "  - SSH keys (~/.ssh/id_ed25519_github)"
-echo "  - Git global config"
+echo "  - Git user.name / user.email"
 echo "  - macOS defaults"
 echo "  - ~/.zshrc.local (machine-specific overrides)"
 echo "  - Claude Code (~/.local/bin/claude or installer location)"

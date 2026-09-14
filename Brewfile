@@ -1,8 +1,8 @@
 # Brewfile — declarative package list for the core CLI toolset.
 #
-# Installed via `brew bundle` (see install.sh, or run `brew bundle` directly).
+# Installed via `brew bundle` (see cmd/install.sh, or run `brew bundle` directly).
 # This is the source of truth for formulae; casks that are individually
-# toggleable in the installer (Ghostty, Nerd Font, gh) stay in install.sh.
+# toggleable in the installer (Ghostty, Nerd Font, gh) stay in cmd/install.sh.
 #
 # Tip: `brew bundle cleanup --file=Brewfile` lists packages NOT in this file.
 
@@ -19,7 +19,7 @@ brew "git-delta"
 brew "zoxide"
 brew "uv"          # Python toolchain (replaces pyenv)
 brew "imagemagick"
-brew "rust"
+brew "rustup"      # keg-only; install.sh runs `rustup default stable`, zsh/20-path.zsh adds it to PATH
 
 # --- Language runtimes (mason-installed LSP servers depend on these) ---
 brew "node"        # pyright, tsgo
@@ -37,7 +37,7 @@ brew "google-java-format"
 # --- Installer / dev tooling ---
 brew "lazygit"     # Snacks.lazygit (<leader>gg)
 brew "wget"        # mason downloads some adapters (js-debug, codelldb) with wget
-brew "gum"         # TUI used by install.sh
+brew "gum"         # TUI used by cmd/install.sh
 brew "shellcheck"  # used by tests/run.sh
 
 # --- Platform-specific trash utility ---
