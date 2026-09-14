@@ -316,6 +316,10 @@ require("lazy").setup({
         vim.keymap.set("n", "<leader>fb", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
         vim.keymap.set("n", "<leader>fh", function() Snacks.picker.help() end, { desc = "Help tags" })
         vim.keymap.set("n", "<leader>fu", function() Snacks.picker.undo() end, { desc = "Undo history" })
+        vim.keymap.set("n", "<leader>fr", function() Snacks.picker.recent() end, { desc = "Recent files" })
+        vim.keymap.set("n", "<leader>fs", function() Snacks.picker.lsp_symbols() end, { desc = "Document symbols" })
+        vim.keymap.set("n", "<leader>fd", function() Snacks.picker.diagnostics() end, { desc = "Diagnostics" })
+        vim.keymap.set("n", "<leader>fk", function() Snacks.picker.keymaps() end, { desc = "Keymaps" })
 
         -- Words keymaps: jump between LSP references of the word under cursor
         vim.keymap.set({ "n", "t" }, "]]", function() Snacks.words.jump(vim.v.count1) end, { desc = "Next reference" })
@@ -492,7 +496,7 @@ require("lazy").setup({
           ensure_installed = {
             "lua_ls",
             "pyright",
-            "ts_ls",
+            "tsgo", -- TypeScript 7 native server (ts_ls needs the removed JS tsserver)
             "gopls",
             "rust_analyzer",
             "jdtls",
@@ -504,6 +508,10 @@ require("lazy").setup({
         -- only per-server settings need vim.lsp.config here.
         local capabilities = require("blink.cmp").get_lsp_capabilities()
         vim.lsp.config("*", { capabilities = capabilities })
+
+        -- ruff comes from brew (Brewfile), not mason, so enable it explicitly.
+        -- It provides fix/organize-imports code actions; pyright keeps hover.
+        vim.lsp.enable("ruff")
 
         vim.lsp.config("lua_ls", {
           settings = {
@@ -526,17 +534,28 @@ require("lazy").setup({
         })
 
         -- Buffer-local keymaps. K stays global (nvim-ufo peek, then hover).
-        -- Built-ins also available: grn rename, gra code action, grr references,
-        -- gri implementation, grt type definition, gO document symbols.
+        -- Navigation goes through snacks pickers (preview + multi-result);
+        -- built-ins grn/gra/grt/gO stay as they are.
         vim.api.nvim_create_autocmd("LspAttach", {
           group = vim.api.nvim_create_augroup("dotfiles_lsp", { clear = true }),
           callback = function(ev)
+            local client = vim.lsp.get_client_by_id(ev.data.client_id)
+            if client and client.name == "ruff" then
+              client.server_capabilities.hoverProvider = false -- pyright owns hover
+            end
+
             local function map(lhs, rhs, desc)
               vim.keymap.set("n", lhs, rhs, { buffer = ev.buf, desc = desc })
             end
-            map("gd", vim.lsp.buf.definition, "Go to definition")
+            map("gd", function() Snacks.picker.lsp_definitions() end, "Go to definition")
+            map("grr", function() Snacks.picker.lsp_references() end, "References")
+            map("gri", function() Snacks.picker.lsp_implementations() end, "Implementations")
             map("<leader>rn", vim.lsp.buf.rename, "Rename")
             map("<leader>ca", vim.lsp.buf.code_action, "Code action")
+            map("<leader>th", function()
+              local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = ev.buf })
+              vim.lsp.inlay_hint.enable(not enabled, { bufnr = ev.buf })
+            end, "Toggle inlay hints")
           end,
         })
       end,
@@ -1121,12 +1140,20 @@ require("lazy").setup({
           typescriptreact = { "eslint_d" },
           javascriptreact = { "eslint_d" },
         }
+        -- eslint_d only makes sense inside a project that configures eslint
+        local eslint_markers = {
+          "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs", "eslint.config.ts",
+          ".eslintrc", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json", ".eslintrc.yml", ".eslintrc.yaml",
+        }
         vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost", "InsertLeave" }, {
-          callback = function()
-            -- Only run linters that exist on PATH
-            local linters = lint.linters_by_ft[vim.bo.filetype] or {}
+          group = vim.api.nvim_create_augroup("dotfiles_lint", { clear = true }),
+          callback = function(ev)
+            -- Only run linters that exist on PATH and apply to this project
+            local linters = lint.linters_by_ft[vim.bo[ev.buf].filetype] or {}
             local available = vim.tbl_filter(function(name)
-              return vim.fn.executable(name) == 1
+              if vim.fn.executable(name) ~= 1 then return false end
+              if name == "eslint_d" and not vim.fs.root(ev.buf, eslint_markers) then return false end
+              return true
             end, linters)
             if #available > 0 then
               lint.try_lint(available)
