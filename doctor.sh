@@ -105,9 +105,13 @@ else
     fi
     SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
 fi
-check_link "$SPF_DIR/config.toml"      "$DOTFILES_DIR/superfile/config.toml"
-check_link "$SPF_DIR/hotkeys.toml"     "$DOTFILES_DIR/superfile/hotkeys.toml"
-check_link "$SPF_DIR/theme/vesper.toml" "$DOTFILES_DIR/superfile/theme/vesper.toml"
+if command -v spf &>/dev/null; then
+    check_link "$SPF_DIR/config.toml"      "$DOTFILES_DIR/superfile/config.toml"
+    check_link "$SPF_DIR/hotkeys.toml"     "$DOTFILES_DIR/superfile/hotkeys.toml"
+    check_link "$SPF_DIR/theme/vesper.toml" "$DOTFILES_DIR/superfile/theme/vesper.toml"
+else
+    log_info "skip: superfile not installed"
+fi
 check_link "$HOME/.zshrc"              "$DOTFILES_DIR/zsh/.zshrc"
 check_link "$HOME/.p10k.zsh"           "$DOTFILES_DIR/zsh/.p10k.zsh"
 check_link "$HOME/.config/nvim"        "$DOTFILES_DIR/nvim"
