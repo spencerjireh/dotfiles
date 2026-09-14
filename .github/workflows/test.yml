@@ -23,18 +23,43 @@ jobs:
       - name: Run test suite
         run: ./tests/run.sh
 
-  install-macos:
-    runs-on: macos-latest
+  # Runs install.sh non-interactively for the config components on each
+  # supported OS, then checks what it produced. Brew-backed components are
+  # left out so the job stays fast and Linux never bootstraps Linuxbrew.
+  install:
+    name: install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            components: "Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config,Superfile file manager"
+          - os: ubuntu-latest
+            components: "Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config"
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install what the config components need
+      - name: Prerequisites (macOS)
+        if: runner.os == 'macOS'
         run: brew install neovim tmux tree-sitter-cli
+
+      - name: Prerequisites (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y tmux zsh
+          # apt's neovim is too old for this config; use the release tarball
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+          sudo npm install -g tree-sitter-cli
+          nvim --version | head -1
 
       - name: Run the installer non-interactively (config components only)
         env:
           DOTFILES_NONINTERACTIVE: "1"
-          DOTFILES_COMPONENTS: "Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config,Superfile file manager"
+          DOTFILES_COMPONENTS: ${{ matrix.components }}
           GIT_NAME: ci
           GIT_EMAIL: ci@example.com
         run: ./install.sh

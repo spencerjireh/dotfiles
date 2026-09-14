@@ -99,7 +99,7 @@ Anything machine- or work-specific (per-machine PATHs, tool installers, private 
 ./tests/run.sh   # dependency-free; runs in a sandbox, installs nothing
 ```
 
-Covers script linting (shellcheck at warning level), the `lib/` helpers, `install.sh`'s symlink/selection logic, stylua formatting of `init.lua`, and booting `tmux.conf` on an isolated server. CI (GitHub Actions) runs it on Ubuntu on every push, and a second job on macOS runs `install.sh` non-interactively for the config components, checks the links with `dotdoctor --links`, restores the Neovim plugins with parsers compiled, and confirms TPM installed its plugins.
+Covers script linting (shellcheck at warning level), the `lib/` helpers, `install.sh`'s symlink/selection logic, stylua formatting of `init.lua`, and booting `tmux.conf` on an isolated server. CI (GitHub Actions) runs it on Ubuntu on every push, and an install job on both macOS and Ubuntu runs `install.sh` non-interactively for the config components, checks the links with `dotdoctor --links`, restores the Neovim plugins with parsers compiled, and confirms TPM installed its plugins. A non-interactive run skips the Homebrew bootstrap when no selected component needs it.
 
 ### Uninstallation
 
@@ -138,7 +138,7 @@ Covers script linting (shellcheck at warning level), the `lib/` helpers, `instal
 ├── tests/
 │   └── run.sh        # dependency-free test suite
 ├── .github/workflows/
-│   └── test.yml      # CI: test suite on Ubuntu, non-interactive install on macOS
+│   └── test.yml      # CI: test suite on Ubuntu, non-interactive install on macOS + Ubuntu
 ├── Brewfile          # declarative package list (brew bundle)
 ├── install.sh
 ├── uninstall.sh

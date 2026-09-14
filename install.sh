@@ -145,8 +145,26 @@ echo "========================================"
 # ----------------------------------------------------------------------------
 NONINTERACTIVE="${DOTFILES_NONINTERACTIVE:-}"
 
-log_info "Bootstrapping foundation (Homebrew, gum)..."
-ensure_homebrew
+# Homebrew is needed for the TUI (gum) and for the brew-backed components. A
+# non-interactive run that selects only config components (symlinks, OMZ, TPM,
+# git) skips it, which matters on Linux where Linuxbrew is a slow install.
+needs_brew=1
+if [ -n "$NONINTERACTIVE" ]; then
+    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-}")"
+    needs_brew=0
+    for c in "Homebrew CLI packages" "Ghostty terminal" "Nerd Font" "Superfile file manager" \
+             "GitHub SSH + CLI" "Karabiner (Caps Lock as Esc/Ctrl)"; do
+        is_selected "$c" && needs_brew=1
+    done
+fi
+
+if [ "$needs_brew" = 1 ]; then
+    log_info "Bootstrapping foundation (Homebrew, gum)..."
+    ensure_homebrew
+else
+    load_brew_env   # use brew if present, but do not install it
+    log_info "Skipping Homebrew bootstrap (no selected component needs it)"
+fi
 if [ -n "$NONINTERACTIVE" ]; then
     # shellcheck disable=SC2034  # read by the sourced lib/tui.sh helpers
     USE_GUM=0
