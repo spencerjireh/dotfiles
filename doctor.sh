@@ -150,6 +150,16 @@ for s in lua-language-server pyright-langserver tsgo gopls rust-analyzer jdtls c
 done
 
 echo ""
+log_info "Checking debug adapters (mason-nvim-dap, installed on first nvim start)..."
+for a in debugpy dlv js-debug-adapter codelldb; do
+    if [ -x "$MASON_BIN/$a" ]; then
+        log_info "adapter ok: $a"
+    else
+        log_warn "optional adapter missing: $a (open nvim once, or :MasonInstall)"
+    fi
+done
+
+echo ""
 log_info "Checking tmux plugins (TPM)..."
 for p in tpm tmux-resurrect tmux-thumbs; do
     check_dir "$HOME/.tmux/plugins/$p" "run ./install.sh (tmux + TPM) or dotup"

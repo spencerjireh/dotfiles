@@ -596,10 +596,11 @@ require("lazy").setup({
             "pyright",
             "tsgo", -- TypeScript 7 native server (ts_ls needs the removed JS tsserver)
             "gopls",
-            "rust_analyzer",
+            "rust_analyzer", -- binary only; rustaceanvim starts it (excluded from auto-enable below)
             "jdtls",
             "clangd",
           },
+          automatic_enable = { exclude = { "rust_analyzer" } },
         })
 
         -- mason-lspconfig v2 enables every installed server automatically;
@@ -867,6 +868,7 @@ require("lazy").setup({
           { "<leader>g", group = "Git" },
           { "<leader>n", group = "Notifications" },
           { "<leader>a", group = "Claude" },
+          { "<leader>d", group = "Debug/Test" },
           { "<Esc>", desc = "Clear highlights / cursors" },
           { "z", group = "Folds" },
           { "za", desc = "Toggle fold under cursor" },
@@ -1117,6 +1119,265 @@ require("lazy").setup({
         { "<leader>aa", "<cmd>ClaudeCodeDiffAccept<cr>", desc = "Accept Claude diff" },
         { "<leader>ad", "<cmd>ClaudeCodeDiffDeny<cr>", desc = "Deny Claude diff" },
       },
+    },
+
+    -- Debugging: nvim-dap + dap-ui, adapters installed by mason-nvim-dap
+    {
+      "mfussenegger/nvim-dap",
+      dependencies = {
+        "rcarriga/nvim-dap-ui",
+        "nvim-neotest/nvim-nio",
+        "jay-babu/mason-nvim-dap.nvim",
+      },
+      keys = {
+        { "<leader>d", nil, desc = "Debug/Test" },
+        {
+          "<leader>db",
+          function()
+            require("dap").toggle_breakpoint()
+          end,
+          desc = "Toggle breakpoint",
+        },
+        {
+          "<leader>dB",
+          function()
+            require("dap").set_breakpoint(vim.fn.input("Condition: "))
+          end,
+          desc = "Conditional breakpoint",
+        },
+        {
+          "<leader>dc",
+          function()
+            require("dap").continue()
+          end,
+          desc = "Continue / start",
+        },
+        {
+          "<leader>do",
+          function()
+            require("dap").step_over()
+          end,
+          desc = "Step over",
+        },
+        {
+          "<leader>di",
+          function()
+            require("dap").step_into()
+          end,
+          desc = "Step into",
+        },
+        {
+          "<leader>dO",
+          function()
+            require("dap").step_out()
+          end,
+          desc = "Step out",
+        },
+        {
+          "<leader>dr",
+          function()
+            require("dap").repl.toggle()
+          end,
+          desc = "Toggle REPL",
+        },
+        {
+          "<leader>dl",
+          function()
+            require("dap").run_last()
+          end,
+          desc = "Run last",
+        },
+        {
+          "<leader>dx",
+          function()
+            require("dap").terminate()
+          end,
+          desc = "Terminate",
+        },
+        {
+          "<leader>du",
+          function()
+            require("dapui").toggle()
+          end,
+          desc = "Toggle debug UI",
+        },
+        {
+          "<leader>de",
+          function()
+            require("dapui").eval()
+          end,
+          mode = { "n", "v" },
+          desc = "Eval expression",
+        },
+        {
+          "<F5>",
+          function()
+            require("dap").continue()
+          end,
+          desc = "Debug: continue",
+        },
+        {
+          "<F10>",
+          function()
+            require("dap").step_over()
+          end,
+          desc = "Debug: step over",
+        },
+        {
+          "<F11>",
+          function()
+            require("dap").step_into()
+          end,
+          desc = "Debug: step into",
+        },
+        {
+          "<S-F11>",
+          function()
+            require("dap").step_out()
+          end,
+          desc = "Debug: step out",
+        },
+      },
+      config = function()
+        local dap, dapui = require("dap"), require("dapui")
+
+        -- Adapters + default launch configs (python/debugpy, delve, js-debug, codelldb)
+        require("mason-nvim-dap").setup({
+          ensure_installed = { "python", "delve", "js", "codelldb" },
+          automatic_installation = true,
+          handlers = {},
+        })
+
+        -- mason-nvim-dap installs js-debug-adapter but ships no adapter/config for it
+        dap.adapters["pwa-node"] = {
+          type = "server",
+          host = "localhost",
+          port = "${port}",
+          executable = { command = "js-debug-adapter", args = { "${port}" } }, -- mason bin is on PATH
+        }
+        for _, ft in ipairs({ "javascript", "typescript", "javascriptreact", "typescriptreact" }) do
+          dap.configurations[ft] = {
+            {
+              type = "pwa-node",
+              request = "launch",
+              name = "Launch file (node)",
+              program = "${file}",
+              cwd = "${workspaceFolder}",
+            },
+            {
+              type = "pwa-node",
+              request = "attach",
+              name = "Attach to node process",
+              processId = require("dap.utils").pick_process,
+              cwd = "${workspaceFolder}",
+            },
+          }
+        end
+
+        dapui.setup()
+        dap.listeners.after.event_initialized["dapui"] = function()
+          dapui.open()
+        end
+        dap.listeners.before.event_terminated["dapui"] = function()
+          dapui.close()
+        end
+        dap.listeners.before.event_exited["dapui"] = function()
+          dapui.close()
+        end
+
+        -- Vesper signs
+        vim.api.nvim_set_hl(0, "DapBreakpoint", { fg = "#ff8080" })
+        vim.api.nvim_set_hl(0, "DapStopped", { fg = "#ffc799" })
+        vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#2a2a2a" })
+        vim.fn.sign_define("DapBreakpoint", { text = "●", texthl = "DapBreakpoint" })
+        vim.fn.sign_define("DapBreakpointCondition", { text = "◆", texthl = "DapBreakpoint" })
+        vim.fn.sign_define("DapStopped", { text = "▶", texthl = "DapStopped", linehl = "DapStoppedLine" })
+      end,
+    },
+
+    -- rustaceanvim (rust-analyzer with extras; owns Rust LSP, debugging via codelldb, neotest adapter)
+    {
+      "mrcjkb/rustaceanvim",
+      version = "^9",
+      lazy = false, -- the plugin lazy-loads itself by filetype
+    },
+
+    -- neotest (run the test under the cursor; adapters per language)
+    {
+      "nvim-neotest/neotest",
+      dependencies = {
+        "nvim-neotest/nvim-nio",
+        "nvim-lua/plenary.nvim",
+        "nvim-treesitter/nvim-treesitter",
+        "nvim-neotest/neotest-python",
+        "fredrikaverpil/neotest-golang",
+        "marilari88/neotest-vitest",
+        "nvim-neotest/neotest-jest",
+        "mrcjkb/rustaceanvim",
+      },
+      keys = {
+        {
+          "<leader>dt",
+          function()
+            require("neotest").run.run()
+          end,
+          desc = "Test nearest",
+        },
+        {
+          "<leader>dT",
+          function()
+            require("neotest").run.run(vim.fn.expand("%"))
+          end,
+          desc = "Test file",
+        },
+        {
+          "<leader>dD",
+          function()
+            require("neotest").run.run({ strategy = "dap" })
+          end,
+          desc = "Debug nearest test",
+        },
+        {
+          "<leader>ds",
+          function()
+            require("neotest").summary.toggle()
+          end,
+          desc = "Test summary",
+        },
+        {
+          "<leader>dp",
+          function()
+            require("neotest").output_panel.toggle()
+          end,
+          desc = "Test output panel",
+        },
+        {
+          "<leader>dS",
+          function()
+            require("neotest").run.stop()
+          end,
+          desc = "Stop tests",
+        },
+      },
+      opts = function()
+        -- uv/venv aware interpreter for pytest
+        local function python()
+          if vim.env.VIRTUAL_ENV then
+            return vim.env.VIRTUAL_ENV .. "/bin/python"
+          end
+          local venv = vim.fs.find(".venv/bin/python", { upward = true, path = vim.fn.getcwd() })[1]
+          return venv or "python3"
+        end
+        return {
+          adapters = {
+            require("neotest-python")({ runner = "pytest", python = python }),
+            require("neotest-golang"),
+            require("neotest-vitest"),
+            require("neotest-jest")({ jestCommand = "npx jest" }),
+            require("rustaceanvim.neotest"),
+          },
+        }
+      end,
     },
 
     -- nvim-surround (add/change/delete surrounding chars)

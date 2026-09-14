@@ -36,6 +36,7 @@ brew "google-java-format"
 
 # --- Installer / dev tooling ---
 brew "lazygit"     # Snacks.lazygit (<leader>gg)
+brew "wget"        # mason downloads some adapters (js-debug, codelldb) with wget
 brew "gum"         # TUI used by install.sh
 brew "shellcheck"  # used by tests/run.sh
 
