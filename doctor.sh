@@ -83,12 +83,26 @@ echo "Dotfiles doctor ($OS)"
 echo "========================================"
 
 log_info "Checking symlinks..."
+# App-backed components (Ghostty, Karabiner) are checked only when the app is
+# installed; a machine (or CI run) without them is not misconfigured.
 if [[ "$OS" == "macos" ]]; then
-    check_link "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "$DOTFILES_DIR/ghostty/config"
-    check_link "$HOME/.config/karabiner" "$DOTFILES_DIR/karabiner"
+    if [ -d "/Applications/Ghostty.app" ]; then
+        check_link "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "$DOTFILES_DIR/ghostty/config"
+    else
+        log_info "skip: Ghostty not installed"
+    fi
+    if [ -d "/Applications/Karabiner-Elements.app" ]; then
+        check_link "$HOME/.config/karabiner" "$DOTFILES_DIR/karabiner"
+    else
+        log_info "skip: Karabiner-Elements not installed"
+    fi
     SPF_DIR="$HOME/Library/Application Support/superfile"
 else
-    check_link "$HOME/.config/ghostty/config" "$DOTFILES_DIR/ghostty/config"
+    if command -v ghostty &>/dev/null; then
+        check_link "$HOME/.config/ghostty/config" "$DOTFILES_DIR/ghostty/config"
+    else
+        log_info "skip: Ghostty not installed"
+    fi
     SPF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/superfile"
 fi
 check_link "$SPF_DIR/config.toml"      "$DOTFILES_DIR/superfile/config.toml"
