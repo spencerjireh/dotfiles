@@ -8,8 +8,11 @@ fi
 # ===========================
 # Auto-start tmux in Ghostty
 # ===========================
+# Attach to the running server if there is one (new Ghostty windows join it);
+# otherwise start it with a timestamped session. prefix + S creates more.
 if [[ -z "$TMUX" ]] && [[ -n "$GHOSTTY_RESOURCES_DIR" ]]; then
-  exec tmux new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')"
+  exec tmux attach 2>/dev/null \
+    || exec tmux new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')" -c "$PWD"
 fi
 
 # ===========================

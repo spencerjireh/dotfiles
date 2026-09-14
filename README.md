@@ -40,7 +40,7 @@ Selectable components (all pre-selected by default):
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
 | Neovim config | Symlinks `nvim/` → `~/.config/nvim` |
 | Superfile file manager | Installs `superfile` (brew) + symlinks config, hotkeys, and Vesper theme |
-| tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (headless, no tmux session needed) |
+| tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (resurrect, thumbs; headless, no tmux session needed) |
 | Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
 | GitHub SSH + CLI | Generates an ed25519 key, writes `~/.ssh/config`, installs `gh` |
 | Git global config | name/email prompts; everything else (delta pager, pull.rebase, autoSetupRemote, aliases) is tracked in `git/config` and included via `include.path`; `git/ignore` becomes the global ignore |
@@ -155,9 +155,10 @@ Prefix: `Cmd+Shift+Space` (Ghostty translates to `Ctrl+Space`)
 | Copy last command output | `prefix + y` |
 | Toggle status bar | `prefix + b` |
 | Reload config | `prefix + r` |
+| Clear screen | `prefix + C-l` (plain `C-l` is pane navigation) |
 | Keybinding help | `prefix + ?` |
 
-tmux auto-starts when opening Ghostty with a timestamped session name (for example `sep14-0930`). Sessions are saved by tmux-resurrect on detach and on window/pane changes, and the last save is restored automatically when the tmux server starts.
+Opening Ghostty attaches to the running tmux server, or starts one with a timestamped session (for example `sep14-0930`) if none is running. Sessions are saved by tmux-resurrect on detach and on window/pane changes, and the last save is restored automatically when the tmux server starts.
 
 ## Shell Aliases
 

@@ -105,7 +105,7 @@ check_tool_optional google-java-format "Java formatting via conform"
 
 echo ""
 log_info "Checking tmux plugins (TPM)..."
-for p in tpm tmux-resurrect tmux-thumbs tmux-prefix-highlight tmux-online-status; do
+for p in tpm tmux-resurrect tmux-thumbs; do
     check_dir "$HOME/.tmux/plugins/$p" "run ./install.sh (tmux + TPM) or dotup"
 done
 
