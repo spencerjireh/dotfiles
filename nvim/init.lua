@@ -240,19 +240,32 @@ require("lazy").setup({
         hl(0, "SnacksPickerInputBorder", { fg = "#505050" })
         hl(0, "SnacksPickerInputFooter", { link = "Normal" })
 
-        -- vim-illuminate: subtle background for word matches
-        vim.api.nvim_set_hl(0, "IlluminatedWordText", { bg = "#2a2a2a" })
-        vim.api.nvim_set_hl(0, "IlluminatedWordRead", { bg = "#2a2a2a" })
-        vim.api.nvim_set_hl(0, "IlluminatedWordWrite", { bg = "#2a2a2a" })
+        -- snacks.words: subtle background for LSP reference matches
+        vim.api.nvim_set_hl(0, "LspReferenceText", { bg = "#2a2a2a" })
+        vim.api.nvim_set_hl(0, "LspReferenceRead", { bg = "#2a2a2a" })
+        vim.api.nvim_set_hl(0, "LspReferenceWrite", { bg = "#2a2a2a" })
       end,
     },
 
-    -- snacks.nvim (explorer, notifications, input UI)
+    -- snacks.nvim (explorer, picker, notifications, input, words, indent, scroll, bigfile)
     {
       "folke/snacks.nvim",
       lazy = false,
       priority = 1000,
       opts = {
+        bigfile = { enabled = true }, -- trims heavy features on files > 1.5MB
+        quickfile = { enabled = true },
+        words = { enabled = true, debounce = 200 }, -- LSP reference highlight (replaces vim-illuminate)
+        indent = { -- indent guides (replaces indent-blankline)
+          enabled = true,
+          indent = { char = "│" },
+          scope = { enabled = true, char = "│" },
+          animate = { enabled = false },
+        },
+        scroll = { -- smooth scrolling (replaces neoscroll)
+          enabled = true,
+          animate = { duration = { step = 10, total = 100 } },
+        },
         explorer = { enabled = true },
         picker = {
           enabled = true,
@@ -310,6 +323,17 @@ require("lazy").setup({
         -- Notification keymaps
         vim.keymap.set("n", "<leader>nd", function() Snacks.notifier.hide() end, { desc = "Dismiss notifications" })
         vim.keymap.set("n", "<leader>nh", function() Snacks.notifier.show_history() end, { desc = "Notification history" })
+
+        -- Picker keymaps (replaces telescope)
+        vim.keymap.set("n", "<leader>ff", function() Snacks.picker.files() end, { desc = "Find files" })
+        vim.keymap.set("n", "<leader>fg", function() Snacks.picker.grep() end, { desc = "Live grep" })
+        vim.keymap.set("n", "<leader>fb", function() Snacks.picker.buffers() end, { desc = "Find buffers" })
+        vim.keymap.set("n", "<leader>fh", function() Snacks.picker.help() end, { desc = "Help tags" })
+        vim.keymap.set("n", "<leader>fu", function() Snacks.picker.undo() end, { desc = "Undo history" })
+
+        -- Words keymaps: jump between LSP references of the word under cursor
+        vim.keymap.set({ "n", "t" }, "]]", function() Snacks.words.jump(vim.v.count1) end, { desc = "Next reference" })
+        vim.keymap.set({ "n", "t" }, "[[", function() Snacks.words.jump(-vim.v.count1) end, { desc = "Previous reference" })
 
         -- Vesper highlights: notifier
         local hl = vim.api.nvim_set_hl
@@ -643,53 +667,6 @@ require("lazy").setup({
       end,
     },
 
-    -- Telescope
-    {
-      "nvim-telescope/telescope.nvim",
-      dependencies = {
-        "nvim-lua/plenary.nvim",
-        "debugloop/telescope-undo.nvim",
-        { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-      },
-      config = function()
-        local telescope = require("telescope")
-        telescope.setup({
-          extensions = {
-            fzf = {},
-            undo = {
-              side_by_side = true,
-              layout_strategy = "vertical",
-              layout_config = {
-                preview_height = 0.6,
-              },
-              mappings = {
-                i = {
-                  ["<cr>"] = require("telescope-undo.actions").restore,
-                  ["<C-y>"] = require("telescope-undo.actions").yank_additions,
-                  ["<C-d>"] = require("telescope-undo.actions").yank_deletions,
-                },
-                n = {
-                  ["<cr>"] = require("telescope-undo.actions").restore,
-                  ["y"] = require("telescope-undo.actions").yank_additions,
-                  ["d"] = require("telescope-undo.actions").yank_deletions,
-                },
-              },
-            },
-          },
-        })
-        telescope.load_extension("undo")
-        telescope.load_extension("fzf")
-
-        -- Keymaps
-        local builtin = require("telescope.builtin")
-        vim.keymap.set("n", "<leader>ff", builtin.find_files, { desc = "Find files" })
-        vim.keymap.set("n", "<leader>fg", builtin.live_grep, { desc = "Live grep" })
-        vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Find buffers" })
-        vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Help tags" })
-        vim.keymap.set("n", "<leader>fu", "<cmd>Telescope undo<cr>", { desc = "Find undo history" })
-      end,
-    },
-
     -- Comment.nvim
     {
       "numToStr/Comment.nvim",
@@ -823,7 +800,7 @@ require("lazy").setup({
         })
 
         wk.add({
-          { "<leader>f", group = "Find/Files (Telescope)" },
+          { "<leader>f", group = "Find (Snacks)" },
           { "<leader>x", group = "Diagnostics (Trouble)" },
           { "<leader>c", group = "Code/LSP" },
           { "<leader>t", group = "Toggle" },
@@ -852,7 +829,9 @@ require("lazy").setup({
           { "<leader>fg", desc = "Live grep" },
           { "<leader>fb", desc = "Find buffers" },
           { "<leader>fh", desc = "Help tags" },
-          { "<leader>fu", desc = "Find undo history" },
+          { "<leader>fu", desc = "Undo history" },
+          { "]]", desc = "Next reference" },
+          { "[[", desc = "Previous reference" },
           { "<leader>xx", desc = "Toggle diagnostics" },
           { "<leader>xX", desc = "Buffer diagnostics" },
           { "<leader>xL", desc = "Location list" },
@@ -1216,20 +1195,16 @@ require("lazy").setup({
       event = "VeryLazy",
       opts = {},
       keys = {
-        { "<leader>ft", "<cmd>TodoTelescope<cr>", desc = "Find TODOs" },
+        {
+          "<leader>ft",
+          function()
+            -- todo-comments ships a snacks picker source but does not register it
+            Snacks.picker.pick(vim.tbl_deep_extend("force", require("todo-comments.snacks").source, { title = "TODOs" }))
+          end,
+          desc = "Find TODOs",
+        },
         { "]t", function() require("todo-comments").jump_next() end, desc = "Next TODO" },
         { "[t", function() require("todo-comments").jump_prev() end, desc = "Previous TODO" },
-      },
-    },
-
-    -- indent-blankline (indent guides)
-    {
-      "lukas-reineke/indent-blankline.nvim",
-      main = "ibl",
-      event = "VeryLazy",
-      opts = {
-        indent = { char = "│" },
-        scope = { enabled = true, show_start = false, show_end = false },
       },
     },
 
@@ -1312,34 +1287,6 @@ require("lazy").setup({
         vim.api.nvim_set_hl(0, "TreesitterContext", { bg = "#181818" })
         vim.api.nvim_set_hl(0, "TreesitterContextSeparator", { fg = "#2a2a2a" })
       end,
-    },
-
-    -- vim-illuminate (highlight word under cursor)
-    {
-      "RRethy/vim-illuminate",
-      event = "VeryLazy",
-      config = function()
-        require("illuminate").configure({
-          delay = 200,
-          large_file_cutoff = 2000,
-          large_file_overrides = { providers = { "lsp" } },
-        })
-      end,
-    },
-
-    -- neoscroll.nvim (smooth scrolling)
-    {
-      "karb94/neoscroll.nvim",
-      event = "VeryLazy",
-      opts = {
-        mappings = { "<C-u>", "<C-d>", "<C-b>", "<C-f>", "zt", "zz", "zb" },
-        hide_cursor = true,
-        stop_eof = true,
-        respect_scrolloff = false,
-        cursor_scrolls_alone = true,
-        duration_multiplier = 0.4,
-        easing = "quadratic",
-      },
     },
 
     -- Rainbow CSV (CSV/TSV syntax highlighting and querying)
