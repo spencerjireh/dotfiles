@@ -34,7 +34,7 @@ Selectable components (all pre-selected by default):
 
 | Component | What it does |
 |-----------|--------------|
-| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rust, trash, language runtimes for the LSP servers (node, go, openjdk), plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
+| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rust, trash, lazygit, wget, language runtimes for the LSP servers (node, go, openjdk), plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
 | Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` (opens maximized, Option acts as Alt, Cmd keys mapped to tmux) |
 | Claude Code | Installs via the official native installer (self-updating) |
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
@@ -56,9 +56,38 @@ Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); cas
 Two helpers are symlinked onto your PATH (`~/.local/bin`) during install:
 
 ```bash
-dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins + mason registry, update Claude
-dotdoctor   # health check: symlinks, CLI tools, runtimes, formatters, OMZ plugins, LSP servers, TPM plugin dirs
+dotup       # pull dotfiles, brew bundle + upgrade, update tmux/zsh/nvim plugins + mason registry, rebuild tmux-thumbs, update Claude
+dotdoctor   # health check: symlinks, CLI tools, runtimes, formatters, OMZ plugins, LSP servers, debug adapters, TPM plugin dirs
+dotdoctor --links   # only the symlinks/dirs the installer creates (used by CI)
 ```
+
+### Non-interactive install
+
+For CI or scripted machines, skip the TUI and pass the component list by name:
+
+```bash
+DOTFILES_NONINTERACTIVE=1 \
+DOTFILES_COMPONENTS="Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config" \
+GIT_NAME="Your Name" GIT_EMAIL="you@example.com" ./install.sh
+```
+
+Labels match the TUI checklist exactly. Nothing prompts, the login shell is not changed, and the GitHub login step is skipped.
+
+### Commit signing
+
+Commits and tags are signed with the GitHub SSH key (`gpg.format = ssh` in `git/config`); the installer writes `~/.config/git/allowed_signers` so `git log --show-signature` verifies locally. For the Verified badge, add the same public key on GitHub as a **signing** key: `gh ssh-key add ~/.ssh/id_ed25519_github.pub --type signing`.
+
+The installer generates the key without a passphrase. To protect it, regenerate with one; the host block already loads it into the agent and keychain:
+
+```bash
+ssh-keygen -t ed25519 -C "you@example.com" -f ~/.ssh/id_ed25519_github   # choose a passphrase
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519_github
+gh ssh-key add ~/.ssh/id_ed25519_github.pub --type authentication --title "$(hostname)"
+gh ssh-key add ~/.ssh/id_ed25519_github.pub --type signing --title "$(hostname) signing"
+./install.sh   # Git global config component: rewrites allowed_signers for the new key
+```
+
+Then delete the old key at github.com/settings/keys.
 
 ### Machine-specific config
 
@@ -70,7 +99,7 @@ Anything machine- or work-specific (per-machine PATHs, tool installers, private 
 ./tests/run.sh   # dependency-free; runs in a sandbox, installs nothing
 ```
 
-Covers script linting, the `lib/` helpers, `install.sh`'s symlink/selection logic, stylua formatting of `init.lua`, and booting `tmux.conf` on an isolated server. Runs in CI (GitHub Actions) on every push.
+Covers script linting (shellcheck at warning level), the `lib/` helpers, `install.sh`'s symlink/selection logic, stylua formatting of `init.lua`, and booting `tmux.conf` on an isolated server. CI (GitHub Actions) runs it on Ubuntu on every push, and a second job on macOS runs `install.sh` non-interactively for the config components, checks the links with `dotdoctor --links`, restores the Neovim plugins with parsers compiled, and confirms TPM installed its plugins.
 
 ### Uninstallation
 
@@ -98,16 +127,18 @@ Covers script linting, the `lib/` helpers, `install.sh`'s symlink/selection logi
 │   └── theme/
 │       └── vesper.toml
 ├── git/
-│   ├── config        # tracked settings + aliases (included from ~/.gitconfig)
+│   ├── config        # tracked settings, signing, aliases (included from ~/.gitconfig)
 │   └── ignore        # global gitignore (~/.config/git/ignore)
+├── karabiner/
+│   └── karabiner.json  # Caps Lock as Esc/Ctrl (directory linked to ~/.config/karabiner)
 ├── lib/
 │   ├── log.sh        # logging helpers
 │   ├── tui.sh        # gum-backed TUI helpers (with plain fallback)
-│   └── tmux.sh       # tpm_run: runs TPM scripts against a throwaway server
+│   └── tmux.sh       # tpm_run (TPM scripts on a throwaway server), tmux_thumbs_build
 ├── tests/
 │   └── run.sh        # dependency-free test suite
 ├── .github/workflows/
-│   └── test.yml      # CI: runs the suite + shellcheck
+│   └── test.yml      # CI: test suite on Ubuntu, non-interactive install on macOS
 ├── Brewfile          # declarative package list (brew bundle)
 ├── install.sh
 ├── uninstall.sh
@@ -192,3 +223,7 @@ rm → trash      # safe delete
 **tmux colors wrong** — Ensure terminal reports 256-color. Config sets `default-terminal` to `tmux-256color`.
 
 **tmux plugins not loaded** — Run `dotup` (or `./install.sh` with the tmux component) to install them headlessly, or press `prefix + I` inside tmux. `dotdoctor` lists any missing plugin directories.
+
+**`prefix + t` (tmux-thumbs) shows an installer prompt** — The Rust binary is missing. `dotup` builds it with cargo (`rust` is in the Brewfile); `dotdoctor` reports the missing binary.
+
+**Karabiner rule does nothing** — Open Karabiner-Elements once and grant Input Monitoring plus the driver extension in System Settings. The rule is in the "Default" profile, which the tracked config selects.

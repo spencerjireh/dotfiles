@@ -69,7 +69,7 @@ Dark theme with transparent background and italic styling.
 ### 2. snacks.nvim (Explorer, Picker, UI, Editor Helpers)
 **Plugin**: `folke/snacks.nvim`
 
-One plugin providing several modules. Enabled here: `explorer`, `picker`, `notifier`, `input`, `words`, `indent`, `scroll`, `bigfile`, `quickfile`.
+One plugin providing several modules. Enabled here: `explorer`, `picker`, `notifier`, `input`, `words`, `indent`, `scroll`, `bigfile`, `quickfile`, `zen`, `scratch`, `dim`, plus `toggle`, `gitbrowse` and `lazygit` which need no setup.
 
 **Explorer** (right sidebar, width 30, follows the current file, git status, trash on delete):
 - `-` - Toggle explorer
@@ -124,6 +124,24 @@ LSP navigation (`gd`, `grr`, `gri`) also opens pickers, see the LSP section. Oth
 **Scroll**: Smooth scrolling for all scroll commands.
 
 **Bigfile**: Files over 1.5 MB open with Treesitter, LSP-heavy features and folding trimmed.
+
+**Toggles** (`Snacks.toggle`; which-key shows the current state of each):
+- `<Space>tw` - Wrap
+- `<Space>ts` - Spelling
+- `<Space>tn` - Relative numbers
+- `<Space>td` - Diagnostics
+- `<Space>th` - Inlay hints
+- `<Space>ti` - Indent guides
+- `<Space>tD` - Dim everything outside the current scope
+- `<Space>tz` - Zen mode (distraction-free, current window only)
+- `<Space>tT` - Treesitter highlighting
+
+**Git and scratch**:
+- `<Space>gg` - Lazygit (full TUI in a floating window; `q` closes)
+- `<Space>gl` - Lazygit log for the current file
+- `<Space>go` - Open the current file, or selected lines, on GitHub in the browser
+- `<Space>.` - Scratch buffer (persisted per project and filetype; run Lua with `<CR>`)
+- `<Space>S` - Pick a scratch buffer
 
 **Notifier and input**:
 - `<Space>nd` - Dismiss all notifications
@@ -205,9 +223,13 @@ mason-lspconfig enables every Mason-installed server automatically. `vim.lsp.con
 - `grr` - References (snacks picker)
 - `gri` - Implementations (snacks picker)
 - `K` - Peek fold or show LSP hover documentation (context-aware)
-- `<Space>rn` - Rename symbol
+- `<Space>rn` - Rename symbol with a live preview (inc-rename; `Enter` applies, `Esc` cancels)
 - `<Space>ca` - Code actions
-- `<Space>th` - Toggle inlay hints for this buffer
+- `<Space>th` - Toggle inlay hints (snacks toggle)
+
+**Rust** is handled by rustaceanvim rather than mason-lspconfig: it starts `rust-analyzer` (the binary still comes from Mason), adds `:RustLsp` commands (`runnables`, `expandMacro`, `openCargo`), and supplies the debugger and test adapter used below. `rust_analyzer` is excluded from mason-lspconfig's auto-enable so only one client attaches.
+
+**Lua** gets `lazydev.nvim`: `lua_ls` and blink see only the runtime and plugin modules a file references, instead of loading every runtime file up front.
 
 **Neovim built-in LSP keys** (also available):
 - `grn` - Rename
@@ -503,6 +525,71 @@ Colors each column of `.csv` and `.tsv` files differently. Loads only for those 
 
 ---
 
+### 29. claudecode.nvim (Claude Code in Neovim)
+**Plugin**: `coder/claudecode.nvim`
+
+Runs Claude Code in a snacks terminal split on the right (35 percent) using the same flags as the `ccd` shell alias (`--dangerously-skip-permissions`, so Claude never prompts, including for shell commands). Neovim speaks the same protocol as the VS Code extension: Claude sees the file and selection you send, and proposes edits as diffs you accept or reject inside Neovim.
+
+**Keybindings** (`<Space>a` group):
+- `<Space>ac` - Toggle the Claude terminal
+- `<Space>af` - Focus the Claude terminal (or toggle if already focused)
+- `<Space>ar` - Resume a previous session (`claude --resume`)
+- `<Space>aC` - Continue the last session (`claude --continue`)
+- `<Space>am` - Select the Claude model
+- `<Space>ab` - Add the current buffer to Claude's context
+- `<Space>as` (visual) - Send the selection to Claude
+- `<Space>as` (in the explorer) - Add the file under the cursor
+- `<Space>aa` / `<Space>ad` - Accept / deny the diff Claude proposed
+
+Commands: `:ClaudeCode`, `:ClaudeCodeAdd <file> [start] [end]`, `:ClaudeCodeSendText {text}`, `:ClaudeCodeStatus`.
+
+---
+
+### 30. Debugging (nvim-dap + dap-ui)
+**Plugins**: `mfussenegger/nvim-dap`, `rcarriga/nvim-dap-ui`, `jay-babu/mason-nvim-dap.nvim`
+
+Adapters are installed by Mason on first start: `debugpy` (Python), `delve` (Go), `js-debug-adapter` (Node / JS / TS, registered as `pwa-node`), `codelldb` (Rust via rustaceanvim, also C/C++). The UI (scopes, breakpoints, stack, watches, REPL, console) opens when a session starts and closes when it ends.
+
+**Keybindings** (`<Space>d` group, plus function keys like VS Code):
+- `<Space>db` / `<Space>dB` - Toggle breakpoint / conditional breakpoint
+- `<Space>dc` or `F5` - Continue (starts a session; pick a launch config on first run)
+- `<Space>do` or `F10` - Step over
+- `<Space>di` or `F11` - Step into
+- `<Space>dO` or `Shift+F11` - Step out
+- `<Space>de` - Evaluate the expression under the cursor or selection
+- `<Space>dr` - Toggle the REPL
+- `<Space>dl` - Run the last configuration again
+- `<Space>du` - Toggle the debug UI
+- `<Space>dx` - Terminate
+
+Launch configs: Python runs the current file with the active venv's interpreter; Go offers file, test and package configs; JS/TS offer "Launch file (node)" and "Attach to node process"; Rust builds and debugs through `:RustLsp debuggables`.
+
+---
+
+### 31. Tests (neotest)
+**Plugins**: `nvim-neotest/neotest` with `neotest-python`, `neotest-golang`, `neotest-vitest`, `neotest-jest`, and rustaceanvim's adapter
+
+Runs the test under the cursor and shows results inline and in a summary tree.
+
+**Keybindings**:
+- `<Space>dt` - Run the nearest test
+- `<Space>dT` - Run the current file
+- `<Space>dD` - Debug the nearest test (uses nvim-dap)
+- `<Space>ds` - Toggle the summary tree
+- `<Space>dp` - Toggle the output panel
+- `<Space>dS` - Stop
+
+Python uses pytest with the interpreter from `$VIRTUAL_ENV`, else `.venv/bin/python` found upward from the cwd, else `python3`. Open uv projects from inside the project so the venv is found.
+
+---
+
+### 32. Small helpers
+- `folke/lazydev.nvim` - see the LSP section (Lua workspace library on demand).
+- `smjonas/inc-rename.nvim` - `:IncRename <name>` renames with a live preview; bound to `<Space>rn` when a server attaches. noice renders the prompt.
+- `vim.o.winborder = "rounded"` - every floating window (hover, signature help, pickers) gets the same border.
+
+---
+
 ## LSP Configuration
 
 ### What is LSP?
@@ -556,7 +643,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>w` - Format and save
 - `<Space>q` - Quit window
 - `<Space>cr` - Check and reload files
-- `<Space>tw` - Toggle word wrap
+- `<Space>tw` / `ts` / `tn` / `td` / `th` / `ti` / `tD` / `tz` / `tT` - Toggles: wrap, spelling, relative numbers, diagnostics, inlay hints, indent guides, dim, zen, treesitter
 - `gh` - Jump back in history
 - `gl` - Jump forward in history
 - `Esc` - Clear multicursors, then search highlights
@@ -608,10 +695,25 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `gd` - Go to definition (picker)
 - `grr` / `gri` - References / implementations (picker)
 - `K` - Peek fold or LSP hover documentation
-- `<Space>rn` - Rename symbol
+- `<Space>rn` - Rename symbol (live preview)
 - `<Space>ca` - Code actions (includes ruff fixes in Python)
 - `<Space>th` - Toggle inlay hints
 - `grt` / `gO` - Type definition / document symbols (built-in)
+- `:RustLsp runnables` / `debuggables` / `expandMacro` - rustaceanvim extras (Rust only)
+
+### Claude Code
+- `<Space>ac` / `af` - Toggle / focus the Claude terminal
+- `<Space>ar` / `aC` - Resume / continue a session
+- `<Space>ab` - Add the current buffer as context
+- `<Space>as` - Send the visual selection (or add the explorer file)
+- `<Space>aa` / `ad` - Accept / deny the proposed diff
+
+### Debugging and Tests
+- `<Space>db` / `dB` - Toggle / conditional breakpoint
+- `<Space>dc` `F5` / `do` `F10` / `di` `F11` / `dO` `Shift+F11` - Continue / over / into / out
+- `<Space>de` / `dr` / `dl` / `du` / `dx` - Eval / REPL / run last / toggle UI / terminate
+- `<Space>dt` / `dT` / `dD` - Test nearest / file / debug nearest
+- `<Space>ds` / `dp` / `dS` - Test summary / output panel / stop
 
 ### Find (snacks picker)
 - `<Space>ff` - Find files
@@ -656,12 +758,19 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `zj` - Next fold
 - `zk` - Previous fold
 
-### Git (gitsigns)
+### Git (gitsigns and snacks)
 - `<Space>gs` - Stage hunk
 - `<Space>gr` - Reset hunk
 - `<Space>gp` - Preview hunk
 - `<Space>gb` - Blame line
 - `<Space>gd` - Diff this file
+- `<Space>gg` - Lazygit
+- `<Space>gl` - Lazygit log for this file
+- `<Space>go` - Open file or selection on GitHub
+
+### Scratch
+- `<Space>.` - Scratch buffer
+- `<Space>S` - Pick a scratch buffer
 
 ### Harpoon (Quick Marks)
 - `<Space>oa` - Add file to Harpoon marks
@@ -802,6 +911,16 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 2. Install it: `:TSInstall <lang>`, then reopen the buffer with `:e`
 3. If the install fails, check `:TSLog` and that `tree-sitter` is on `PATH` (`dotdoctor`)
 
+### Debugger does not start
+1. `:checkhealth mason` and `ls ~/.local/share/nvim/mason/bin` should show `debugpy`, `dlv`, `js-debug-adapter`, `codelldb`; `dotdoctor` lists them. `:MasonInstall <name>` installs one by hand
+2. Mason downloads some adapters with `wget` (in the Brewfile)
+3. `:DapShowLog` shows adapter output; for Python make sure the venv interpreter is the one with your dependencies
+
+### Tests are not discovered
+1. neotest needs the parser for the language (`:TSInstall`) and a recognised test file name (`test_*.py`, `*_test.go`, `*.test.ts`)
+2. `<Space>ds` opens the summary; `:Neotest summary` errors show adapter problems
+3. Python: run from inside the project so `.venv` is found, or activate it before starting Neovim
+
 ### JavaScript/TypeScript has no LSP or shows an initialize error
 1. `tsgo` must be installed: `:Mason`, or `:MasonInstall tsgo`
 2. It needs `node` on `PATH` (`dotdoctor`); the Brewfile installs it
@@ -877,6 +996,13 @@ Add the server name to `ensure_installed` in the LSP section. Settings go in a `
 | `zR` | Open all folds |
 | `Ctrl+h/j/k/l` | Split and tmux pane navigation |
 | `<Space>gs` / `gr` / `gp` / `gb` | Stage / reset / preview / blame hunk |
+| `<Space>gg` / `go` | Lazygit / open on GitHub |
+| `<Space>ac` / `as` | Toggle Claude / send selection |
+| `<Space>aa` / `ad` | Accept / deny Claude diff |
+| `<Space>db` / `F5` / `F10` / `F11` | Breakpoint / continue / step over / step into |
+| `<Space>du` / `de` | Debug UI / eval |
+| `<Space>dt` / `dT` / `ds` | Test nearest / file / summary |
+| `<Space>.` | Scratch buffer |
 | `<Space>oa` | Add Harpoon mark |
 | `<Space>oo` | Harpoon menu |
 | `<Space>o1-5` | Jump to mark 1-5 |
@@ -885,7 +1011,7 @@ Add the server name to `ensure_installed` in the LSP section. Settings go in a `
 | `<Space>tr` | Toggle markdown render |
 | `<Space>io` | Open file externally |
 | `gh/gl` | Jump history back/forward |
-| `<Space>tw` | Toggle word wrap |
+| `<Space>tw` / `ts` / `tz` / `tD` | Toggle wrap / spell / zen / dim |
 | `<Space>?` | Show all keymaps |
 | `<Space><Space>` | Show leader keymaps |
 | `:Mason` | Manage LSP servers |
