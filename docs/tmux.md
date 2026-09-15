@@ -40,6 +40,10 @@ Ghostty maps a few Cmd keys to tmux sequences so window management stays in tmux
 | `Cmd+Shift+L` | `prefix + n` | Next window |
 | `Cmd+1` to `Cmd+9` | `M-1` to `M-9` | Jump to window |
 
+Ghostty's own split keys (`Cmd+D`, `Cmd+Shift+D`) and `Cmd+Shift+A` are
+unbound so they cannot open a split outside tmux. If a Ghostty split does
+appear, `Cmd+W` closes the focused one.
+
 On Linux, Ghostty's `cmd` is the Super key and GNOME reserves Super+Shift+Space
 and Super+1-9, so use `C-Space` (the real prefix) and `Alt+1-9` there.
 

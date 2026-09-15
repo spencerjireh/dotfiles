@@ -121,6 +121,12 @@ keybind = cmd+shift+space=text:\x00
 keybind = cmd+shift+h=text:\x00p
 keybind = cmd+shift+l=text:\x00n
 
+# tmux owns splits: unbind Ghostty's native split keys (and the old Cmd+Shift+A,
+# whose Ghostty default is select-all) so a slip does nothing surprising.
+keybind = cmd+d=unbind
+keybind = cmd+shift+d=unbind
+keybind = cmd+shift+a=unbind
+
 # Linux: "cmd" is Super, and GNOME owns Super+Shift+Space and Super+1-9.
 # Use C-Space (the real prefix) and Alt+N there; nothing else is needed.
 
