@@ -103,6 +103,7 @@ Inside the explorer:
 - `<Space>fs` - Document symbols (LSP)
 - `<Space>fd` - Diagnostics
 - `<Space>fk` - Keymaps
+- `<Space>fn` - Notification history (searchable, with preview)
 - `<Space>ft` - Find TODO/FIXME/NOTE comments (todo-comments source)
 
 Inside a picker:
@@ -150,10 +151,12 @@ LSP navigation (`gd`, `grr`, `gri`) also opens pickers, see the LSP section. Oth
 - `<Space>bo` - Close every other buffer
 - `Shift+h` / `Shift+l` - Previous / next buffer (defined in `init.lua`)
 
-**Notifier and input**:
+**Notifier and input** (`fancy` style: title bar with icon, source and time, message below; toasts stack bottom-right, wrap long lines, and grow to at most half the width and 60 percent of the height, with a "↓ N lines" footer beyond that):
+- `<Space>fn` - Searchable notification history (picker; the preview shows the full text)
+- `<Space>nh` - Notification history as a plain float
 - `<Space>nd` - Dismiss all notifications
-- `<Space>nh` - Notification history
-- ERROR-level notifications are sticky and must be dismissed manually
+- Timeouts: INFO 3 s, WARN 8 s, ERROR sticky until dismissed
+- Routine Vim messages (file written, yank/undo line counts, search wrap, "pattern not found") show as a fading one-liner bottom-right instead of a toast; see noice below
 - Input prompts (for example LSP rename) use a floating window
 - A one-line hint ("Space = menu | Space fk = search keys | dot keys nvim in the shell") shows on every start. It is marked temporary in `init.lua`; delete the `dotfiles_hint` block once the keys are familiar
 
@@ -520,6 +523,8 @@ Inline image display through the Kitty graphics protocol (Ghostty supports it; t
 
 Replaces the command line with a centered popup, routes messages through the snacks notifier, adds borders to LSP hover and signature windows, and shows LSP progress.
 
+Routine messages are routed to the `mini` view (a fading one-liner bottom-right, the same place as LSP progress) so they never stack up as toasts: "written", "N lines yanked", "N fewer/more lines", undo/redo counters, "search hit BOTTOM/TOP", and E486 "Pattern not found". They still appear in `:messages` and `:Noice history`. Messages over 20 lines open in a split (`long_message_to_split`).
+
 ---
 
 ### 27. nvim-colorizer
@@ -744,6 +749,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>fs` - Document symbols
 - `<Space>fd` - Diagnostics
 - `<Space>fk` - Keymaps
+- `<Space>fn` - Notification history (searchable)
 - `<Space>ft` - Find TODO comments
 
 ### File Explorer (snacks)
@@ -807,7 +813,8 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 
 ### Notifications
 - `<Space>nd` - Dismiss notifications
-- `<Space>nh` - Notification history
+- `<Space>nh` - Notification history (float)
+- `<Space>fn` - Notification history (searchable picker)
 
 ### Markdown
 - `<Space>mp` - Open markdown file in browser
@@ -1037,6 +1044,7 @@ Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go 
 | `<Space>io` | Open file externally |
 | `gh/gl` | Jump history back/forward |
 | `<Space>tw` / `ts` / `tz` / `tD` | Toggle wrap / spell / zen / dim |
+| `<Space>fn` / `<Space>nh` | Notification history (picker / float) |
 | `<Space>?` | Show all keymaps |
 | `<Space><Space>` | Show leader keymaps |
 | `:Mason` | Manage LSP servers |

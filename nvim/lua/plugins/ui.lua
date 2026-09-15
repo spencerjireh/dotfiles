@@ -53,6 +53,20 @@ return {
         view_error = "notify",
         view_warn = "notify",
       },
+      -- Routine messages go to the fading one-liner bottom-right (the same
+      -- view as LSP progress) instead of a toast. They still land in
+      -- :messages and :Noice history.
+      routes = {
+        { filter = { event = "msg_show", kind = "", find = "written" }, view = "mini" },
+        { filter = { event = "msg_show", kind = "", find = "lines yanked" }, view = "mini" },
+        { filter = { event = "msg_show", kind = "", find = "fewer lines" }, view = "mini" },
+        { filter = { event = "msg_show", kind = "", find = "more lines" }, view = "mini" },
+        { filter = { event = "msg_show", kind = "", find = "line less" }, view = "mini" },
+        { filter = { event = "msg_show", kind = "", find = "before #" }, view = "mini" }, -- undo
+        { filter = { event = "msg_show", kind = "", find = "after #" }, view = "mini" }, -- redo
+        { filter = { event = "msg_show", kind = "wmsg" }, view = "mini" }, -- search hit BOTTOM/TOP
+        { filter = { event = "msg_show", kind = "emsg", find = "E486" }, view = "mini" }, -- pattern not found
+      },
       popupmenu = {
         enabled = true,
         backend = "nui",

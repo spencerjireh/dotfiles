@@ -47,12 +47,16 @@ return {
     },
     notifier = {
       enabled = true,
-      timeout = 3000,
-      style = "compact",
+      timeout = 3000, -- INFO; WARN and ERROR are adjusted in the vim.notify override below
+      style = "fancy", -- title bar with icon, source and time; message below
       top_down = false,
-      width = { min = 30, max = 0.4 },
+      width = { min = 40, max = 0.5 },
+      height = { min = 1, max = 0.6 }, -- beyond this a "↓ N lines" footer appears
       margin = { top = 0, right = 1, bottom = 1 },
     },
+    -- Toast window: wrap long lines instead of cutting them at the right edge
+    -- (snacks' default notification style sets wrap = false).
+    styles = { notification = { wo = { wrap = true } } },
     input = { enabled = true },
     zen = {}, -- distraction-free editing (<leader>tz)
     scratch = {}, -- persistent scratch buffers (<leader>.)
@@ -62,12 +66,15 @@ return {
     local Snacks = require("snacks")
     Snacks.setup(opts)
 
-    -- Sticky ERROR notifications (ported from nvim-notify override)
+    -- Timeouts by level: INFO 3 s (notifier default), WARN 8 s, ERROR sticky
+    -- until dismissed with <leader>nd.
     local original_notify = vim.notify
     vim.notify = function(msg, level, o)
       o = o or {}
       if level == vim.log.levels.ERROR then
         o.timeout = false
+      elseif level == vim.log.levels.WARN then
+        o.timeout = o.timeout or 8000
       end
       original_notify(msg, level, o)
     end
@@ -124,6 +131,9 @@ return {
     vim.keymap.set("n", "<leader>fk", function()
       Snacks.picker.keymaps()
     end, { desc = "Keymaps" })
+    vim.keymap.set("n", "<leader>fn", function()
+      Snacks.picker.notifications()
+    end, { desc = "Notifications (searchable)" })
 
     -- Words keymaps: jump between LSP references of the word under cursor
     vim.keymap.set({ "n", "t" }, "]]", function()
@@ -176,6 +186,7 @@ return {
       hl(0, "SnacksNotifier" .. l[1], { fg = l[2], bg = "#101010" })
       hl(0, "SnacksNotifierBorder" .. l[1], { fg = l[2] })
       hl(0, "SnacksNotifierIcon" .. l[1], { fg = l[2] })
+      hl(0, "SnacksNotifierTitle" .. l[1], { fg = l[2], bg = "#101010", bold = true }) -- fancy style title bar
     end
   end,
 }
