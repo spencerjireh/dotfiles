@@ -52,6 +52,8 @@ Layout: `nvim/init.lua` holds options, autocmds, plugin-free keymaps and the laz
 
 Use leader key for custom commands. Example: `<Space>ff` opens file finder.
 
+**Shared model with tmux.** The `Space` layer here and the `prefix` layer in tmux use the same verbs: `h/j/k/l` is a direction, `Shift+h/l` (here) or `p/n` (tmux) is previous/next in a list, `|` and `-` split, `q` closes and `Q` closes more, `f` finds, `?` helps, and a number jumps to a slot (`Cmd+N` for a tmux window, `<Space>N` for a Harpoon mark). The full table is in `docs/tmux.md`.
+
 ## Plugins
 
 ### 1. Vesper Theme
@@ -265,7 +267,7 @@ One plugin for completion, with a prebuilt Rust fuzzy matcher (downloaded on fir
 4. Buffer (words from open files)
 
 **Keybindings** (in insert mode):
-- `Ctrl+Space` - Trigger completion manually
+- `Ctrl+n` - Open the completion menu when it is hidden, move down when it is open (`Ctrl+Space` also works, but only outside tmux, whose prefix swallows it)
 - `Tab` - Select next item / jump to next snippet placeholder
 - `Shift+Tab` - Select previous item / jump to previous placeholder
 - `Enter` - Confirm selection (first item is preselected)
@@ -428,7 +430,7 @@ Shows available keybindings in a popup as you type.
 
 Every keymap carries a `desc`, which is what which-key shows; `lua/plugins/which-key.lua` only defines the groups below and a few built-in keys.
 
-Groups: `<Space>f` Find, `<Space>b` Buffer, `<Space>x` Diagnostics (Trouble), `<Space>c` Code actions, `<Space>g` Git, `<Space>h` Harpoon, `<Space>n` Notifications, `<Space>t` Toggle / tools, `<Space>m` Markdown, `<Space>i` Images/Files, `<Space>a` Claude, `<Space>d` Debug/Test.
+Groups: `<Space>f` Find, `<Space>b` Buffer, `<Space>x` Diagnostics (Trouble), `<Space>c` Code actions, `<Space>g` Git, `<Space>m` Harpoon (marks), `<Space>n` Notifications, `<Space>t` Toggle / tools, `<Space>i` Images/Files, `<Space>a` Claude, `<Space>d` Debug/Test.
 
 ---
 
@@ -466,11 +468,11 @@ Folding from Treesitter queries with an indent fallback. Folded lines show the f
 Per-project list of up to 5 files you jump to with one key.
 
 **Keybindings**:
-- `<Space>ha` - Add current file to Harpoon marks
-- `<Space>hh` - Open Harpoon quick menu
-- `<Space>h1` `<Space>h2` `<Space>h3` `<Space>h4` `<Space>h5` - Jump to mark 1 to 5
-- `<Space>hn` - Navigate to next mark
-- `<Space>hp` - Navigate to previous mark
+- `<Space>ma` - Add current file to Harpoon marks
+- `<Space>mm` - Open Harpoon quick menu
+- `<Space>1` `<Space>2` `<Space>3` `<Space>4` `<Space>5` - Jump to mark 1 to 5
+- `<Space>mn` - Navigate to next mark
+- `<Space>mp` - Navigate to previous mark
 
 **Inside Harpoon Menu**:
 - `j/k` or `Down/Up` - Navigate through marks
@@ -496,7 +498,7 @@ In-buffer markdown rendering: code blocks with borders, custom bullets, heading 
 
 **Keybindings**:
 - `<Space>tr` - Toggle render markdown on/off
-- `<Space>mp` - Open the markdown file in the default browser
+- `<Space>tm` - Open the markdown file in the default browser
 
 Markdown buffers also get `conceallevel=2`, word wrap, and spell check.
 
@@ -711,8 +713,9 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ### Windows/Splits
 - `:split` or `:sp` - Horizontal split
 - `:vsplit` or `:vs` - Vertical split
-- `Ctrl+h/j/k/l` - Navigate splits and tmux panes
-- `Ctrl+w =` - Equal size splits
+- `Ctrl+h/j/k/l` or `<Space>h` / `<Space>j` / `<Space>k` / `<Space>l` - Move to the split in that direction, or into the neighbouring tmux pane at the edge
+- `<Space>|` / `<Space>-` - Split right / below (same keys as tmux `prefix + |` / `prefix + -`)
+- `<Space>=` or `Ctrl+w =` - Equal size splits
 - `<Space>q` or `Ctrl+w q` - Close current split (`<Space>q` quits when it is the last one)
 
 ### LSP (configured in this setup)
@@ -766,7 +769,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `gc` - Toggle comment (visual mode)
 
 ### Completion (Insert mode)
-- `Ctrl+Space` - Trigger completion
+- `Ctrl+n` - Open the completion menu (or move down when open)
 - `Tab` - Next item / next snippet placeholder
 - `Shift+Tab` - Previous item / previous placeholder
 - `Enter` - Confirm
@@ -798,11 +801,11 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>S` - Pick a scratch buffer
 
 ### Harpoon (Quick Marks)
-- `<Space>ha` - Add file to Harpoon marks
-- `<Space>hh` - Open Harpoon menu
-- `<Space>h1` to `<Space>h5` - Jump to mark 1 to 5
-- `<Space>hn` - Navigate to next mark
-- `<Space>hp` - Navigate to previous mark
+- `<Space>ma` - Add file to Harpoon marks
+- `<Space>mm` - Open Harpoon menu
+- `<Space>1` to `<Space>5` - Jump to mark 1 to 5
+- `<Space>mn` - Navigate to next mark
+- `<Space>mp` - Navigate to previous mark
 
 ### Diagnostics (Trouble)
 - `<Space>xx` - Workspace diagnostics
@@ -817,7 +820,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>fn` - Notification history (searchable picker)
 
 ### Markdown
-- `<Space>mp` - Open markdown file in browser
+- `<Space>tm` - Open markdown file in browser
 - `<Space>tr` - Toggle render markdown (in-buffer)
 
 ### Images and External Files
@@ -838,7 +841,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ### Workflow Tips
 
 1. **Quick File Switching**:
-   - Use Harpoon for your 5 most-accessed files: `<Space>ha` to mark, `<Space>h1` to `<Space>h5` to jump
+   - Use Harpoon for your 5 most-accessed files: `<Space>ma` to mark, `<Space>1` to `<Space>5` to jump
    - `<Space>ff` to find files by name (for everything else)
    - `Shift+h` / `Shift+l` to step through open files, `<Space>fb` to pick one
    - `<Space>bd` to close a file when you are done with it (the split stays)
@@ -869,7 +872,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 
 6. **Markdown Editing**:
    - In-buffer rendering with `<Space>tr` for quick previews
-   - Open in browser with `<Space>mp` for final review
+   - Open in browser with `<Space>tm` for final review
    - Images render inline (Kitty graphics protocol)
    - Use `<Space>io` to open PDFs or Office docs externally
 
@@ -931,7 +934,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ### Completion not appearing
 1. Ensure LSP is running (`:checkhealth vim.lsp`)
 2. Check if you're in insert mode
-3. Try `Ctrl+Space` to trigger manually
+3. Try `Ctrl+n` to open it manually (`Ctrl+Space` does not reach Neovim inside tmux)
 4. Check blink loaded and its fuzzy binary is present: `:checkhealth blink.cmp`
 
 ### No syntax highlighting or text objects for a language
@@ -1026,7 +1029,8 @@ Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go 
 | `za` | Toggle fold |
 | `zM` | Close all folds |
 | `zR` | Open all folds |
-| `Ctrl+h/j/k/l` | Split and tmux pane navigation |
+| `Ctrl+h/j/k/l` or `<Space>h/j/k/l` | Split and tmux pane navigation |
+| `<Space>|` / `<Space>-` / `<Space>=` | Split right / below / equalize |
 | `<Space>gs` / `gr` / `gp` / `gb` | Stage / reset / preview / blame hunk |
 | `<Space>gg` / `go` | Lazygit / open on GitHub |
 | `<Space>ac` / `as` | Toggle Claude / send selection |
@@ -1035,11 +1039,11 @@ Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go 
 | `<Space>du` / `de` | Debug UI / eval |
 | `<Space>dt` / `dT` / `ds` | Test nearest / file / summary |
 | `<Space>.` | Scratch buffer |
-| `<Space>ha` | Add Harpoon mark |
-| `<Space>hh` | Harpoon menu |
-| `<Space>h1` to `<Space>h5` | Jump to mark 1-5 |
-| `<Space>hn` / `<Space>hp` | Next/previous mark |
-| `<Space>mp` | Open markdown in browser |
+| `<Space>ma` | Add Harpoon mark |
+| `<Space>mm` | Harpoon menu |
+| `<Space>1` to `<Space>5` | Jump to mark 1-5 |
+| `<Space>mn` / `<Space>mp` | Next/previous mark |
+| `<Space>tm` | Open markdown in browser |
 | `<Space>tr` | Toggle markdown render |
 | `<Space>io` | Open file externally |
 | `gh/gl` | Jump history back/forward |

@@ -9,6 +9,26 @@ The prefix is `C-Space`. In Ghostty, `Cmd+Shift+Space` is translated to
 `C-Space` (`ghostty/config`), so either works. `prefix + C-Space` sends a
 literal `C-Space` to the pane.
 
+## Mental model
+
+Two layers, same verbs. `prefix` (tmux) owns sessions, windows and panes.
+`Space` (Neovim, see `docs/nvim.md`) owns files, buffers and code. Ghostty only
+translates Cmd keys into tmux sequences. Inside each layer the same key means
+the same thing:
+
+| Verb | tmux (`prefix +`) | Neovim (`Space`) |
+|------|-------------------|------------------|
+| Move in a direction | `h` / `j` / `k` / `l` (panes); `C-h/j/k/l` without prefix | `h` / `j` / `k` / `l` (splits, crosses into tmux); `Ctrl+h/j/k/l` |
+| Previous / next in the list | `p` / `n` (windows); `Cmd+Shift+H` / `Cmd+Shift+L` | `Shift+h` / `Shift+l` (buffers) |
+| Reorder | `<` / `>` (windows) | |
+| Split | `\|` / `-` | `\|` / `-`, `=` equalize |
+| Close the smallest thing / more | `q` pane, `X` window, `Q` session | `q` window (quits on the last), `Q` all, `bd` buffer |
+| Find in a list | `f` windows, `F` sessions | `f` + letter (files, buffers, grep, ...) |
+| Jump to slot N | `Cmd+N` / `Alt+N` (window N) | `Space N` (Harpoon mark N) |
+| New | `c` window, `S` session | |
+| Scratch | `g` popup terminal | `.` scratch buffer |
+| Help | `?` | `?` |
+
 ## Ghostty translations
 
 Ghostty maps a few Cmd keys to tmux sequences so window management stays in tmux:
@@ -16,19 +36,22 @@ Ghostty maps a few Cmd keys to tmux sequences so window management stays in tmux
 | Ghostty key | Sent to tmux | Effect |
 |-------------|--------------|--------|
 | `Cmd+Shift+Space` | `C-Space` | Prefix |
-| `Cmd+Shift+A` | `prefix + h` | Previous window |
-| `Cmd+Shift+D` | `prefix + l` | Next window |
+| `Cmd+Shift+H` | `prefix + p` | Previous window |
+| `Cmd+Shift+L` | `prefix + n` | Next window |
 | `Cmd+1` to `Cmd+9` | `M-1` to `M-9` | Jump to window |
+
+On Linux, Ghostty's `cmd` is the Super key and GNOME reserves Super+Shift+Space
+and Super+1-9, so use `C-Space` (the real prefix) and `Alt+1-9` there.
 
 ## Navigation
 
 | Action | Keys |
 |--------|------|
-| Pane left / down / up / right | `C-h` / `C-j` / `C-k` / `C-l` (no prefix; forwarded into Neovim by vim-tmux-navigator) |
-| Previous / next window | `prefix + h` / `prefix + l` (repeatable) |
-| Move window left / right | `prefix + k` / `prefix + j` (repeatable) |
+| Pane left / down / up / right | `prefix + h` / `prefix + j` / `prefix + k` / `prefix + l`, or `C-h` / `C-j` / `C-k` / `C-l` without prefix (forwarded into Neovim by vim-tmux-navigator) |
+| Previous / next window | `prefix + p` / `prefix + n` (repeatable; `Cmd+Shift+H` / `Cmd+Shift+L` in Ghostty) |
+| Move window left / right | `prefix + <` / `prefix + >` (repeatable) |
 | Window by number | `M-1` to `M-9` (Alt+number, or Cmd+number in Ghostty) |
-| Window switcher, all sessions | `prefix + p` (fzf) |
+| Window switcher, all sessions | `prefix + f` (fzf) |
 
 ## Copy mode (vi keys)
 
@@ -51,21 +74,22 @@ Mouse selection also copies (`set-clipboard on`).
 
 | Action | Keys |
 |--------|------|
-| Split side by side (vertical) | `prefix + v` |
-| Split stacked (horizontal) | `prefix + s` |
+| Split stacked (horizontal) | `prefix + -` |
+| Move to a pane | `prefix + h` / `prefix + j` / `prefix + k` / `prefix + l` |
 | Resize left / down / up / right | `prefix + H` / `prefix + J` / `prefix + K` / `prefix + L` (5 cells, repeatable) |
-| Close pane | `prefix + x` |
+| Close pane | `prefix + q` |
 
-Alternate split keys: `prefix + |` (side by side) and `prefix + -` (stacked).
-Splits open in the current pane's directory.
+Split side by side with `prefix + |`. Splits open in the current pane's
+directory. Neovim uses the same `|`, `-` and `q` under `Space`.
 
 ## Windows
 
 | Action | Keys |
 |--------|------|
 | New window (after the current one, same directory) | `prefix + c` |
-| Previous / next window | `prefix + h` / `prefix + l` |
-| Reorder window | `prefix + j` / `prefix + k` |
+| Previous / next window | `prefix + p` / `prefix + n` |
+| Reorder window | `prefix + <` / `prefix + >` |
+| Find a window in any session | `prefix + f` (fzf) |
 | Close window | `prefix + X` |
 | Toggle status bar | `prefix + b` (off by default) |
 
@@ -78,8 +102,8 @@ brackets when it is not the shell.
 | Action | Keys |
 |--------|------|
 | New session | `prefix + S` (prompts for a name) |
-| Session switcher | `prefix + w` (fzf; shows the current session, `C-x` kills the highlighted one) |
-| Kill session | `prefix + q` (asks for confirmation) |
+| Session switcher | `prefix + F` (fzf; shows the current session, `C-x` kills the highlighted one) |
+| Kill session | `prefix + Q` (asks for confirmation) |
 | Detach | `prefix + d` |
 | Save / restore layout | `prefix + C-s` / `prefix + C-r` (tmux-resurrect) |
 
@@ -96,7 +120,8 @@ is off.
 |--------|------|
 | Scratch terminal popup (current directory) | `prefix + g` |
 | Copy hints for paths, URLs, hashes (tmux-thumbs) | `prefix + t` |
-| Window switcher across sessions | `prefix + p` |
+| Window switcher across sessions | `prefix + f` |
+| Session switcher | `prefix + F` |
 | Install TPM plugins | `prefix + I` (`dot update` does this headlessly) |
 
 ## Other

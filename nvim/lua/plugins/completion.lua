@@ -8,6 +8,9 @@ return {
     opts = {
       keymap = {
         preset = "enter", -- <CR> accept, <C-e> hide, <C-b>/<C-f> scroll docs, <C-space> show
+        -- <C-space> is the tmux prefix and never reaches Neovim inside tmux; <C-n>
+        -- opens the menu when hidden and moves down when open.
+        ["<C-n>"] = { "show", "select_next", "fallback" },
         ["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
         ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
       },

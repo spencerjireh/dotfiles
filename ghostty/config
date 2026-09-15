@@ -116,9 +116,13 @@ macos-option-as-alt = true
 # Translate cmd+shift+space to ctrl+space for tmux prefix
 keybind = cmd+shift+space=text:\x00
 
-# Cmd+Shift+A/D to navigate tmux windows (sends prefix+h / prefix+l)
-keybind = cmd+shift+a=text:\x00h
-keybind = cmd+shift+d=text:\x00l
+# Cmd+Shift+H/L: previous/next tmux window (sends prefix+p / prefix+n). Both are
+# unbound in Ghostty and system-wide on macOS; Cmd+H (hide) is unaffected.
+keybind = cmd+shift+h=text:\x00p
+keybind = cmd+shift+l=text:\x00n
+
+# Linux: "cmd" is Super, and GNOME owns Super+Shift+Space and Super+1-9.
+# Use C-Space (the real prefix) and Alt+N there; nothing else is needed.
 
 # Cmd+number to switch tmux windows (sends Alt+N; a later bind replaces the
 # default goto_tab, so no explicit unbind is needed)

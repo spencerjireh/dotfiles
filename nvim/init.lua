@@ -115,8 +115,8 @@ vim.keymap.set("n", "<leader>tR", "<cmd>checktime<cr>", { desc = "Reload files f
 
 -- Toggles (<leader>t...) are defined with Snacks.toggle in lua/plugins/snacks.lua
 
--- Open markdown file in default browser
-vim.keymap.set("n", "<leader>mp", function()
+-- Open markdown file in default browser (<leader>t = toggles / tools, next to <leader>tr)
+vim.keymap.set("n", "<leader>tm", function()
   local file = vim.fn.expand("%:p")
   if file:match("%.md$") then
     vim.ui.open(file) -- open on macOS, xdg-open on Linux
@@ -155,6 +155,11 @@ vim.keymap.set("n", "<leader>q", function()
   end
 end, { desc = "Close window (quit if last)" })
 vim.keymap.set("n", "<leader>Q", "<cmd>confirm qall<cr>", { desc = "Quit all" })
+
+-- Splits: same keys as tmux (prefix + | and prefix + -); new splits open right/below
+vim.keymap.set("n", "<leader>|", "<cmd>vsplit<cr>", { desc = "Split right" })
+vim.keymap.set("n", "<leader>-", "<cmd>split<cr>", { desc = "Split below" })
+vim.keymap.set("n", "<leader>=", "<C-w>=", { desc = "Equalize splits" })
 
 -- Buffers: step through open files. The stock H/L (top/bottom of screen)
 -- motions are given up for this. <leader>b* (close buffer) lives in lua/plugins/snacks.lua.

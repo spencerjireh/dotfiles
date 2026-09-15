@@ -21,6 +21,7 @@ superfile, git, Karabiner. Everything is symlinked from this repo into `$HOME` b
 
 - Every Neovim keymap has a `desc`; which-key reads it. Groups are defined once in `lua/plugins/which-key.lua`.
 - Every zsh function is preceded by a `# desc:` comment.
+- tmux (`prefix`) and Neovim (`Space`) share one key model, documented in `docs/tmux.md` "Mental model": h/j/k/l is a direction, p/n or Shift+h/l is previous/next, `|`/`-` split, `q` closes and `Q` closes more, `f` finds, `?` helps, numbers jump to slots. New bindings must fit it.
 - Docs never drift: `tests/run.sh` fails when a `<leader>` mapping, an alias/function name, or a tmux prefix binding is missing from its `docs/*.md`. Update the doc in the same change.
 - Formatting and lint: `stylua nvim/` (config in `nvim/.stylua.toml`), `shellcheck -S warning` on every shell file, `zsh -n` on zsh files. Run `./tests/run.sh` before committing.
 - Shell scripts are bash 3.2 compatible (macOS default): no namerefs, no associative arrays.
