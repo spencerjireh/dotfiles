@@ -19,7 +19,7 @@ the same thing:
 | Verb | tmux (`prefix +`) | Neovim (`Space`) |
 |------|-------------------|------------------|
 | Move in a direction | `C-h/j/k/l` without prefix (panes) | `h` / `j` / `k` / `l` (splits, crosses into tmux); `Ctrl+h/j/k/l` |
-| Previous / next in the list | `k` / `j` (windows; also `p` / `n`); `Cmd+Shift+K` / `Cmd+Shift+J` | `Shift+h` / `Shift+l` (buffers) |
+| Previous / next in the list | `k` / `j` (windows; also `p` / `n`); `Cmd+Shift+K` / `Cmd+Shift+J` (or `Cmd+Shift+A` / `Cmd+Shift+D`) | `Shift+h` / `Shift+l` (buffers) |
 | Reorder | `h` / `l` move the window left / right; `Cmd+Shift+H` / `Cmd+Shift+L` | |
 | Split | `\|` / `-` | `\|` / `-`, `=` equalize |
 | Close the smallest thing / more | `q` pane, `X` window, `Q` session | `q` window (quits on the last), `Q` all, `bd` buffer |
@@ -43,11 +43,12 @@ Ghostty maps a few Cmd keys to tmux sequences so window management stays in tmux
 | `Cmd+Shift+L` | `prefix + l` | Move window right |
 | `Cmd+Shift+J` | `prefix + j` | Next window |
 | `Cmd+Shift+K` | `prefix + k` | Previous window |
+| `Cmd+Shift+D` | `prefix + j` | Next window (left-hand alias) |
+| `Cmd+Shift+A` | `prefix + k` | Previous window (left-hand alias) |
 | `Cmd+1` to `Cmd+9` | `M-1` to `M-9` | Jump to window |
 
-Ghostty's own split keys (`Cmd+D`, `Cmd+Shift+D`) and `Cmd+Shift+A` are
-unbound so they cannot open a split outside tmux. If a Ghostty split does
-appear, `Cmd+W` closes the focused one.
+Ghostty's own split key `Cmd+D` is unbound so it cannot open a split outside
+tmux. If a Ghostty split does appear, `Cmd+W` closes the focused one.
 
 On Linux, Ghostty's `cmd` is the Super key and GNOME reserves Super+Shift+Space
 and Super+1-9, so use `C-Space` (the real prefix) and `Alt+1-9` there.

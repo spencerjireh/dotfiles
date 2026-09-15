@@ -125,11 +125,13 @@ keybind = cmd+shift+l=text:\x00l
 keybind = cmd+shift+j=text:\x00j
 keybind = cmd+shift+k=text:\x00k
 
-# tmux owns splits: unbind Ghostty's native split keys (and the old Cmd+Shift+A,
-# whose Ghostty default is select-all) so a slip does nothing surprising.
+# Left-hand alias for J/K: Cmd+Shift+A/D switch to the previous/next window.
+# (Cmd+Shift+D replaces Ghostty's native split-down; tmux owns splits.)
+keybind = cmd+shift+a=text:\x00k
+keybind = cmd+shift+d=text:\x00j
+
+# tmux owns splits: unbind Ghostty's remaining native split key.
 keybind = cmd+d=unbind
-keybind = cmd+shift+d=unbind
-keybind = cmd+shift+a=unbind
 
 # Linux: "cmd" is Super, and GNOME owns Super+Shift+Space and Super+1-9.
 # Use C-Space (the real prefix) and Alt+N there; nothing else is needed.
