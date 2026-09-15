@@ -58,16 +58,58 @@ return {
         end
       end
 
+      local function attach(buf, lang)
+        pcall(vim.treesitter.start, buf, lang)
+        vim.bo[buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+      end
+
+      -- Parsers installed on first use: a filetype with an installable parser that is
+      -- not on disk yet gets it in the background, then every buffer of that filetype
+      -- is attached. get_available() is cached because each call fires a User autocmd.
+      local available ---@type table<string, boolean>|nil
+      local attempted = {} ---@type table<string, boolean>
+      local function install_on_demand(lang, ft)
+        if not available then
+          available = {}
+          for _, l in ipairs(require("nvim-treesitter.config").get_available()) do
+            available[l] = true
+          end
+        end
+        if attempted[lang] or not available[lang] then
+          return
+        end
+        attempted[lang] = true
+        ts.install({ lang }):await(function(err)
+          vim.schedule(function()
+            if err then
+              vim.notify(("Treesitter: %s parser failed to install (:TSLog)"):format(lang), vim.log.levels.WARN)
+              return
+            end
+            if not vim.treesitter.language.add(lang) then
+              return
+            end
+            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+              if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == ft then
+                attach(buf, lang)
+              end
+            end
+            vim.notify(("Treesitter: installed %s"):format(lang), vim.log.levels.INFO)
+          end)
+        end)
+      end
+
       -- Highlight + indent for any filetype that has a parser. Folds are owned by nvim-ufo.
       vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("dotfiles_treesitter", { clear = true }),
         callback = function(ev)
           local lang = vim.treesitter.language.get_lang(ev.match) or ev.match
           if not vim.treesitter.language.add(lang) then
-            return -- no parser for this filetype: silent no-op
+            if vim.bo[ev.buf].buftype == "" then
+              install_on_demand(lang, ev.match)
+            end
+            return
           end
-          pcall(vim.treesitter.start, ev.buf, lang)
-          vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          attach(ev.buf, lang)
         end,
       })
     end,

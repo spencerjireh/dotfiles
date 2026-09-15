@@ -96,17 +96,23 @@ Inside the explorer:
 - `?` - Show help
 
 **Picker** (fuzzy finder, replaces Telescope):
-- `<Space>ff` - Find files
+- `<Space>ff` - Smart find: open buffers, recent files and project files in one list, ranked by frecency
+- `<Space>fF` - Find files (project files only)
 - `<Space>fg` - Live grep (search text in files)
+- `<Space>fw` - Grep the word under the cursor, or the visual selection
+- `<Space>fl` - Reopen the last picker with its query
+- `<Space>fp` - Projects under `~/Projects`: pick one to change directory and restore its session
 - `<Space>fb` - Find buffers
 - `<Space>fh` - Help tags
 - `<Space>fu` - Undo history (`Enter` restores that state, `Ctrl+y` yanks added lines, `Ctrl+Shift+y` yanks removed lines)
 - `<Space>fr` - Recent files
 - `<Space>fs` - Document symbols (LSP)
+- `<Space>fS` - Workspace symbols (LSP, whole project)
 - `<Space>fd` - Diagnostics
 - `<Space>fk` - Keymaps
 - `<Space>fn` - Notification history (searchable, with preview)
 - `<Space>ft` - Find TODO/FIXME/NOTE comments (todo-comments source)
+- `<Space>fR` - Find and replace across the project (grug-far, see below)
 
 Inside a picker:
 - `Ctrl+j/k` or `Down/Up` - Navigate results
@@ -140,11 +146,15 @@ LSP navigation (`gd`, `grr`, `gri`) also opens pickers, see the LSP section. Oth
 - `<Space>tD` - Dim everything outside the current scope
 - `<Space>tz` - Zen mode (distraction-free, current window only)
 - `<Space>tT` - Treesitter highlighting
+- `<Space>tl` - LSP status (`:checkhealth vim.lsp`: what attached, root directory, why not)
 
 **Git and scratch**:
 - `<Space>gg` - Lazygit (full TUI in a floating window; `q` closes)
 - `<Space>gl` - Lazygit log for the current file
 - `<Space>go` - Open the current file, or selected lines, on GitHub in the browser
+- `<Space>gc` - Commits (git log picker with diff preview)
+- `<Space>gS` - Git status picker (changed files, diff preview)
+- `<Space>gB` - Git branches picker (checkout)
 - `<Space>.` - Scratch buffer (persisted per project and filetype; run Lua with `<CR>`)
 - `<Space>S` - Pick a scratch buffer
 
@@ -177,6 +187,12 @@ Auto-save does **not** format. Formatting runs only on `<Space>w` (see conform.n
 **Plugin**: `nvim-lualine/lualine.nvim`
 
 Statusline showing mode, file path and status, git branch and changes, LSP diagnostics, encoding, filetype, and cursor position.
+
+The right side starts with what the repo activated for the buffer:
+`lsp:<clients> fmt:<formatters|none> lint:<linters>`. `fmt:none` means `<Space>w`
+saves without formatting because the repo carries no config for a formatter
+(see conform below). The segment comes from `lua/dotfiles/project.lua`, the same
+module conform and nvim-lint consult, so the three never disagree.
 
 ---
 
@@ -225,7 +241,13 @@ Missing parsers install asynchronously on the first start; reopen affected buffe
 
 Provides IDE-like features: autocomplete, go-to-definition, hover docs, rename, code actions, diagnostics.
 
-**Servers installed by Mason**: `lua_ls`, `pyright`, `tsgo` (TypeScript 7 native server), `gopls`, `rust_analyzer`, `jdtls`, `clangd`. Mason needs `node`, `go` and `java` on `PATH` to install them; the Brewfile provides all three.
+**Servers installed by Mason at first start**: `lua_ls`, `pyright`, `tsgo` (TypeScript 7 native server), `gopls`, `rust_analyzer`, `jdtls`, `clangd`. Mason needs `node`, `go` and `java` on `PATH` to install them; the Brewfile provides all three.
+
+**Servers installed on demand**: the first time a filetype from the `on_demand` table in `lua/plugins/lsp.lua` opens (shell, JSON, YAML, TOML, Dockerfile, HTML, CSS, Markdown, Ruby, PHP, Elixir, Zig, Svelte, Vue, Astro, Prisma, Terraform, Nix, Kotlin, GraphQL, Protobuf, CMake), Mason installs its server in the background and attaches it to the open buffers when done; a notification reports both steps. `biome` is installed only inside a repo that has `biome.json`. Mason installs into `~/.local/share/nvim/mason`, never into the repo. `<Space>tl` shows what attached and why not.
+
+**Servers read the repo's own config**: pyright reads `pyproject.toml` / `pyrightconfig.json` (without either, checking is lowered to `basic` so an untyped repo is not flooded), tsgo reads `tsconfig.json`, gopls `go.mod`, rust-analyzer `Cargo.toml`. `tsgo` and `denols` never attach together: `deno.json` wins. `b0o/SchemaStore.nvim` feeds `jsonls` and `yamlls` the schemas for `package.json`, `tsconfig.json`, `pyproject.toml`, GitHub workflows, compose files, Kubernetes manifests and more, so unfamiliar config files get completion and validation.
+
+**Per-repo overrides**: `exrc` is on, so a `.nvim.lua` in the working directory is sourced after Neovim asks once (`:trust`). Use it for the cases a general config cannot guess (a nonstandard root, extra server settings). The file is git-ignored globally (`git/ignore`).
 
 **ruff** also runs as a language server for Python. Its binary comes from the Brewfile, not Mason, so `lua/plugins/lsp.lua` enables it explicitly. It supplies the fix-all and organize-imports code actions under `<Space>ca`; its hover is disabled so `K` shows pyright only.
 
@@ -280,16 +302,18 @@ One plugin for completion, with a prebuilt Rust fuzzy matcher (downloaded on fir
 ### 8. conform.nvim (Formatting)
 **Plugin**: `stevearc/conform.nvim`
 
-Formatting runs only when you press `<Space>w`: format the buffer, then write it. Falls back to LSP formatting when no formatter is configured for the filetype.
+Formatting runs only when you press `<Space>w`: format the buffer, then write it. `<Space>W` formats only the hunks gitsigns reports as changed, then writes; untouched lines stay untouched (formatters that cannot format a range are skipped by conform).
 
-**Formatters by filetype** (all installed via the Brewfile):
-- Lua: `stylua`
-- Python: `ruff_organize_imports`, `ruff_format`
-- JavaScript / TypeScript / JSX / TSX: `prettierd` (falls back to `prettier`)
-- Go: `gofmt`
-- Java: `google-java-format`
-- C / C++: `clang-format`
-- Rust: `rustfmt`
+**Formatting follows the repo.** The order is: repo config, then the repo-local binary, then the global binary, then nothing. A formatter runs only when the repo carries its config file (`require_cwd` in `lua/plugins/format.lua`); a repo with no config for the filetype is saved as is and the mini view says `saved, no formatter config in this repo`. The statusline `fmt:` segment shows the decision before you press the key. LSP formatting is never used as a fallback.
+
+**Formatters by filetype** (global binaries from the Brewfile; `prettier` and `biome` prefer `node_modules/.bin`):
+- JavaScript / TypeScript / JSX / TSX: first of `biome` (`biome.json`), `deno_fmt` (`deno.json`), `prettierd` / `prettier` (`.prettierrc*`, `prettier.config.*` or a `prettier` key in `package.json`)
+- JSON / CSS / GraphQL: first of `biome`, `prettierd` / `prettier`; HTML, SCSS, Vue, Svelte, Astro, YAML, Markdown: `prettierd` / `prettier`
+- Python: `black` when `pyproject.toml` has `[tool.black]` (the repo's `.venv/bin/black` wins over the brew one; same for ruff); otherwise `ruff_format` when `[tool.ruff]`, `ruff.toml` or `.ruff.toml` exists, plus `ruff_organize_imports` only when that config selects the isort rules (`"I"`); otherwise nothing
+- Lua: `stylua` (`stylua.toml` / `.stylua.toml`)
+- Shell: `shfmt` (only where `.editorconfig` exists, since that is the only place shfmt reads style from)
+- C / C++: `clang-format` (`.clang-format`)
+- Go: `gofmt`; Rust: `rustfmt`; Java: `google-java-format` (the language's own tool; no config needed)
 
 `:ConformInfo` shows which formatters apply to the current buffer and whether they are available.
 
@@ -298,9 +322,11 @@ Formatting runs only when you press `<Space>w`: format the buffer, then write it
 ### 9. nvim-lint (Linting)
 **Plugin**: `mfussenegger/nvim-lint`
 
-Runs on read, write, and leaving insert mode. Only linters found on `PATH` are run.
-- Python: `ruff`
-- JavaScript / TypeScript / JSX / TSX: `eslint_d`, only inside a project that has an eslint config (`eslint.config.*` or `.eslintrc*`)
+Runs on read, write, and leaving insert mode. Only linters found on `PATH` are run, and linters that need repo config run only where that config exists (gates in `lua/dotfiles/project.lua`; the statusline `lint:` segment shows the result).
+- Python: `ruff`, only where `[tool.ruff]`, `ruff.toml` or `.ruff.toml` exists
+- JavaScript / TypeScript / JSX / TSX: `eslint_d`, only inside a project that has an eslint config (`eslint.config.*` or `.eslintrc*`); it runs the repo's own eslint from `node_modules`
+- Shell: `shellcheck`
+- Dockerfile: `hadolint`
 
 ---
 
@@ -608,6 +634,53 @@ Python uses pytest with the interpreter from `$VIRTUAL_ENV`, else `.venv/bin/pyt
 
 ---
 
+### 33. guess-indent.nvim (Indent detection)
+**Plugin**: `NMAC427/guess-indent.nvim`
+
+Sets `shiftwidth` and `expandtab` per buffer from the file's own content, so a four-space Python repo or a tab-indented Go file does not fight the two-space default from `init.lua`. `.editorconfig` (built into Neovim) wins when present; guess-indent only fills in where there is none.
+
+---
+
+### 34. SchemaStore.nvim (JSON and YAML schemas)
+**Plugin**: `b0o/SchemaStore.nvim`
+
+Loaded when `jsonls` or `yamlls` starts (see the LSP section). Completion and validation for `package.json`, `tsconfig.json`, `pyproject.toml`, `.github/workflows/*.yml`, `docker-compose.yml`, Kubernetes manifests, and the rest of the SchemaStore catalog.
+
+---
+
+### 35. persistence.nvim (Sessions)
+**Plugin**: `folke/persistence.nvim`
+
+Saves the buffers and window layout per working directory on exit. Nothing is restored automatically.
+- `<Space>ss` - Restore the session for the current directory
+- `<Space>sl` - Restore the last session
+- `<Space>sd` - Do not save this session on exit
+
+`<Space>fp` (projects picker) changes directory and restores that project's session.
+
+---
+
+### 36. grug-far.nvim (Find and replace)
+**Plugin**: `MagicDuck/grug-far.nvim`
+
+Project-wide search and replace on top of ripgrep: a buffer with search, replace, files-filter and flags fields, live results, and per-match or all-at-once replacement.
+- `<Space>fR` - Open; in visual mode the selection is the search term
+- Inside: `<localleader>r` replace all, `<localleader>j`/`<localleader>k` next/previous match, `<localleader>o` open the match, `<localleader>q` send to quickfix, `<localleader>c` close (`?` lists them all)
+
+---
+
+### 37. diffview.nvim (Diffs and history)
+**Plugin**: `sindrets/diffview.nvim`
+
+Side-by-side diffs and file history in a tab page. Lazygit stays the tool for staging; diffview is for reading a change or a branch.
+- `<Space>gv` - Diff the working tree against the index (`:DiffviewOpen`; `:DiffviewOpen main..HEAD` for a branch)
+- `<Space>gV` - Close diffview
+- `<Space>gh` - History of the current file; in visual mode, history of the selected lines
+- `<Space>gH` - History of the whole repo
+- Inside: `Tab` / `S-Tab` next/previous file, `-` stage/unstage, `g?` help
+
+---
+
 ## LSP Configuration
 
 ### What is LSP?
@@ -634,8 +707,8 @@ Language Server Protocol provides IDE features like:
 - Press `g?` for help
 
 **Adding a server**:
-1. Add its name to `ensure_installed` in `lua/plugins/lsp.lua` (or install it once via `:Mason`)
-2. Restart Neovim. mason-lspconfig enables it automatically; no `vim.lsp.enable` call is needed
+1. Add its name to `ensure_installed` in `lua/plugins/lsp.lua` (always installed), or map its filetype to it in the `on_demand` table (installed the first time that filetype opens), or install it once via `:Mason`
+2. mason-lspconfig enables it as soon as it is installed; no `vim.lsp.enable` call is needed
 3. For server-specific settings, add a `vim.lsp.config("server_name", { settings = { ... } })` block next to the `lua_ls` one
 
 Formatters and linters are not managed by Mason. They come from the Brewfile so they are on `PATH` for the shell too. `dot doctor` reports any that are missing.
@@ -658,7 +731,8 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `Ctrl+r` - Redo
 
 ### General Editor
-- `<Space>w` - Format and save
+- `<Space>w` - Format and save (saves untouched when the repo has no formatter config)
+- `<Space>W` - Format only the changed hunks, then save
 - `<Space>q` - Close the current window; on the last window, quit Neovim (asks about unsaved buffers)
 - `<Space>Q` - Quit everything (asks about unsaved buffers)
 - `<Space>tR` - Reload files from disk (checktime)
@@ -725,6 +799,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>rn` - Rename symbol (live preview)
 - `<Space>ca` - Code actions (includes ruff fixes in Python)
 - `<Space>th` - Toggle inlay hints
+- `<Space>tl` - LSP status (`:checkhealth vim.lsp`)
 - `grt` / `gO` - Type definition / document symbols (built-in)
 - `:RustLsp runnables` / `debuggables` / `expandMacro` - rustaceanvim extras (Rust only)
 
@@ -743,17 +818,23 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>ds` / `dp` / `dS` - Test summary / output panel / stop
 
 ### Find (snacks picker)
-- `<Space>ff` - Find files
+- `<Space>ff` - Smart find (buffers, recent, files)
+- `<Space>fF` - Find files
 - `<Space>fg` - Live grep (search in files)
+- `<Space>fw` - Grep word under cursor / selection
+- `<Space>fl` - Last picker
+- `<Space>fp` - Projects
 - `<Space>fb` - Find buffers
 - `<Space>fh` - Help tags
 - `<Space>fu` - Undo history
 - `<Space>fr` - Recent files
 - `<Space>fs` - Document symbols
+- `<Space>fS` - Workspace symbols
 - `<Space>fd` - Diagnostics
 - `<Space>fk` - Keymaps
 - `<Space>fn` - Notification history (searchable)
 - `<Space>ft` - Find TODO comments
+- `<Space>fR` - Find and replace (grug-far)
 
 ### File Explorer (snacks)
 - `-` - Toggle explorer
@@ -795,6 +876,15 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 - `<Space>gg` - Lazygit
 - `<Space>gl` - Lazygit log for this file
 - `<Space>go` - Open file or selection on GitHub
+- `<Space>gc` / `<Space>gS` / `<Space>gB` - Commits / status / branches (pickers)
+- `<Space>gv` / `<Space>gV` - Open / close diffview
+- `<Space>gh` / `<Space>gH` - File (or selection) history / repo history (diffview)
+
+### Session (persistence)
+`<Space>s` is the session group:
+- `<Space>ss` - Restore session for this directory
+- `<Space>sl` - Restore last session
+- `<Space>sd` - Do not save this session
 
 ### Scratch
 - `<Space>.` - Scratch buffer
@@ -926,7 +1016,7 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 ## Troubleshooting
 
 ### LSP not working
-1. Check if server is running: `:checkhealth vim.lsp`
+1. Check if server is running: `:checkhealth vim.lsp` (`<Space>tl`); the statusline `lsp:` segment lists attached clients
 2. Verify server is installed: `:Mason`
 3. Check logs: `:LspLog`
 4. Restart LSP: `:LspRestart`
@@ -958,8 +1048,9 @@ Formatters and linters are not managed by Mason. They come from the Brewfile so 
 3. The older `ts_ls` server is not used: its Mason bundle pulls TypeScript 7, which no longer ships the JS `tsserver` it needs
 
 ### Formatting does nothing on `<Space>w`
-1. `:ConformInfo` shows the formatters for the buffer and whether they are available
-2. Run `dot doctor` to see which formatter binaries are missing; `brew bundle` installs them
+1. The statusline says `fmt:none` when the repo has no config for a formatter of this filetype; that is by design (see conform above). Add the repo's config (`.prettierrc`, `biome.json`, `[tool.ruff]`, `stylua.toml`, ...) or leave the file as it is
+2. `:ConformInfo` shows the formatters for the buffer and why one is unavailable ("Root directory not found" means no config)
+3. Run `dot doctor` to see which formatter binaries are missing; `brew bundle` installs them
 
 ### Picker not finding files
 1. Make sure you're in the right directory (`:pwd`)
@@ -1001,6 +1092,7 @@ Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go 
 | Command | Action |
 |---------|--------|
 | `<Space>w` | Format and save |
+| `<Space>W` | Format changed hunks and save |
 | `<Space>q` | Close window (quit if last) |
 | `<Space>Q` | Quit all |
 | `<Space>bd` | Close buffer, keep window |

@@ -5,6 +5,8 @@
 --   lua/plugins/*.lua     one file per purpose (lsp, completion, git, debug, ...); each returns
 --                         a lazy.nvim spec (or a list of specs) and is picked up by the
 --                         { import = "plugins" } line below. Add a plugin = add a file.
+--   lua/dotfiles/*.lua    plain modules shared by several specs (project.lua: which
+--                         formatter, linter and server a repo's own config selects)
 --
 -- Keymap reference: docs/nvim.md in the dotfiles repo (`dot keys nvim`).
 
@@ -66,6 +68,19 @@ vim.opt.sidescrolloff = 8 -- Keep 8 columns visible when scrolling horizontally
 
 -- Hide end-of-buffer tildes
 vim.opt.fillchars:append({ eob = " " })
+
+-- Per-repo config: a trusted .nvim.lua in the working directory is sourced
+-- (Neovim asks once, :trust). Globally git-ignored via git/ignore.
+vim.o.exrc = true
+
+-- Filetypes Neovim 0.12 does not detect on its own (checked with vim.filetype.match)
+vim.filetype.add({
+  extension = { mdx = "markdown" },
+  pattern = {
+    ["docker%-compose[%w_.-]*%.ya?ml"] = "yaml.docker-compose",
+    ["compose[%w_.-]*%.ya?ml"] = "yaml.docker-compose",
+  },
+})
 
 -- Auto-reload files changed outside of Neovim
 vim.opt.updatetime = 250 -- Faster CursorHold for quicker external change detection
