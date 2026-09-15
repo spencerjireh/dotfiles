@@ -36,9 +36,13 @@ ZSH_HIGHLIGHT_STYLES[arg0]='fg=2'                         # green - command name
 # ===========================
 # Ghostty shell integration
 # ===========================
-# Prompt marks, sudo, title. Ghostty injects this only into the first shell;
-# shells inside tmux need to source it themselves.
-if [[ -n "$GHOSTTY_RESOURCES_DIR" && -r "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
+# Prompt marks, sudo, title. Ghostty injects this only into the first shell.
+# Not sourced inside tmux: Ghostty 1.3's script inserts OSC 133 marks after
+# every newline in PS1, which splits the ${...} expressions in the p10k prompt
+# and prints a literal ":-" and "}}" on the first prompt of each new pane.
+# tmux does not forward the marks anyway, and cursor shape is set in
+# 10-options.zsh. See https://github.com/ghostty-org/ghostty/discussions/11407
+if [[ -z "$TMUX" && -n "$GHOSTTY_RESOURCES_DIR" && -r "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration" ]]; then
   builtin source "$GHOSTTY_RESOURCES_DIR/shell-integration/zsh/ghostty-integration"
 fi
 
