@@ -101,7 +101,7 @@ directory. Neovim uses the same `|`, `-` and `q` under `Space`.
 | Move window left / right | `prefix + h` / `prefix + l` |
 | Find a window in any session | `prefix + f` (fzf) |
 | Close window | `prefix + X` |
-| Toggle status bar | `prefix + b` (off by default) |
+| Toggle status bar | `prefix + b` (off by default; shows the window tabs only) |
 
 Windows are numbered from 1 and renumbered when one closes. With the status
 bar on, a window shows as its directory name, plus the running command in
