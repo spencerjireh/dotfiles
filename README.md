@@ -45,7 +45,7 @@ Selectable components (all pre-selected by default):
 
 | Component | What it does |
 |-----------|--------------|
-| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, imagemagick, rustup (+ `rustup default stable`), trash, lazygit, wget, language runtimes for the LSP servers (node, go, openjdk), plus formatters/linters (stylua, ruff, prettierd, eslint_d, clang-format, google-java-format) |
+| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, mise, direnv, imagemagick, rustup (+ `rustup default stable`), trash, lazygit, wget, language runtimes for the LSP servers (node, go, openjdk; mise overrides them per repo), plus formatters/linters (stylua, ruff, black, prettierd, eslint_d, shfmt, hadolint, clang-format, google-java-format) |
 | Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` (opens maximized, Option acts as Alt, Cmd keys mapped to tmux) |
 | Claude Code | Installs via the official native installer (self-updating) |
 | Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |

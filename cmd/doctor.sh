@@ -156,7 +156,7 @@ if [ "$LINKS_ONLY" = 0 ]; then
 if want "Homebrew CLI packages"; then
 echo ""
 log_info "Checking tools (Brewfile)..."
-for t in nvim tmux fzf fd eza bat rg delta zoxide git lazygit; do
+for t in nvim tmux fzf fd eza bat rg delta zoxide git lazygit mise direnv; do
     check_tool "$t"
 done
 for t in node go java; do
@@ -172,6 +172,9 @@ for t in uv ruff stylua prettierd eslint_d tree-sitter; do
 done
 check_tool_optional clang-format "C/C++ formatting via conform"
 check_tool_optional google-java-format "Java formatting via conform"
+check_tool_optional black "Python formatting via conform in repos with [tool.black]"
+check_tool_optional shfmt "shell formatting via conform (needs .editorconfig in the repo)"
+check_tool_optional hadolint "Dockerfile linting via nvim-lint"
 fi
 
 want "Superfile file manager" && check_tool spf "Superfile component"

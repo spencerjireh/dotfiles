@@ -17,6 +17,9 @@ alias soffice="/Applications/LibreOffice.app/Contents/MacOS/soffice"
 # export PATH="$PATH:$HOME/.maestro/bin"
 # export PATH="/opt/homebrew/share/google-cloud-sdk/bin:$PATH"
 
+# Project roots for fproj / tmux prefix + o (colon-separated; default ~/Projects)
+# export DOTFILES_PROJECT_DIRS="$HOME/Projects:$HOME/work"
+
 # Private credentials live here, never in the tracked .zshrc
 # export COOLIFY_BASE_URL="https://coolify.example.com"
 # export COOLIFY_API_TOKEN="..."

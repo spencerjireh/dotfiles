@@ -194,6 +194,30 @@ cheat() {
   curl -s "cheat.sh/$1"
 }
 
+# desc: open a project directory as a tmux session (fzf over $DOTFILES_PROJECT_DIRS, default ~/Projects)
+fproj() {
+  # $1 seeds the fzf query. DOTFILES_PROJECT_DIRS is colon-separated (~/.zshrc.local).
+  # tmux's prefix + o runs this in a popup (sources only this file, see tmux.conf).
+  local dirs dir name
+  dirs=("${(s/:/)${DOTFILES_PROJECT_DIRS:-$HOME/Projects}}")
+  if command -v fd &>/dev/null; then
+    dir=$(fd --type d --max-depth 1 --min-depth 1 . "${dirs[@]}" 2>/dev/null \
+      | fzf --reverse --query="${1:-}" --select-1 --exit-0)
+  else
+    dir=$(find "${dirs[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
+      | fzf --reverse --query="${1:-}" --select-1 --exit-0)
+  fi
+  [[ -n "$dir" ]] || return 0
+  dir="${dir%/}"
+  name="${${dir:t}//./_}"
+  tmux has-session -t "=$name" 2>/dev/null || tmux new-session -ds "$name" -c "$dir"
+  if [[ -n "$TMUX" ]]; then
+    tmux switch-client -t "=$name"
+  else
+    tmux attach -t "=$name"
+  fi
+}
+
 # ===========================
 # Startup Time Profiler
 # ===========================

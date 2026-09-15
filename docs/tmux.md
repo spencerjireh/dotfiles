@@ -23,7 +23,7 @@ the same thing:
 | Reorder | `h` / `l` move the window left / right; `Cmd+Shift+H` / `Cmd+Shift+L` | |
 | Split | `\|` / `-` | `\|` / `-`, `=` equalize |
 | Close the smallest thing / more | `q` pane, `X` window, `Q` session | `q` window (quits on the last), `Q` all, `bd` buffer |
-| Find in a list | `f` windows, `F` sessions | `f` + letter (files, buffers, grep, ...) |
+| Find in a list | `f` windows, `F` sessions, `o` projects | `f` + letter (files, buffers, grep, ...); `fp` projects |
 | Jump to slot N | `Cmd+N` / `Alt+N` (window N) | `Space N` (Harpoon mark N) |
 | New | `c` window, `S` session | |
 | Scratch | `g` popup terminal | `.` scratch buffer |
@@ -112,13 +112,17 @@ brackets when it is not the shell.
 | Action | Keys |
 |--------|------|
 | New session | `prefix + S` (prompts for a name) |
+| Open a project as a session | `prefix + o` (fzf over `~/Projects`; creates or switches) |
 | Session switcher | `prefix + F` (fzf; shows the current session, `C-x` kills the highlighted one) |
 | Kill session | `prefix + Q` (asks for confirmation) |
 | Detach | `prefix + d` |
 | Save / restore layout | `prefix + C-s` / `prefix + C-r` (tmux-resurrect) |
 
 Opening Ghostty attaches to the running tmux server, or starts one with a
-timestamped session (for example `sep14-0930`) if none is running. Sessions
+timestamped session (for example `sep14-0930`) if none is running.
+`prefix + o` lists the directories under `~/Projects` (or
+`DOTFILES_PROJECT_DIRS` from `~/.zshrc.local`) and opens the pick as a session
+named after the directory; the shell function `fproj` does the same. Sessions
 are saved by tmux-resurrect on detach and on every window or pane change, and
 the last save is restored automatically when the tmux server starts.
 tmux-continuum is not used because its timer lives in the status line, which

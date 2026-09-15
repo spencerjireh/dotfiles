@@ -54,6 +54,19 @@ if command -v zoxide &>/dev/null; then
 fi
 
 # ===========================
+# mise (per-project runtimes) and direnv (per-directory env)
+# ===========================
+# mise reads .nvmrc, .node-version, .python-version, .tool-versions and
+# .mise.toml, so a repo that pins a version gets it; brew node/go/java stay the
+# defaults elsewhere. direnv loads a trusted .envrc on cd (direnv allow once).
+if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
+fi
+if command -v direnv &>/dev/null; then
+  eval "$(direnv hook zsh)"
+fi
+
+# ===========================
 # Delta (better diffs)
 # ===========================
 # git/config sets core.pager = delta; only the pager delta itself uses is set here.
