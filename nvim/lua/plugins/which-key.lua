@@ -56,6 +56,7 @@ return {
       { "<leader>n", group = "Notifications" },
       { "<leader>a", group = "Claude" },
       { "<leader>d", group = "Debug/Test" },
+      { "<leader>s", group = "Session" },
       { "<Esc>", desc = "Clear highlights / cursors" },
       { "z", group = "Folds" },
       { "za", desc = "Toggle fold under cursor" },
