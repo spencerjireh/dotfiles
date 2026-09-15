@@ -52,7 +52,7 @@ Layout: `nvim/init.lua` holds options, autocmds, plugin-free keymaps and the laz
 
 Use leader key for custom commands. Example: `<Space>ff` opens file finder.
 
-**Shared model with tmux.** The `Space` layer here and the `prefix` layer in tmux use the same verbs: `h/j/k/l` is a direction, `Shift+h/l` (here) or `p/n` (tmux) is previous/next in a list, `|` and `-` split, `q` closes and `Q` closes more, `f` finds, `?` helps, and a number jumps to a slot (`Cmd+N` for a tmux window, `<Space>N` for a Harpoon mark). The full table is in `docs/tmux.md`.
+**Shared model with tmux.** The `Space` layer here and the `prefix` layer in tmux use the same verbs: `Ctrl+h/j/k/l` is a direction in both (and `<Space>h/j/k/l` here; under tmux's prefix, `h/l` reorder windows and `j/k` switch them), `Shift+h/l` (here) or `j/k` (tmux) is previous/next in a list, `|` and `-` split, `q` closes and `Q` closes more, `f` finds, `?` helps, and a number jumps to a slot (`Cmd+N` for a tmux window, `<Space>N` for a Harpoon mark). The full table is in `docs/tmux.md`.
 
 ## Plugins
 

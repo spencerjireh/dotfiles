@@ -18,9 +18,9 @@ the same thing:
 
 | Verb | tmux (`prefix +`) | Neovim (`Space`) |
 |------|-------------------|------------------|
-| Move in a direction | `h` / `j` / `k` / `l` (panes); `C-h/j/k/l` without prefix | `h` / `j` / `k` / `l` (splits, crosses into tmux); `Ctrl+h/j/k/l` |
-| Previous / next in the list | `p` / `n` (windows); `Cmd+Shift+H` / `Cmd+Shift+L` | `Shift+h` / `Shift+l` (buffers) |
-| Reorder | `<` / `>` (windows) | |
+| Move in a direction | `C-h/j/k/l` without prefix (panes) | `h` / `j` / `k` / `l` (splits, crosses into tmux); `Ctrl+h/j/k/l` |
+| Previous / next in the list | `k` / `j` (windows; also `p` / `n`); `Cmd+Shift+K` / `Cmd+Shift+J` | `Shift+h` / `Shift+l` (buffers) |
+| Reorder | `h` / `l` move the window left / right; `Cmd+Shift+H` / `Cmd+Shift+L` | |
 | Split | `\|` / `-` | `\|` / `-`, `=` equalize |
 | Close the smallest thing / more | `q` pane, `X` window, `Q` session | `q` window (quits on the last), `Q` all, `bd` buffer |
 | Find in a list | `f` windows, `F` sessions | `f` + letter (files, buffers, grep, ...) |
@@ -29,6 +29,9 @@ the same thing:
 | Scratch | `g` popup terminal | `.` scratch buffer |
 | Help | `?` | `?` |
 
+With the prefix, `h/j/k/l` act on windows (h/l reorder, j/k switch). Without
+it, `C-h/j/k/l` move between panes.
+
 ## Ghostty translations
 
 Ghostty maps a few Cmd keys to tmux sequences so window management stays in tmux:
@@ -36,8 +39,10 @@ Ghostty maps a few Cmd keys to tmux sequences so window management stays in tmux
 | Ghostty key | Sent to tmux | Effect |
 |-------------|--------------|--------|
 | `Cmd+Shift+Space` | `C-Space` | Prefix |
-| `Cmd+Shift+H` | `prefix + p` | Previous window |
-| `Cmd+Shift+L` | `prefix + n` | Next window |
+| `Cmd+Shift+H` | `prefix + h` | Move window left |
+| `Cmd+Shift+L` | `prefix + l` | Move window right |
+| `Cmd+Shift+J` | `prefix + j` | Next window |
+| `Cmd+Shift+K` | `prefix + k` | Previous window |
 | `Cmd+1` to `Cmd+9` | `M-1` to `M-9` | Jump to window |
 
 Ghostty's own split keys (`Cmd+D`, `Cmd+Shift+D`) and `Cmd+Shift+A` are
@@ -51,9 +56,9 @@ and Super+1-9, so use `C-Space` (the real prefix) and `Alt+1-9` there.
 
 | Action | Keys |
 |--------|------|
-| Pane left / down / up / right | `prefix + h` / `prefix + j` / `prefix + k` / `prefix + l`, or `C-h` / `C-j` / `C-k` / `C-l` without prefix (forwarded into Neovim by vim-tmux-navigator) |
-| Previous / next window | `prefix + p` / `prefix + n` (repeatable; `Cmd+Shift+H` / `Cmd+Shift+L` in Ghostty) |
-| Move window left / right | `prefix + <` / `prefix + >` (repeatable) |
+| Pane left / down / up / right | `C-h` / `C-j` / `C-k` / `C-l` (no prefix; forwarded into Neovim by vim-tmux-navigator) |
+| Next / previous window | `prefix + j` / `prefix + k` (repeatable; also `prefix + n` / `prefix + p`; `Cmd+Shift+J` / `Cmd+Shift+K` in Ghostty) |
+| Move window left / right | `prefix + h` / `prefix + l` (repeatable; `Cmd+Shift+H` / `Cmd+Shift+L` in Ghostty) |
 | Window by number | `M-1` to `M-9` (Alt+number, or Cmd+number in Ghostty) |
 | Window switcher, all sessions | `prefix + f` (fzf) |
 
@@ -79,7 +84,7 @@ Mouse selection also copies (`set-clipboard on`).
 | Action | Keys |
 |--------|------|
 | Split stacked (horizontal) | `prefix + -` |
-| Move to a pane | `prefix + h` / `prefix + j` / `prefix + k` / `prefix + l` |
+| Move to a pane | `C-h` / `C-j` / `C-k` / `C-l` (no prefix) |
 | Resize left / down / up / right | `prefix + H` / `prefix + J` / `prefix + K` / `prefix + L` (5 cells, repeatable) |
 | Close pane | `prefix + q` |
 
@@ -91,8 +96,8 @@ directory. Neovim uses the same `|`, `-` and `q` under `Space`.
 | Action | Keys |
 |--------|------|
 | New window (after the current one, same directory) | `prefix + c` |
-| Previous / next window | `prefix + p` / `prefix + n` |
-| Reorder window | `prefix + <` / `prefix + >` |
+| Next / previous window | `prefix + j` / `prefix + k` (also `prefix + n` / `prefix + p`) |
+| Move window left / right | `prefix + h` / `prefix + l` |
 | Find a window in any session | `prefix + f` (fzf) |
 | Close window | `prefix + X` |
 | Toggle status bar | `prefix + b` (off by default) |

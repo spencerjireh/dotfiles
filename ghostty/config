@@ -116,10 +116,14 @@ macos-option-as-alt = true
 # Translate cmd+shift+space to ctrl+space for tmux prefix
 keybind = cmd+shift+space=text:\x00
 
-# Cmd+Shift+H/L: previous/next tmux window (sends prefix+p / prefix+n). Both are
-# unbound in Ghostty and system-wide on macOS; Cmd+H (hide) is unaffected.
-keybind = cmd+shift+h=text:\x00p
-keybind = cmd+shift+l=text:\x00n
+# Cmd+Shift+H/L move the current tmux window left/right, Cmd+Shift+J/K switch to
+# the next/previous window (sends prefix+h/l/j/k). Cmd+Shift+J replaces Ghostty's
+# default write_screen_file (unused here); the others are unbound by default. None
+# is a macOS system shortcut; Cmd+H (hide) is unaffected.
+keybind = cmd+shift+h=text:\x00h
+keybind = cmd+shift+l=text:\x00l
+keybind = cmd+shift+j=text:\x00j
+keybind = cmd+shift+k=text:\x00k
 
 # tmux owns splits: unbind Ghostty's native split keys (and the old Cmd+Shift+A,
 # whose Ghostty default is select-all) so a slip does nothing surprising.
