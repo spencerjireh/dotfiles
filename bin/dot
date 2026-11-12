@@ -6,7 +6,7 @@
 #   dot update      pull repo, brew bundle + upgrade, plugins, Claude   (alias: up)
 #   dot doctor      health check; --links checks only symlinks/dirs
 #   dot uninstall   remove the symlinks, restore backups
-#   dot keys [t]    keybinding/alias reference for nvim, tmux, zsh, superfile, all
+#   dot keys [t]    keybinding/alias reference for nvim, tmux, zsh, superfile, all (--sheet: tables only)
 #   dot edit [q]    fzf over tracked files, open in $EDITOR
 #   dot dir         print the repo path (cd "$(dot dir)")
 #   dot help        this text

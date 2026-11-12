@@ -81,6 +81,10 @@ for t in nvim tmux zsh superfile; do
     if [ -f "$DOTFILES_DIR/docs/$t.md" ]; then pass "docs/$t.md exists"; else fail "docs/$t.md exists"; fi
 done
 OUT="$("$DOT" keys tmux 2>&1 </dev/null | head -1)"; assert_contains "$OUT" "#" "dot keys tmux prints docs/tmux.md"
+OUT="$("$DOT" keys tmux --sheet 2>&1 </dev/null)"; assert_success "$?" "dot keys tmux --sheet exits 0"
+assert_contains "$OUT" "Close pane" "dot keys --sheet lists table rows"
+assert_contains "$OUT" "Panes" "dot keys --sheet lists section headings"
+case "$OUT" in *"prefix + "*) fail "dot keys --sheet drops 'prefix + ' from keys" ;; *) pass "dot keys --sheet drops 'prefix + ' from keys" ;; esac
 
 # ---------------------------------------------------------------------------
 section "lib/log.sh"
@@ -206,7 +210,7 @@ if command -v tmux >/dev/null 2>&1; then
         assert_eq "C-Space" "$(tmux -L "$TMUX_SOCK" show-options -gv prefix)" "prefix is C-Space"
         assert_contains "$(tmux -L "$TMUX_SOCK" show-hooks -g)" "resurrect" "resurrect autosave hooks are set"
         assert_contains "$(tmux -L "$TMUX_SOCK" list-keys -T prefix)" "send-keys C-l" "prefix + C-l clears the screen"
-        assert_contains "$(tmux -L "$TMUX_SOCK" list-keys -T prefix)" "dot keys tmux" "prefix + ? opens docs/tmux.md via dot keys"
+        assert_contains "$(tmux -L "$TMUX_SOCK" list-keys -T prefix)" "dot keys tmux --sheet" "prefix + ? opens the docs/tmux.md cheat sheet via dot keys"
         # Config lines that failed to parse show up as "unknown"/"invalid" errors
         case "$TMUX_ERR" in
             *"unknown"*|*"invalid"*|*"usage"*) fail "tmux.conf has no parse errors" "$TMUX_ERR" ;;

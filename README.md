@@ -17,7 +17,7 @@ Keybinding and alias references live in [`docs/`](docs/) and are shown by `dot k
 | Topic | File | In-app help |
 |-------|------|-------------|
 | Neovim | [docs/nvim.md](docs/nvim.md) | `<Space>?` (which-key), `<Space>fk` (keymap picker) |
-| tmux | [docs/tmux.md](docs/tmux.md) | `prefix + ?` (opens the same file in a popup) |
+| tmux | [docs/tmux.md](docs/tmux.md) | `prefix + ?` (cheat sheet in a popup) |
 | Zsh | [docs/zsh.md](docs/zsh.md) | `dot keys zsh` |
 | Superfile | [docs/superfile.md](docs/superfile.md) | `?` inside `spf` |
 
@@ -71,7 +71,7 @@ dot install          # the installer (same as ./install.sh)
 dot update           # pull dotfiles, brew bundle + upgrade, tmux/zsh/nvim plugins, mason registry, tmux-thumbs, Claude
 dot doctor           # health check for the recorded components: symlinks, tools, runtimes, formatters, LSP servers, adapters, TPM plugins
 dot doctor --links   # only the symlinks/dirs the installer creates (used by CI)
-dot keys             # list reference topics; dot keys tmux | nvim | zsh | superfile | all
+dot keys             # list reference topics; dot keys tmux | nvim | zsh | superfile | all; --sheet for the key tables only
 dot edit [query]     # fzf over the repo's tracked files, open in $EDITOR (zshconfig, nvimconfig, tmuxconfig are shortcuts)
 dot uninstall        # remove the symlinks, restore backups
 dot dir              # print the repo path: cd "$(dot dir)"
@@ -145,7 +145,7 @@ dot uninstall   # removes symlinks, restores backups, drops the git include and 
 │   └── tmux.sh         # tpm_run (TPM scripts on a throwaway server), tmux_thumbs_build
 ├── docs/
 │   ├── nvim.md         # Neovim plugins and keys
-│   ├── tmux.md         # tmux keys (shown by prefix + ?)
+│   ├── tmux.md         # tmux keys (prefix + ? shows them as a cheat sheet)
 │   ├── zsh.md          # aliases and functions
 │   └── superfile.md    # superfile hotkeys
 ├── ghostty/config
