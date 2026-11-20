@@ -304,7 +304,7 @@ if is_selected "Claude Code"; then
     if command -v claude &>/dev/null; then
         log_warn "Claude Code already installed, skipping"
     else
-        curl -fsSL https://claude.com/install.sh | bash
+        curl -fsSL https://claude.ai/install.sh | bash
         log_info "Installed Claude Code"
     fi
 fi
