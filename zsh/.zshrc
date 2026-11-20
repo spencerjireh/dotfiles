@@ -1,18 +1,25 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 # ===========================
 # Auto-start tmux in Ghostty
 # ===========================
 # Attach to the running server if there is one (new Ghostty windows join it);
 # otherwise start it with a timestamped session. prefix + S creates more.
-if [[ -z "$TMUX" ]] && [[ -n "$GHOSTTY_RESOURCES_DIR" ]]; then
-  exec tmux attach 2>/dev/null \
-    || exec tmux new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')" -c "$PWD"
+# Must run before the instant prompt below, which redirects stdin/stdout and
+# would leave tmux without a terminal. `exec` replaces the shell, so a failed
+# attach can't fall through to `||`: check for a server first. Skipped
+# entirely when tmux isn't installed.
+if [[ -z "$TMUX" ]] && [[ -n "$GHOSTTY_RESOURCES_DIR" ]] && command -v tmux &>/dev/null; then
+  if tmux has-session 2>/dev/null; then
+    exec tmux attach
+  else
+    exec tmux new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')" -c "$PWD"
+  fi
+fi
+
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # ===========================
