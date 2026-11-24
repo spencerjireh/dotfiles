@@ -1,6 +1,8 @@
 -- claudecode.nvim (Claude Code in a snacks terminal split, IDE protocol for context + diffs)
+-- Off when the machine's agent is not Claude (DOTFILES_AGENT, lua/dotfiles/settings.lua).
 return {
   "coder/claudecode.nvim",
+  enabled = require("dotfiles.settings").agent() == "claude",
   dependencies = { "folke/snacks.nvim" },
   -- cmd stubs load the plugin on first :ClaudeCode* use; keys alone would not create them
   cmd = {

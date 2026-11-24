@@ -1,31 +1,38 @@
 -- LSP: nvim-lspconfig + mason, servers installed on demand, SchemaStore for JSON/YAML,
 -- lazydev for Lua, inc-rename for live-preview renames
+--
+-- With DOTFILES_MASON=0 (lua/dotfiles/settings.lua) Mason is not loaded at all:
+-- nothing is downloaded, and the servers already on PATH are enabled instead.
+local mason = require("dotfiles.settings").on("MASON")
+
 return {
   {
     "neovim/nvim-lspconfig",
     dependencies = {
-      "mason-org/mason.nvim",
-      "mason-org/mason-lspconfig.nvim",
+      { "mason-org/mason.nvim", enabled = mason },
+      { "mason-org/mason-lspconfig.nvim", enabled = mason },
       "saghen/blink.cmp",
       { "b0o/SchemaStore.nvim", lazy = true }, -- loaded by jsonls/yamlls before_init
     },
     config = function()
-      require("mason").setup({
-        ui = { border = "rounded" },
-        log_level = vim.log.levels.WARN,
-      })
-      require("mason-lspconfig").setup({
-        ensure_installed = {
-          "lua_ls",
-          "pyright",
-          "tsgo", -- TypeScript 7 native server (ts_ls needs the removed JS tsserver)
-          "gopls",
-          "rust_analyzer", -- binary only; rustaceanvim starts it (excluded from auto-enable below)
-          "jdtls",
-          "clangd",
-        },
-        automatic_enable = { exclude = { "rust_analyzer" } },
-      })
+      if mason then
+        require("mason").setup({
+          ui = { border = "rounded" },
+          log_level = vim.log.levels.WARN,
+        })
+        require("mason-lspconfig").setup({
+          ensure_installed = {
+            "lua_ls",
+            "pyright",
+            "tsgo", -- TypeScript 7 native server (ts_ls needs the removed JS tsserver)
+            "gopls",
+            "rust_analyzer", -- binary only; rustaceanvim starts it (excluded from auto-enable below)
+            "jdtls",
+            "clangd",
+          },
+          automatic_enable = { exclude = { "rust_analyzer" } },
+        })
+      end
 
       -- mason-lspconfig v2 enables every installed server automatically;
       -- only per-server settings need vim.lsp.config here.
@@ -35,6 +42,34 @@ return {
       -- ruff comes from brew (Brewfile), not mason, so enable it explicitly.
       -- It provides fix/organize-imports code actions; pyright keeps hover.
       vim.lsp.enable("ruff")
+
+      -- Mason off: enable each server whose binary is on PATH (brew, npm -g, mise).
+      -- Order matters for TypeScript: tsgo wins, ts_ls is the fallback.
+      if not mason then
+        local on_path = {
+          { "pyright", "pyright-langserver" },
+          { "lua_ls", "lua-language-server" },
+          { "tsgo", "tsgo" },
+          { "ts_ls", "typescript-language-server" },
+          { "bashls", "bash-language-server" },
+          { "jsonls", "vscode-json-language-server" },
+          { "yamlls", "yaml-language-server" },
+          { "html", "vscode-html-language-server" },
+          { "cssls", "vscode-css-language-server" },
+          { "marksman", "marksman" },
+          { "taplo", "taplo" },
+          { "dockerls", "docker-langserver" },
+        }
+        local enabled = {} ---@type table<string, boolean>
+        for _, entry in ipairs(on_path) do
+          local server, binary = entry[1], entry[2]
+          local shadowed = server == "ts_ls" and enabled.tsgo
+          if not shadowed and vim.fn.executable(binary) == 1 then
+            vim.lsp.enable(server)
+            enabled[server] = true
+          end
+        end
+      end
 
       vim.lsp.config("lua_ls", {
         settings = {
@@ -159,25 +194,27 @@ return {
         end))
       end
 
-      vim.api.nvim_create_autocmd("FileType", {
-        group = vim.api.nvim_create_augroup("dotfiles_lsp_on_demand", { clear = true }),
-        callback = function(ev)
-          local entries = on_demand[ev.match]
-          if not entries or vim.bo[ev.buf].buftype ~= "" then
-            return
-          end
-          for _, entry in ipairs(entries) do
-            local server = type(entry) == "table" and entry[1] or entry
-            local markers = type(entry) == "table" and entry.markers or nil
-            if not attempted[server] and not vim.lsp.is_enabled(server) then
-              if not markers or vim.fs.root(ev.buf, markers) then
-                attempted[server] = true
-                install_server(server, ev.match)
+      if mason then
+        vim.api.nvim_create_autocmd("FileType", {
+          group = vim.api.nvim_create_augroup("dotfiles_lsp_on_demand", { clear = true }),
+          callback = function(ev)
+            local entries = on_demand[ev.match]
+            if not entries or vim.bo[ev.buf].buftype ~= "" then
+              return
+            end
+            for _, entry in ipairs(entries) do
+              local server = type(entry) == "table" and entry[1] or entry
+              local markers = type(entry) == "table" and entry.markers or nil
+              if not attempted[server] and not vim.lsp.is_enabled(server) then
+                if not markers or vim.fs.root(ev.buf, markers) then
+                  attempted[server] = true
+                  install_server(server, ev.match)
+                end
               end
             end
-          end
-        end,
-      })
+          end,
+        })
+      end
 
       -- Buffer-local keymaps. K stays global (nvim-ufo peek, then hover).
       -- Navigation goes through snacks pickers (preview + multi-result);

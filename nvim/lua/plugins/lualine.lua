@@ -7,7 +7,7 @@ return {
     require("lualine").setup({
       options = {
         theme = "auto",
-        icons_enabled = true,
+        icons_enabled = require("dotfiles.settings").on("GLYPHS"), -- off without a Nerd Font
         component_separators = { left = "", right = "" },
         section_separators = { left = "", right = "" },
       },

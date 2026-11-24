@@ -1,4 +1,6 @@
 -- UI extras: scrollbar (satellite), cmdline/messages (noice), inline color previews (colorizer)
+local glyphs = require("dotfiles.settings").on("GLYPHS") -- false without a Nerd Font
+
 return {
   -- Satellite (scrollbar with decorations)
   {
@@ -42,9 +44,9 @@ return {
         enabled = true,
         view = "cmdline_popup",
         format = {
-          cmdline = { pattern = "^:", icon = "", lang = "vim" },
-          search_down = { kind = "search", pattern = "^/", icon = " ", lang = "regex" },
-          search_up = { kind = "search", pattern = "^%?", icon = " ", lang = "regex" },
+          cmdline = { pattern = "^:", icon = glyphs and "" or ":", lang = "vim" },
+          search_down = { kind = "search", pattern = "^/", icon = glyphs and " " or "/", lang = "regex" },
+          search_up = { kind = "search", pattern = "^%?", icon = glyphs and " " or "?", lang = "regex" },
         },
       },
       messages = {
