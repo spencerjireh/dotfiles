@@ -9,6 +9,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 DOTFILES_DIR="${DOTFILES_DIR:-$(dotfiles_dir "${BASH_SOURCE[0]}")}"
 source "$DOTFILES_DIR/lib/tui.sh"
 source "$DOTFILES_DIR/lib/components.sh"
+source "$DOTFILES_DIR/lib/profile.sh"
 load_env
 
 remove_symlink() {
@@ -91,10 +92,17 @@ if [ -f "$HOME/.config/git/allowed_signers" ]; then
     log_info "Removed ~/.config/git/allowed_signers"
 fi
 
-if [ -f "$COMPONENTS_FILE" ]; then
-    rm "$COMPONENTS_FILE"
-    log_info "Removed ${COMPONENTS_FILE/#$HOME/~}"
+if grep -qxF "$BASHRC_ZSH_BEGIN" "$HOME/.bashrc" 2>/dev/null; then
+    bashrc_zsh_remove
+    log_info "Removed the zsh launcher block from ~/.bashrc"
 fi
+
+for state in "$COMPONENTS_FILE" "$PROFILE_FILE" "$SETTINGS_FILE"; do
+    if [ -f "$state" ]; then
+        rm "$state"
+        log_info "Removed ${state/#$HOME/~}"
+    fi
+done
 
 echo "========================================"
 log_info "Dotfiles symlinks removed."

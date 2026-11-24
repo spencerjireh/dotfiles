@@ -9,6 +9,7 @@ DOTFILES_DIR="${DOTFILES_DIR:-$(dotfiles_dir "${BASH_SOURCE[0]}")}"
 source "$DOTFILES_DIR/lib/tui.sh"
 source "$DOTFILES_DIR/lib/tmux.sh"
 source "$DOTFILES_DIR/lib/components.sh"
+source "$DOTFILES_DIR/lib/profile.sh"
 
 create_symlink() {
     local src="$1"
@@ -66,6 +67,11 @@ ensure_homebrew() {
     if command -v brew &>/dev/null; then
         log_info "Homebrew present"
         return
+    fi
+    if [ "${PROFILE_BOOTSTRAP_BREW:-1}" != 1 ]; then
+        log_error "Homebrew is required, and the '$PROFILE_NAME' profile does not install it."
+        log_error "Install it first (https://brew.sh), or select only components that do not need it."
+        exit 1
     fi
     log_warn "Homebrew not found; installing (may prompt for your password)..."
     NONINTERACTIVE=1 /bin/bash -c \
@@ -128,6 +134,28 @@ components_from_env() {
     printf '%s\n' "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;/^$/d'
 }
 
+# filter_excluded: read labels on stdin, drop the ones in PROFILE_EXCLUDE.
+filter_excluded() {
+    local line
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        list_has "${PROFILE_EXCLUDE:-}" "$line" || printf '%s\n' "$line"
+    done
+}
+
+install_usage() {
+    cat <<EOF
+Usage: dot install [--profile <name>] [--list-profiles]
+
+  --profile <name>   install variant (also DOTFILES_PROFILE). Without it the
+                     installer reuses the recorded profile, or asks.
+  --list-profiles    print the available profiles and exit
+
+Non-interactive: DOTFILES_NONINTERACTIVE=1, with DOTFILES_COMPONENTS="a,b,..."
+(defaults to the profile's own component list) and GIT_NAME / GIT_EMAIL.
+EOF
+}
+
 # Allow the test suite to source this file for its helper functions without
 # running the installer. Everything below this guard is the actual install run.
 if [ -n "${DOTFILES_SOURCE_ONLY:-}" ]; then
@@ -141,22 +169,71 @@ case "$(uname -s)" in
     *)      log_error "Unsupported OS: $(uname -s)"; exit 1 ;;
 esac
 
+# Arguments
+PROFILE_ARG="${DOTFILES_PROFILE:-}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --profile)
+            [ $# -ge 2 ] || { log_error "--profile needs a name"; exit 1; }
+            PROFILE_ARG="$2"; shift 2 ;;
+        --profile=*)
+            PROFILE_ARG="${1#--profile=}"; shift ;;
+        --list-profiles)
+            for p in $(profile_list); do
+                profile_load "$p" && printf '%-10s %s\n' "$p" "$PROFILE_DESC"
+            done
+            exit 0 ;;
+        -h|--help)
+            install_usage; exit 0 ;;
+        *)
+            log_error "Unknown option: $1"; install_usage; exit 1 ;;
+    esac
+done
+
+NONINTERACTIVE="${DOTFILES_NONINTERACTIVE:-}"
+
 echo ""
 echo "Installing dotfiles from $DOTFILES_DIR ($OS)"
 echo "========================================"
 
 # ----------------------------------------------------------------------------
+# Profile: --profile / DOTFILES_PROFILE, else the one recorded on this machine,
+# else ask (interactive) or fall back to default. Resolved before the bootstrap
+# because the profile decides whether Homebrew may be installed.
+# ----------------------------------------------------------------------------
+load_brew_env
+# shellcheck disable=SC2034  # read by the sourced lib/tui.sh helpers
+if [ -z "$NONINTERACTIVE" ] && command -v gum &>/dev/null; then USE_GUM=1; fi
+
+[ -z "$PROFILE_ARG" ] && PROFILE_ARG="$(profile_recorded)"
+if [ -z "$PROFILE_ARG" ] && [ -z "$NONINTERACTIVE" ] && [ "$(profile_list | grep -c .)" -gt 1 ]; then
+    PROFILE_CHOICES=()
+    for p in default $(profile_list | grep -vx default); do
+        profile_load "$p" && PROFILE_CHOICES+=("$p: $PROFILE_DESC")
+    done
+    tui_choose PROFILE_PICK "Which variant is this machine?" "${PROFILE_CHOICES[@]}"
+    PROFILE_ARG="${PROFILE_PICK%%:*}"
+fi
+profile_load "${PROFILE_ARG:-default}" || exit 1
+log_info "Profile: $PROFILE_NAME${PROFILE_DESC:+ ($PROFILE_DESC)}"
+
+if is_wsl; then
+    case "$DOTFILES_DIR" in
+        /mnt/*) log_warn "This repo is on the Windows filesystem ($DOTFILES_DIR). Clone it under your WSL home instead: symlinks and git are slow and unreliable on /mnt." ;;
+    esac
+fi
+
+# ----------------------------------------------------------------------------
 # Bootstrap: install the foundation a fresh machine lacks, before anything else.
 # (Homebrew may prompt for your password; everything after the confirm is clean.)
 # ----------------------------------------------------------------------------
-NONINTERACTIVE="${DOTFILES_NONINTERACTIVE:-}"
-
 # Homebrew is needed for the TUI (gum) and for the brew-backed components. A
 # non-interactive run that selects only config components (symlinks, OMZ, TPM,
 # git) skips it, which matters on Linux where Linuxbrew is a slow install.
 needs_brew=1
 if [ -n "$NONINTERACTIVE" ]; then
-    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-}")"
+    # No DOTFILES_COMPONENTS: take the profile's own list.
+    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-$PROFILE_COMPONENTS}" | filter_excluded)"
     needs_brew=0
     for c in "Homebrew CLI packages" "Ghostty terminal" "Nerd Font" "Superfile file manager" \
              "GitHub SSH + CLI" "Karabiner (Caps Lock as Esc/Ctrl)"; do
@@ -201,11 +278,20 @@ if [[ "$OS" == "macos" ]]; then
     FEATURES+=("macOS defaults")
 fi
 
+# The profile removes what it never offers and decides what starts ticked.
+OFFERED=()
+while IFS= read -r f; do
+    [ -n "$f" ] && OFFERED+=("$f")
+done < <(printf '%s\n' "${FEATURES[@]}" | filter_excluded)
+
 if [ -n "$NONINTERACTIVE" ]; then
-    SELECTED="$(components_from_env "${DOTFILES_COMPONENTS:-}")"
-    log_info "Non-interactive install (DOTFILES_COMPONENTS)"
+    log_info "Non-interactive install (DOTFILES_COMPONENTS, or the profile's list)"
 else
-    tui_multiselect SELECTED "Components" "${FEATURES[@]}"
+    if [ -n "$PROFILE_COMPONENTS" ]; then
+        TUI_PRESELECTED="$(components_from_env "$PROFILE_COMPONENTS")"
+    fi
+    tui_multiselect SELECTED "Components ($PROFILE_NAME profile)" "${OFFERED[@]}"
+    unset TUI_PRESELECTED
 fi
 
 if [ -z "${SELECTED//[[:space:]]/}" ]; then
@@ -220,6 +306,13 @@ GITHUB_EMAIL="${GITHUB_EMAIL:-}"
 GIT_NAME="${GIT_NAME:-}"
 GIT_EMAIL="${GIT_EMAIL:-}"
 CHSH_ZSH=0
+ZSH_VIA_BASHRC=0
+# Whether Nerd Font glyphs render in this terminal. Kept across re-runs; only
+# profiles that cannot install the font ask (the answer becomes DOTFILES_GLYPHS).
+GLYPHS="${DOTFILES_GLYPHS:-$(settings_get DOTFILES_GLYPHS)}"
+if [ "$PROFILE_ASK_GLYPHS" = 1 ] && [ -n "$NONINTERACTIVE" ] && [ -z "$GLYPHS" ]; then
+    GLYPHS=0
+fi
 
 if [ -z "$NONINTERACTIVE" ]; then
     if is_selected "GitHub SSH + CLI" && [ ! -f "$HOME/.ssh/id_ed25519_github" ]; then
@@ -235,10 +328,27 @@ if [ -z "$NONINTERACTIVE" ]; then
 
     # Offer to switch the login shell to zsh (only if not already on it).
     if is_selected "Zsh + Oh My Zsh" && [[ "$SHELL" != *zsh ]]; then
-        if tui_confirm "Make zsh your default login shell? (needs your password)"; then
+        if [ "$PROFILE_LOGIN_SHELL" = "bashrc" ]; then
+            if tui_confirm "Start zsh automatically from ~/.bashrc? (no password or admin rights needed)"; then
+                ZSH_VIA_BASHRC=1
+            fi
+        elif tui_confirm "Make zsh your default login shell? (needs your password)"; then
             CHSH_ZSH=1
         fi
     fi
+
+    if [ "$PROFILE_ASK_GLYPHS" = 1 ]; then
+        echo ""
+        # U+E0A0 (branch), U+F07B (folder), U+F121 (code) from the Nerd Font range
+        printf '  Sample icons:  \xee\x82\xa0   \xef\x81\xbb   \xef\x84\xa1\n'
+        if tui_confirm "Do the three sample icons above show as icons (not boxes or question marks)?" no; then
+            GLYPHS=1
+        else
+            GLYPHS=0
+        fi
+    fi
+elif is_selected "Zsh + Oh My Zsh" && [ "$PROFILE_LOGIN_SHELL" = "bashrc" ] && [[ "${SHELL:-}" != *zsh ]]; then
+    ZSH_VIA_BASHRC=1   # a marked block in ~/.bashrc; nothing to ask
 fi
 
 # Summary + single confirmation gate.
@@ -259,6 +369,16 @@ log_info "Running install (no further prompts, except a password if you opted in
 components_save
 log_info "Recorded components in ${COMPONENTS_FILE/#$HOME/~}"
 
+# Record the profile and the runtime settings it implies (read by zsh, tmux
+# and Neovim). Rewritten on every run so a profile switch leaves nothing behind.
+profile_save
+settings_reset
+settings_apply_profile
+if [ -n "$GLYPHS" ]; then settings_set DOTFILES_GLYPHS "$GLYPHS"; fi
+if [ -f "$SETTINGS_FILE" ]; then
+    log_info "Recorded settings in ${SETTINGS_FILE/#$HOME/~}: $(tr '\n' ' ' < "$SETTINGS_FILE")"
+fi
+
 # ----------------------------------------------------------------------------
 # Phase 2: execution. Everything below is non-interactive, apart from chsh,
 # which runs first so any password prompt happens up front.
@@ -268,7 +388,8 @@ if [ "$CHSH_ZSH" = 1 ]; then
     log_info "Switching login shell to zsh (may ask for your password)..."
     zsh_path="$(command -v zsh)"
     if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
-        echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null
+        # shellcheck disable=SC2016  # $1 is expanded by the inner sh
+        run_sudo "add $zsh_path to /etc/shells" sh -c 'echo "$1" >> /etc/shells' _ "$zsh_path" || true
     fi
     if chsh -s "$zsh_path"; then
         log_info "Default login shell set to zsh ($zsh_path)"
@@ -280,8 +401,8 @@ fi
 # Brew packages (declarative via Brewfile)
 if is_selected "Homebrew CLI packages"; then
     log_info "Installing Homebrew packages (brew bundle)..."
-    brew bundle --file="$DOTFILES_DIR/Brewfile"
-    ensure_rustup
+    brew bundle --file="$(profile_brewfile)"
+    if brewfile_has rustup; then ensure_rustup; fi
 fi
 
 # Ghostty (app + config)
@@ -368,7 +489,11 @@ if is_selected "tmux + TPM"; then
         log_info "Installed TPM"
     fi
     tpm_run install_plugins || log_warn "TPM plugin install failed"
-    tmux_thumbs_build
+    if setting_off DOTFILES_TMUX_THUMBS; then
+        log_info "tmux-thumbs build skipped (off in this profile)"
+    else
+        tmux_thumbs_build
+    fi
 fi
 
 # Zsh + Oh My Zsh plugins/theme
@@ -396,6 +521,11 @@ if is_selected "Zsh + Oh My Zsh"; then
         https://github.com/zsh-users/zsh-syntax-highlighting
     clone_or_pull "$OMZ_CUSTOM/themes/powerlevel10k" \
         --depth=1 https://github.com/romkatv/powerlevel10k.git
+
+    if [ "$ZSH_VIA_BASHRC" = 1 ]; then
+        bashrc_zsh_install "$(command -v zsh)"
+        log_info "Added a block to ~/.bashrc that starts zsh in interactive terminals"
+    fi
 fi
 
 # GitHub SSH + CLI
@@ -479,9 +609,18 @@ if is_selected "Git global config"; then
 
     # Commit signing: git/config signs with the GitHub SSH key. Write the
     # allowed-signers file so signatures verify locally too. Regenerated on
-    # every run so a new key or email is picked up.
+    # every run so a new key or email is picked up. Profiles without that key
+    # turn signing off in ~/.gitconfig, which is read after the include.
     signing_email="$(git config --global user.email 2>/dev/null || true)"
-    if [ -f "$HOME/.ssh/id_ed25519_github.pub" ] && [ -n "$signing_email" ]; then
+    if [ "$PROFILE_GIT_SIGNING" != 1 ]; then
+        git config --global commit.gpgsign false
+        git config --global tag.gpgsign false
+        if [ "$(git config --global --includes --get commit.gpgsign)" = "false" ]; then
+            log_info "Commit signing off for this profile (commit.gpgsign=false in ~/.gitconfig)"
+        else
+            log_warn "Could not turn commit signing off: move the [include] section above [commit] in ~/.gitconfig"
+        fi
+    elif [ -f "$HOME/.ssh/id_ed25519_github.pub" ] && [ -n "$signing_email" ]; then
         printf '%s namespaces="git" %s\n' "$signing_email" "$(cut -d' ' -f1,2 "$HOME/.ssh/id_ed25519_github.pub")" \
             > "$HOME/.config/git/allowed_signers"
         log_info "Wrote ~/.config/git/allowed_signers (commits are signed with the GitHub SSH key)"
