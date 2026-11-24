@@ -19,6 +19,11 @@ dotfiles_dir() {
     esac
 }
 
+# True inside WSL (Windows Subsystem for Linux).
+is_wsl() {
+    grep -qi microsoft /proc/version 2>/dev/null
+}
+
 # Make `brew` available in this shell session regardless of platform/arch.
 load_brew_env() {
     if command -v brew &>/dev/null; then

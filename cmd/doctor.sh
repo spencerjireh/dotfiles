@@ -9,7 +9,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/log.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
 DOTFILES_DIR="${DOTFILES_DIR:-$(dotfiles_dir "${BASH_SOURCE[0]}")}"
 source "$DOTFILES_DIR/lib/components.sh"
+source "$DOTFILES_DIR/lib/profile.sh"
 load_env
+profile_load_recorded
 
 
 case "$(uname -s)" in
@@ -83,8 +85,19 @@ check_dir() { # dir [note]
 }
 
 echo ""
-echo "Dotfiles doctor ($OS)"
+echo "Dotfiles doctor ($OS, $PROFILE_NAME profile)"
 echo "========================================"
+if [ -f "$SETTINGS_FILE" ]; then
+    log_info "Settings (${SETTINGS_FILE/#$HOME/~}): $(tr '\n' ' ' < "$SETTINGS_FILE")"
+fi
+if is_wsl; then
+    case "$DOTFILES_DIR" in
+        /mnt/*)
+            log_warn "repo is on the Windows filesystem ($DOTFILES_DIR); clone it under your WSL home"
+            ISSUES=$((ISSUES + 1))
+            ;;
+    esac
+fi
 if [ -n "$SELECTED" ]; then
     log_info "Checking components from ${COMPONENTS_FILE/#$HOME/~}: $(printf '%s' "$SELECTED" | tr '\n' ',' | sed 's/,/, /g')"
 else
@@ -134,6 +147,15 @@ if want "Zsh + Oh My Zsh"; then
     check_link "$HOME/.zshrc"              "$DOTFILES_DIR/zsh/.zshrc"
     check_link "$HOME/.p10k.zsh"           "$DOTFILES_DIR/zsh/.p10k.zsh"
     check_file "$HOME/.zshrc.local" "seeded from zsh/.zshrc.local.example by install.sh"
+    # Profiles that start zsh from ~/.bashrc instead of chsh: informational only,
+    # the block is optional (the installer asks).
+    if [ "$PROFILE_LOGIN_SHELL" = "bashrc" ] && [[ "${SHELL:-}" != *zsh ]]; then
+        if grep -qxF "$BASHRC_ZSH_BEGIN" "$HOME/.bashrc" 2>/dev/null; then
+            log_info "login shell ok: ~/.bashrc starts zsh"
+        else
+            log_warn "optional: ~/.bashrc does not start zsh (re-run dot install to add the block)"
+        fi
+    fi
 fi
 want "Neovim config" && check_link "$HOME/.config/nvim"   "$DOTFILES_DIR/nvim"
 want "tmux + TPM"    && check_link "$HOME/.tmux.conf"     "$DOTFILES_DIR/tmux/tmux.conf"
@@ -155,26 +177,36 @@ fi
 if [ "$LINKS_ONLY" = 0 ]; then
 if want "Homebrew CLI packages"; then
 echo ""
-log_info "Checking tools (Brewfile)..."
-for t in nvim tmux fzf fd eza bat rg delta zoxide git lazygit mise direnv; do
-    check_tool "$t"
+# Each entry is formula:command. A tool is checked only when the profile's
+# Brewfile lists its formula, so a smaller profile is not told to install Go.
+log_info "Checking tools ($PROFILE_BREWFILE)..."
+check_tool git
+for pair in neovim:nvim tmux:tmux fzf:fzf fd:fd eza:eza bat:bat ripgrep:rg git-delta:delta \
+            zoxide:zoxide lazygit:lazygit mise:mise direnv:direnv; do
+    brewfile_has "${pair%%:*}" && check_tool "${pair#*:}"
 done
-for t in node go java; do
-    check_tool "$t" "brew bundle (mason LSP servers need it)"
+for pair in node:node go:go openjdk:java; do
+    brewfile_has "${pair%%:*}" && check_tool "${pair#*:}" "brew bundle (language servers need it)"
 done
-check_tool rustup "brew bundle (keg-only; PATH via zsh/20-path.zsh)"
-check_tool cargo "rustup default stable (builds tmux-thumbs)"
+if brewfile_has rustup; then
+    check_tool rustup "brew bundle (keg-only; PATH via zsh/20-path.zsh)"
+    check_tool cargo "rustup default stable (builds tmux-thumbs)"
+fi
+for pair in pyright:pyright-langserver typescript-language-server:typescript-language-server \
+            lua-language-server:lua-language-server; do
+    brewfile_has "${pair%%:*}" && check_tool "${pair#*:}" "brew bundle (language server on PATH)"
+done
 
 echo ""
 log_info "Checking formatters/linters (nvim conform + nvim-lint)..."
-for t in uv ruff stylua prettierd eslint_d tree-sitter; do
-    check_tool "$t" "brew bundle"
+for pair in uv:uv ruff:ruff stylua:stylua prettierd:prettierd eslint_d:eslint_d tree-sitter-cli:tree-sitter; do
+    brewfile_has "${pair%%:*}" && check_tool "${pair#*:}" "brew bundle"
 done
-check_tool_optional clang-format "C/C++ formatting via conform"
-check_tool_optional google-java-format "Java formatting via conform"
-check_tool_optional black "Python formatting via conform in repos with [tool.black]"
-check_tool_optional shfmt "shell formatting via conform (needs .editorconfig in the repo)"
-check_tool_optional hadolint "Dockerfile linting via nvim-lint"
+brewfile_has clang-format && check_tool_optional clang-format "C/C++ formatting via conform"
+brewfile_has google-java-format && check_tool_optional google-java-format "Java formatting via conform"
+brewfile_has black && check_tool_optional black "Python formatting via conform in repos with [tool.black]"
+brewfile_has shfmt && check_tool_optional shfmt "shell formatting via conform (needs .editorconfig in the repo)"
+brewfile_has hadolint && check_tool_optional hadolint "Dockerfile linting via nvim-lint"
 fi
 
 want "Superfile file manager" && check_tool spf "Superfile component"
@@ -197,7 +229,10 @@ if want "Nerd Font"; then
     fi
 fi
 
-if want "Neovim config"; then
+if want "Neovim config" && setting_off DOTFILES_MASON; then
+echo ""
+log_info "Mason is off (DOTFILES_MASON=0): Neovim uses the language servers on PATH; no debug adapters"
+elif want "Neovim config"; then
 echo ""
 log_info "Checking LSP servers (mason, installed on first nvim start)..."
 MASON_BIN="$HOME/.local/share/nvim/mason/bin"
@@ -228,7 +263,9 @@ log_info "Checking tmux plugins (TPM)..."
 for p in tpm tmux-resurrect tmux-thumbs; do
     check_dir "$HOME/.tmux/plugins/$p" "run ./install.sh (tmux + TPM) or dot update"
 done
-[ "$LINKS_ONLY" = 0 ] && check_file "$HOME/.tmux/plugins/tmux-thumbs/target/release/thumbs" "dot update builds it (needs cargo)"
+if [ "$LINKS_ONLY" = 0 ] && ! setting_off DOTFILES_TMUX_THUMBS; then
+    check_file "$HOME/.tmux/plugins/tmux-thumbs/target/release/thumbs" "dot update builds it (needs cargo)"
+fi
 fi
 
 echo "========================================"

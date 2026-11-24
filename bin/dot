@@ -2,7 +2,7 @@
 
 # dot: single entry point for the dotfiles repo. Linked to ~/.local/bin/dot.
 #
-#   dot install     interactive (or DOTFILES_NONINTERACTIVE=1) installer
+#   dot install     interactive (or DOTFILES_NONINTERACTIVE=1) installer; --profile <name>, --list-profiles
 #   dot update      pull repo, brew bundle + upgrade, plugins, Claude   (alias: up)
 #   dot doctor      health check; --links checks only symlinks/dirs
 #   dot uninstall   remove the symlinks, restore backups

@@ -43,7 +43,7 @@ section() { echo ""; echo "── $1 ──"; }
 
 # ---------------------------------------------------------------------------
 section "Lint: bash -n on all scripts"
-SCRIPTS=("$DOTFILES_DIR"/bin/dot "$DOTFILES_DIR"/install.sh "$DOTFILES_DIR"/cmd/*.sh "$DOTFILES_DIR"/lib/*.sh "$DOTFILES_DIR"/tests/run.sh)
+SCRIPTS=("$DOTFILES_DIR"/bin/dot "$DOTFILES_DIR"/install.sh "$DOTFILES_DIR"/cmd/*.sh "$DOTFILES_DIR"/lib/*.sh "$DOTFILES_DIR"/profiles/*.conf "$DOTFILES_DIR"/tests/run.sh)
 for f in "${SCRIPTS[@]}"; do
     if bash -n "$f" 2>/dev/null; then pass "${f#"$DOTFILES_DIR"/} parses"
     else fail "${f#"$DOTFILES_DIR"/} parses"; fi
@@ -115,6 +115,24 @@ case "$SEL" in *Beta*) fail "tui_multiselect excludes declined option" ;; *) pas
 printf 'y\n' | tui_confirm "ok?"; assert_success "$?" "tui_confirm yes -> success"
 printf 'n\n' | tui_confirm "ok?"; assert_failure "$?" "tui_confirm no -> failure"
 printf '\n'  | tui_confirm "ok?"; assert_success "$?" "tui_confirm empty defaults to yes"
+printf '\n'  | tui_confirm "ok?" no; assert_failure "$?" "tui_confirm \"no\" default: empty means no"
+printf 'y\n' | tui_confirm "ok?" no; assert_success "$?" "tui_confirm \"no\" default: y still means yes"
+
+# TUI_PRESELECTED: only listed options default to yes
+# shellcheck disable=SC2034  # read by the sourced tui_multiselect
+TUI_PRESELECTED=$'Alpha'
+tui_multiselect SEL "pick" "Alpha" "Beta" <<< $'\n\n' >/dev/null
+assert_eq "Alpha" "$(printf '%s' "$SEL" | sed '/^$/d')" "tui_multiselect preselects only TUI_PRESELECTED"
+tui_multiselect SEL "pick" "Alpha" "Beta" <<< $'\ny' >/dev/null
+assert_contains "$SEL" "Beta" "tui_multiselect: a non-preselected option can still be ticked"
+unset TUI_PRESELECTED
+
+tui_choose GOT "which?" "one: first" "two: second" <<< "" >/dev/null
+assert_eq "one: first" "$GOT" "tui_choose defaults to the first option"
+tui_choose GOT "which?" "one: first" "two: second" <<< "2" >/dev/null
+assert_eq "two: second" "$GOT" "tui_choose takes a number"
+tui_choose GOT "which?" "one: first" "two: second" <<< "9" >/dev/null
+assert_eq "one: first" "$GOT" "tui_choose falls back to the first option when out of range"
 
 # ---------------------------------------------------------------------------
 section "cmd/install.sh helpers (sourced)"
@@ -150,6 +168,116 @@ SELECTED="$(components_load)"
 ( is_selected "Neovim config" ); assert_success "$?" "components_load keeps earlier components"
 ( is_selected "Zsh + Oh My Zsh" ); assert_success "$?" "components_load includes new components"
 rm -rf "$COMP_HOME"
+
+# ---------------------------------------------------------------------------
+section "lib/profile.sh (profiles, settings, sudo policy)"
+assert_contains "$(profile_list)" "default" "profile_list includes default"
+assert_contains "$(profile_list)" "work" "profile_list includes work"
+
+for p in $(profile_list); do
+    ( profile_load "$p" ) >/dev/null 2>&1; assert_success "$?" "profile $p loads and validates"
+done
+( profile_load "nope" ) >/dev/null 2>&1; assert_failure "$?" "profile_load rejects an unknown profile"
+( profile_load "../work" ) >/dev/null 2>&1; assert_failure "$?" "profile_load rejects a path as a name"
+( profile_load "" ) >/dev/null 2>&1; assert_failure "$?" "profile_load rejects an empty name"
+
+profile_load default
+assert_eq "allow:Brewfile:1" "$PROFILE_SUDO:$PROFILE_BREWFILE:$PROFILE_BOOTSTRAP_BREW" "default profile keeps the stock behaviour"
+assert_eq "" "$PROFILE_EXCLUDE$PROFILE_SETTINGS" "default profile excludes nothing and records no settings"
+( brewfile_has rustup ); assert_success "$?" "brewfile_has finds rustup in the default Brewfile"
+
+profile_load work
+assert_eq "ask:Brewfile.work:0" "$PROFILE_SUDO:$PROFILE_BREWFILE:$PROFILE_BOOTSTRAP_BREW" "work profile: sudo asks, own Brewfile, no brew bootstrap"
+( brewfile_has rustup ); assert_failure "$?" "work Brewfile has no rustup"
+( brewfile_has neovim ); assert_success "$?" "work Brewfile has neovim"
+( list_has "$PROFILE_EXCLUDE" "Claude Code" ); assert_success "$?" "work profile excludes Claude Code"
+( list_has "$PROFILE_EXCLUDE" "Claude" ); assert_failure "$?" "list_has requires an exact match"
+FILTERED="$(printf '%s\n' "Neovim config" "Claude Code" "Karabiner (Caps Lock as Esc/Ctrl)" "tmux + TPM" | filter_excluded)"
+assert_eq $'Neovim config\ntmux + TPM' "$FILTERED" "filter_excluded drops the profile's excluded components"
+# every label a profile names must be a real installer component
+KNOWN_LABELS="$(sed -n '/^FEATURES=(/,/^fi/p' "$DOTFILES_DIR/cmd/install.sh" | grep -oE '"[^"$]+"' | tr -d '"')"
+bad=""
+for p in $(profile_list); do
+    profile_load "$p"
+    while IFS= read -r label; do
+        [ -z "$label" ] && continue
+        printf '%s\n' "$KNOWN_LABELS" | grep -qxF "$label" || bad="$bad [$p: $label]"
+    done < <(components_from_env "$PROFILE_COMPONENTS,$PROFILE_EXCLUDE")
+done
+if [ -z "$bad" ]; then pass "profiles only name components the installer knows"
+else fail "profiles only name components the installer knows" "unknown:$bad"; fi
+
+# Brewfile.work must not drift: each formula is in Brewfile or is a known work-only one
+WORK_ONLY="zsh pyright typescript-language-server lua-language-server"
+missing=""
+while IFS= read -r formula; do
+    grep -qE "^brew \"$formula\"" "$DOTFILES_DIR/Brewfile" && continue
+    case " $WORK_ONLY " in *" $formula "*) continue ;; esac
+    missing="$missing $formula"
+done < <(grep -oE '^brew "[^"]+"' "$DOTFILES_DIR/Brewfile.work" | sed 's/^brew "//; s/"$//')
+if [ -z "$missing" ]; then pass "Brewfile.work formulae are in Brewfile or the work-only allowlist"
+else fail "Brewfile.work formulae are in Brewfile or the work-only allowlist" "unexpected:$missing"; fi
+
+# profile + settings state files (sandboxed)
+PROF_HOME="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-prof.XXXXXX")"
+PROFILE_FILE="$PROF_HOME/dotfiles/profile"
+SETTINGS_FILE="$PROF_HOME/dotfiles/settings"
+assert_eq "" "$(profile_recorded)" "profile_recorded is empty with no record"
+profile_load_recorded; assert_eq "default" "$PROFILE_NAME" "profile_load_recorded falls back to default"
+profile_load work; profile_save
+assert_eq "work" "$(profile_recorded)" "profile_save records the profile"
+profile_load default; profile_load_recorded
+assert_eq "work" "$PROFILE_NAME" "profile_load_recorded loads the recorded profile"
+echo "gone" > "$PROFILE_FILE"; profile_load_recorded
+assert_eq "default" "$PROFILE_NAME" "profile_load_recorded survives a profile that no longer exists"
+
+assert_eq "" "$(settings_get DOTFILES_MASON)" "settings_get is empty with no file"
+( setting_off DOTFILES_MASON ); assert_failure "$?" "setting_off is false when unset"
+profile_load work; settings_apply_profile
+assert_eq "0" "$(settings_get DOTFILES_MASON)" "settings_apply_profile records the profile's settings"
+assert_eq "kiro" "$(settings_get DOTFILES_AGENT)" "settings_get reads a string value"
+( setting_off DOTFILES_MASON ); assert_success "$?" "setting_off is true for 0"
+settings_set DOTFILES_MASON 1; settings_set DOTFILES_GLYPHS 0
+assert_eq "1" "$(settings_get DOTFILES_MASON)" "settings_set replaces an earlier value"
+assert_eq "1" "$(grep -c '^DOTFILES_MASON=' "$SETTINGS_FILE")" "settings_set leaves one line per key"
+( settings_set OTHER_KEY 1 ) 2>/dev/null; assert_failure "$?" "settings_set rejects keys outside DOTFILES_"
+( settings_set DOTFILES_X '1; rm -rf x' ) 2>/dev/null; assert_failure "$?" "settings_set rejects unsafe values"
+if command -v zsh >/dev/null 2>&1; then
+    assert_eq "kiro" "$(zsh -c 'source "$1"; print -r -- $DOTFILES_AGENT' _ "$SETTINGS_FILE")" "the settings file is sourceable by zsh"
+fi
+settings_reset
+assert_eq "" "$(settings_get DOTFILES_AGENT)" "settings_reset clears every setting"
+
+# run_sudo: a fake sudo on PATH records whether it was called
+mkdir -p "$PROF_HOME/bin"
+printf '#!/bin/sh\necho called >> "%s/sudo.log"\n' "$PROF_HOME" > "$PROF_HOME/bin/sudo"
+chmod +x "$PROF_HOME/bin/sudo"
+OLD_PATH="$PATH"; PATH="$PROF_HOME/bin:$PATH"
+sudo_calls() { [ -f "$PROF_HOME/sudo.log" ] && grep -c called "$PROF_HOME/sudo.log" || echo 0; }
+PROFILE_SUDO=allow NONINTERACTIVE="" run_sudo "test" true >/dev/null 2>&1
+assert_eq "1" "$(sudo_calls)" "run_sudo allow: runs sudo"
+PROFILE_SUDO=never NONINTERACTIVE="" run_sudo "test" true >/dev/null 2>&1; assert_failure "$?" "run_sudo never: reports the step as skipped"
+assert_eq "1" "$(sudo_calls)" "run_sudo never: sudo is not called"
+PROFILE_SUDO=ask NONINTERACTIVE=1 run_sudo "test" true >/dev/null 2>&1; assert_failure "$?" "run_sudo ask, non-interactive: skipped"
+assert_eq "1" "$(sudo_calls)" "run_sudo ask, non-interactive: sudo is not called"
+PROFILE_SUDO=ask NONINTERACTIVE="" run_sudo "test" true <<< "" >/dev/null 2>&1; assert_failure "$?" "run_sudo ask: empty answer declines"
+assert_eq "1" "$(sudo_calls)" "run_sudo ask: declined means sudo is not called"
+PROFILE_SUDO=ask NONINTERACTIVE="" run_sudo "test" true <<< "y" >/dev/null 2>&1
+assert_eq "2" "$(sudo_calls)" "run_sudo ask: an explicit yes runs sudo"
+PATH="$OLD_PATH"
+
+# ~/.bashrc zsh launcher block
+BRC="$PROF_HOME/bashrc"
+printf 'export KEEP=1\n' > "$BRC"
+bashrc_zsh_install /bin/zsh "$BRC"; bashrc_zsh_install /bin/zsh "$BRC"
+assert_eq "1" "$(grep -cxF "$BASHRC_ZSH_BEGIN" "$BRC")" "bashrc_zsh_install is idempotent"
+assert_contains "$(cat "$BRC")" 'exec "/bin/zsh" -l' "bashrc_zsh_install writes the exec line"
+if bash -n "$BRC" 2>/dev/null; then pass "the block is valid bash"; else fail "the block is valid bash"; fi
+assert_eq "plain" "$(bash --rcfile "$BRC" -c 'echo plain' 2>&1)" "the block leaves non-interactive bash alone"
+bashrc_zsh_remove "$BRC"
+assert_eq "export KEEP=1" "$(cat "$BRC")" "bashrc_zsh_remove restores the file exactly"
+rm -rf "$PROF_HOME"
+profile_load default
 
 # ---------------------------------------------------------------------------
 section "create_symlink (sandboxed)"

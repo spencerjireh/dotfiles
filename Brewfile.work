@@ -1,0 +1,47 @@
+# Brewfile.work: package list for the `work` profile (profiles/work.conf).
+#
+# A subset of Brewfile for Python and JS/TS work, plus language servers that the
+# default profile gets from Mason instead. tests/run.sh checks that every formula
+# here is either in Brewfile or in its work-only allowlist, so the two do not drift.
+
+# --- Core CLI tools ---
+brew "zsh"
+brew "neovim"
+brew "tree-sitter-cli" # required by nvim-treesitter (main) to compile parsers
+brew "tmux"
+brew "fzf"
+brew "fd"
+brew "eza"
+brew "bat"
+brew "ripgrep"
+brew "git-delta"
+brew "zoxide"
+brew "uv"          # Python toolchain
+brew "mise"        # per-project runtimes
+brew "direnv"      # per-directory env (.envrc)
+
+# --- Language runtimes ---
+brew "node"
+
+# --- Language servers (Mason is off in this profile; Neovim enables what is on PATH) ---
+brew "pyright"
+brew "typescript-language-server"
+brew "lua-language-server"
+
+# --- Formatters / linters (conform.nvim + nvim-lint) ---
+brew "stylua"
+brew "ruff"
+brew "black"
+brew "prettierd"
+brew "eslint_d"
+brew "shfmt"
+
+# --- Installer / dev tooling ---
+brew "lazygit"
+brew "wget"
+brew "gum"         # TUI used by cmd/install.sh
+brew "shellcheck"  # used by tests/run.sh
+
+# --- Platform-specific trash utility ---
+brew "trash" if OS.mac?
+brew "trash-cli" unless OS.mac?
