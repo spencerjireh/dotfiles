@@ -10,7 +10,8 @@ superfile, git, Karabiner. Everything is symlinked from this repo into `$HOME` b
 | `bin/dot` | Single CLI. `install`, `update`, `doctor`, `uninstall`, `keys`, `edit`, `dir`, `help` |
 | `install.sh` | Shim for `dot install` (fresh-machine entry point, used by CI) |
 | `cmd/*.sh` | One script per subcommand; each sources `lib/` itself and runs standalone |
-| `lib/` | `log.sh` (log_info/warn/error), `env.sh` (repo root resolver, brew + rustup PATH), `components.sh` (`~/.config/dotfiles/components`, `is_selected`), `tui.sh` (gum with plain fallback), `tmux.sh` (TPM headless helpers) |
+| `lib/` | `log.sh` (log_info/warn/error), `env.sh` (repo root resolver, brew + rustup PATH, `is_wsl`), `components.sh` (`~/.config/dotfiles/components`, `is_selected`), `profile.sh` (profiles, settings file, `run_sudo`, `.bashrc` zsh block), `tui.sh` (gum with plain fallback), `tmux.sh` (TPM headless helpers) |
+| `profiles/*.conf` | Install variants (`default`, `work`): sourced `PROFILE_*` keys; defaults in `profile_defaults` (`lib/profile.sh`). `Brewfile.work` is the work profile's package list |
 | `docs/` | Source of truth for keys and aliases: `nvim.md`, `tmux.md`, `zsh.md`, `superfile.md`. Shown by `dot keys` and tmux `prefix + ?` |
 | `nvim/init.lua` | Options, autocmds, plain keymaps, lazy bootstrap with `{ import = "plugins" }` |
 | `nvim/lua/plugins/*.lua` | One plugin spec (or one tight group) per file |
@@ -25,7 +26,9 @@ superfile, git, Karabiner. Everything is symlinked from this repo into `$HOME` b
 - Docs never drift: `tests/run.sh` fails when a `<leader>` mapping, an alias/function name, or a tmux prefix binding is missing from its `docs/*.md`. Update the doc in the same change.
 - Formatting and lint: `stylua nvim/` (config in `nvim/.stylua.toml`), `shellcheck -S warning` on every shell file, `zsh -n` on zsh files. Run `./tests/run.sh` before committing.
 - Shell scripts are bash 3.2 compatible (macOS default): no namerefs, no associative arrays.
-- Package list lives in `Brewfile`; casks that are toggleable in the installer stay in `cmd/install.sh`.
+- Package list lives in `Brewfile`; casks that are toggleable in the installer stay in `cmd/install.sh`. `Brewfile.work` is a subset plus a work-only allowlist kept in `tests/run.sh`.
+- Profiles act at install time only. Tracked configs (zsh, tmux, Neovim) read `~/.config/dotfiles/settings` (`DOTFILES_*`, via `lua/dotfiles/settings.lua` in Neovim) or check what is installed; they never test the profile name. No settings file must mean the default behaviour.
+- Any installer step that needs root goes through `run_sudo` (`lib/profile.sh`) so a profile can ask first or refuse.
 - Commit messages: conventional prefix (`feat(nvim):`, `fix(doctor):`, `docs:`), no session links.
 
 ## Do not

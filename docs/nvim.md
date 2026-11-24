@@ -249,6 +249,8 @@ Provides IDE-like features: autocomplete, go-to-definition, hover docs, rename, 
 
 **Per-repo overrides**: `exrc` is on, so a `.nvim.lua` in the working directory is sourced after Neovim asks once (`:trust`). Use it for the cases a general config cannot guess (a nonstandard root, extra server settings). The file is git-ignored globally (`git/ignore`).
 
+**Without Mason** (`DOTFILES_MASON=0` in `~/.config/dotfiles/settings`, recorded by the `work` install profile): Mason, mason-lspconfig and the debug plugins are not loaded and nothing is downloaded. `lua/plugins/lsp.lua` instead enables each server whose binary is already on `PATH`: `pyright-langserver`, `lua-language-server`, `tsgo` (or `typescript-language-server` when `tsgo` is absent), and, if present, the bash, JSON, YAML, HTML, CSS, Markdown, TOML and Dockerfile servers. `Brewfile.work` provides the first three; anything else can come from `npm -g` or mise. `<Space>tl` shows what attached. The `<Space>d` debug keys are absent; the test keys still work. Settings are read by `lua/dotfiles/settings.lua`, which also turns off the Claude plugin (`DOTFILES_AGENT` other than `claude`) and the icons that need a Nerd Font (`DOTFILES_GLYPHS=0`).
+
 **ruff** also runs as a language server for Python. Its binary comes from the Brewfile, not Mason, so `lua/plugins/lsp.lua` enables it explicitly. It supplies the fix-all and organize-imports code actions under `<Space>ca`; its hover is disabled so `K` shows pyright only.
 
 mason-lspconfig enables every Mason-installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities (from blink.cmp) for all of them; only `lua_ls` has extra settings. All of this is in `lua/plugins/lsp.lua`.
