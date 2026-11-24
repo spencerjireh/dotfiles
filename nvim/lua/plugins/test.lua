@@ -38,6 +38,10 @@ return {
       {
         "<leader>dD",
         function()
+          if not pcall(require, "dap") then
+            vim.notify("Debugging is off on this machine (DOTFILES_MASON=0)", vim.log.levels.WARN)
+            return
+          end
           require("neotest").run.run({ strategy = "dap" })
         end,
         desc = "Debug nearest test",

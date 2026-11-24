@@ -1,6 +1,8 @@
--- Debugging: nvim-dap + dap-ui, adapters installed by mason-nvim-dap
+-- Debugging: nvim-dap + dap-ui, adapters installed by mason-nvim-dap.
+-- Off with DOTFILES_MASON=0: without Mason there are no adapters to run.
 return {
   "mfussenegger/nvim-dap",
+  enabled = require("dotfiles.settings").on("MASON"),
   dependencies = {
     "rcarriga/nvim-dap-ui",
     "nvim-neotest/nvim-nio",

@@ -54,7 +54,6 @@ return {
       { "<leader>m", group = "Harpoon (marks)" },
       { "<leader>g", group = "Git" },
       { "<leader>n", group = "Notifications" },
-      { "<leader>a", group = "Claude" },
       { "<leader>d", group = "Debug/Test" },
       { "<leader>s", group = "Session" },
       { "<Esc>", desc = "Clear highlights / cursors" },
@@ -65,5 +64,8 @@ return {
       { "zj", desc = "Move to next fold" },
       { "zk", desc = "Move to previous fold" },
     })
+    if require("dotfiles.settings").agent() == "claude" then
+      wk.add({ { "<leader>a", group = "Claude" } })
+    end
   end,
 }

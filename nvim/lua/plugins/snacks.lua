@@ -19,6 +19,8 @@ return {
     },
     explorer = { enabled = true },
     picker = {
+      -- file-type icons need a Nerd Font (DOTFILES_GLYPHS, lua/dotfiles/settings.lua)
+      icons = { files = { enabled = require("dotfiles.settings").on("GLYPHS") } },
       enabled = true,
       sources = {
         explorer = {
