@@ -222,6 +222,16 @@ fproj() {
 # Startup Time Profiler
 # ===========================
 
+# Kiro (the editor and agent on work machines). Defined only where the `kiro`
+# launcher is on PATH; under WSL that is the Windows install, reached through
+# the Windows PATH that WSL appends.
+if command -v kiro &>/dev/null; then
+  # desc: open a directory in Kiro (default: the current one)
+  ko() {
+    kiro "${1:-.}"
+  }
+fi
+
 # desc: start an interactive zsh with zprof enabled and print the startup report
 zsh_profile() {
   ZPROF=true zsh -i -c exit

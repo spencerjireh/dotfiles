@@ -20,8 +20,10 @@ alias v='nvim'
 
 # vibe coding
 alias opc="opencode"
-alias cld="claude"
-alias ccd="claude --dangerously-skip-permissions"
+if command -v claude &>/dev/null; then
+  alias cld="claude"
+  alias ccd="claude --dangerously-skip-permissions"
+fi
 
 if command -v trash &>/dev/null; then
   unalias rm 2>/dev/null
@@ -58,7 +60,12 @@ alias -- -="cd -"
 # Enhanced ls commands (use eza if available)
 if command -v eza &>/dev/null; then
   alias ls="eza"
-  alias ll="eza -lah --git --icons=always"
+  # Icons need a Nerd Font; DOTFILES_GLYPHS=0 (~/.config/dotfiles/settings) says there is none.
+  if [[ "$DOTFILES_GLYPHS" == 0 ]]; then
+    alias ll="eza -lah --git"
+  else
+    alias ll="eza -lah --git --icons=always"
+  fi
   alias la="eza -a"
   alias lt="eza --tree --level=2"
 else
