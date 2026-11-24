@@ -75,8 +75,85 @@ jobs:
       - name: tmux plugins installed headlessly
         run: test "$(ls ~/.tmux/plugins | wc -l | tr -d ' ')" = 3
 
+      - name: The default profile was recorded, with no settings file
+        run: |
+          test "$(cat ~/.config/dotfiles/profile)" = default
+          test ! -e ~/.config/dotfiles/settings
+
       - name: dot command works through its PATH symlink
         run: |
           ~/.local/bin/dot help
           ~/.local/bin/dot keys tmux | head -3
           test -f ~/.config/dotfiles/components && cat ~/.config/dotfiles/components
+
+  # The work profile (profiles/work.conf): config components only, on a runner
+  # where any call to sudo fails the job. "Claude Code" is requested on purpose
+  # to prove the profile's exclusions win over DOTFILES_COMPONENTS.
+  work-profile:
+    name: install (work profile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prerequisites
+        run: |
+          sudo apt-get update && sudo apt-get install -y tmux zsh
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+          sudo npm install -g tree-sitter-cli
+
+      - name: Replace sudo with one that records the call and fails
+        run: |
+          mkdir -p "$RUNNER_TEMP/nosudo"
+          printf '#!/bin/sh\necho "sudo $*" >> "%s/sudo-calls.log"\nexit 1\n' "$RUNNER_TEMP" > "$RUNNER_TEMP/nosudo/sudo"
+          chmod +x "$RUNNER_TEMP/nosudo/sudo"
+          echo "$RUNNER_TEMP/nosudo" >> "$GITHUB_PATH"
+
+      - name: Run the installer non-interactively with the work profile
+        env:
+          DOTFILES_NONINTERACTIVE: "1"
+          DOTFILES_PROFILE: work
+          DOTFILES_COMPONENTS: "Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config,Claude Code"
+          GIT_NAME: ci
+          GIT_EMAIL: ci@example.com
+          SHELL: /bin/bash
+        run: ./install.sh
+
+      - name: Nothing called sudo
+        run: |
+          if [ -e "$RUNNER_TEMP/sudo-calls.log" ]; then cat "$RUNNER_TEMP/sudo-calls.log"; exit 1; fi
+
+      - name: Profile, settings and exclusions were applied
+        run: |
+          test "$(cat ~/.config/dotfiles/profile)" = work
+          grep -qx 'DOTFILES_MASON=0' ~/.config/dotfiles/settings
+          grep -qx 'DOTFILES_AGENT=kiro' ~/.config/dotfiles/settings
+          grep -qx 'DOTFILES_GLYPHS=0' ~/.config/dotfiles/settings
+          if grep -q 'Claude Code' ~/.config/dotfiles/components; then echo 'Claude Code was recorded'; exit 1; fi
+          if command -v claude; then echo 'claude was installed'; exit 1; fi
+          grep -qxF '# >>> dotfiles: start zsh >>>' ~/.bashrc
+          test "$(git config --global --includes --get commit.gpgsign)" = false
+          test ! -e ~/.tmux/plugins/tmux-thumbs/target/release/thumbs
+          ./bin/dot doctor --links
+
+      - name: Neovim starts without Mason, debug adapters or the Claude plugin
+        run: |
+          NVIM_TS_SYNC=1 nvim --headless "+Lazy! restore" +qa
+          nvim --headless +'lua local n={}; for _,p in ipairs(require("lazy").plugins()) do n[p.name]=true end; assert(not n["mason.nvim"], "mason.nvim is loaded"); assert(not n["nvim-dap"], "nvim-dap is loaded"); assert(not n["claudecode.nvim"], "claudecode.nvim is loaded"); assert(n["nvim-lspconfig"], "nvim-lspconfig is missing"); assert(vim.lsp.is_enabled("ruff")); io.write("plugins ok\n")' +qa
+          git diff --exit-code nvim/lazy-lock.json
+
+      - name: tmux loads the config with the work settings
+        run: |
+          DOTFILES_TMUX_BOOTSTRAP=1 tmux new-session -d -s ci -x 80 -y 24
+          sleep 2
+          test "$(tmux list-keys -T prefix | grep -c ' t ')" = 0
+          tmux kill-server
+
+      - name: Uninstall removes the profile state and the .bashrc block
+        run: |
+          printf 'y\n' | ./bin/dot uninstall
+          test ! -e ~/.config/dotfiles/profile
+          test ! -e ~/.config/dotfiles/settings
+          if grep -q 'dotfiles: start zsh' ~/.bashrc; then echo 'the .bashrc block is still there'; exit 1; fi

@@ -62,6 +62,47 @@ Symlinks are created with **automatic backup** of any existing file. The selecti
 
 Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); casks that are individually toggleable in the TUI (Ghostty, font, `gh`) stay in `cmd/install.sh`.
 
+### Variants (profiles)
+
+The installer has variants, called profiles. A profile decides which components are offered and ticked, which Brewfile is bundled, and whether the installer may use `sudo`.
+
+```bash
+dot install --list-profiles     # what exists
+dot install                     # asks which variant on the first run, then remembers it
+dot install --profile work      # or DOTFILES_PROFILE=work for scripted runs
+```
+
+| Profile | For | What it does |
+|---------|-----|--------------|
+| `default` | Personal machines | Everything described above |
+| `work` | A locked-down work machine: WSL with Homebrew already installed | Brew formulae (`Brewfile.work`) and plain git clones only. No apps, no casks, no `curl \| bash` installers, no font install, no Claude Code, no personal GitHub key. `sudo` is used only after an explicit yes, and never in a scripted run |
+
+What `work` changes, compared with `default`:
+
+- **Components**: Homebrew CLI packages, Neovim, tmux, Zsh and Git config are ticked; Superfile can be ticked; Ghostty, Claude Code, Nerd Font, GitHub SSH + CLI, Karabiner and macOS defaults are not offered.
+- **Packages**: `Brewfile.work` covers the core CLI tools plus Python and JS/TS tooling. Go, Java, Rust, C tooling and imagemagick are left out.
+- **Homebrew**: must already be installed; the installer stops with a message instead of bootstrapping it.
+- **Login shell**: instead of `chsh`, a marked block in `~/.bashrc` starts zsh in interactive terminals (`dot uninstall` removes it).
+- **Neovim**: Mason is off. Language servers come from brew (pyright, typescript-language-server, lua-language-server) or anything else on `PATH`; there are no debug adapters. The Claude plugin is off.
+- **tmux**: tmux-thumbs is not built (it needs Rust) and its key is unbound. Copying goes to the Windows clipboard through the terminal.
+- **Git**: commit signing is turned off in `~/.gitconfig`, because the signing key belongs to the personal GitHub setup. Name and email are asked for as usual, so use the work ones.
+- **Icons**: the installer shows three sample icons and asks whether they render. If not, `ll`, the Neovim statusline, the file pickers and the command line use plain characters.
+- **Updates**: `dot update` restores Neovim plugins to `nvim/lazy-lock.json` instead of syncing, so a read-only clone never ends up with local changes.
+
+The profile name is recorded in `~/.config/dotfiles/profile` and its switches in `~/.config/dotfiles/settings` (`DOTFILES_MASON`, `DOTFILES_AGENT`, `DOTFILES_TMUX_THUMBS`, `DOTFILES_GLYPHS`). zsh, tmux and Neovim read the settings file; `dot doctor` and `dot update` follow the recorded profile.
+
+On a work machine, clone over https inside the WSL home (not under `/mnt/c`), then run the installer:
+
+```bash
+git clone https://github.com/spencerjireh/dotfiles.git ~/dotfiles
+```
+
+```bash
+~/dotfiles/install.sh --profile work
+```
+
+**Adding a variant**: copy `profiles/work.conf` to `profiles/<name>.conf` and edit it. The keys and their defaults are listed in `profile_defaults` in `lib/profile.sh`. Give it its own `Brewfile.<name>` if the package set differs. Tracked configs must react to a setting or to what is installed, never to the profile name.
+
 ### The `dot` command
 
 Linked to `~/.local/bin/dot` during install. Every script in the repo is reachable through it:
@@ -169,7 +210,9 @@ dot uninstall   # removes symlinks, restores backups, drops the git include and 
 ├── karabiner/          # karabiner.json (directory linked to ~/.config/karabiner)
 ├── tests/run.sh        # dependency-free test suite
 ├── .github/workflows/test.yml
+├── profiles/           # install variants: default.conf, work.conf
 ├── Brewfile            # declarative package list (brew bundle)
+├── Brewfile.work       # package list for the work profile
 └── CLAUDE.md           # conventions for Claude Code sessions in this repo
 ```
 
