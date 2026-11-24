@@ -99,7 +99,9 @@ is off.
 | Swap selection end | `o` |
 | Exit copy mode | `Escape` |
 
-Yank uses pbcopy on macOS and xclip on Linux. Mouse selection also copies
+Yank uses pbcopy on macOS and xclip on Linux. Under WSL it hands the text to
+the terminal (`tmux load-buffer -w`, OSC 52), which Windows Terminal puts on
+the Windows clipboard; nothing extra is installed. Mouse selection also copies
 (`set-clipboard on`).
 
 ## Popups
@@ -148,3 +150,5 @@ and Super+1-9, so use `C-Space` (the real prefix) and `Alt+1-9` there.
 - `tmux-resurrect`: save / restore sessions, including pane contents.
 - `tmux-thumbs`: `prefix + t` copy hints. Its Rust binary is built by the
   installer and by `dot update`; `dot doctor` reports it when missing.
+  Machines whose install profile records `DOTFILES_TMUX_THUMBS=0` (no Rust
+  toolchain) skip the build and have `prefix + t` unbound.

@@ -1,19 +1,33 @@
 # ===========================
-# Auto-start tmux in Ghostty
+# Machine settings (untracked)
 # ===========================
-# Attach to the running server if there is one (new Ghostty windows join it);
+# DOTFILES_* switches recorded by the installer from the install profile
+# (lib/profile.sh): plain KEY=value lines, also read by tmux and Neovim.
+# No file means every default.
+[[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/settings" ]] \
+  && source "${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/settings"
+
+# ===========================
+# Auto-start tmux in Ghostty and Windows Terminal
+# ===========================
+# Attach to the running server if there is one (new windows join it);
 # otherwise start it with a timestamped session. prefix + S creates more.
 # Must run before the instant prompt below, which redirects stdin/stdout and
 # would leave tmux without a terminal. `exec` replaces the shell, so a failed
 # attach can't fall through to `||`: check for a server first. Skipped
-# entirely when tmux isn't installed.
-if [[ -z "$TMUX" ]] && [[ -n "$GHOSTTY_RESOURCES_DIR" ]] && command -v tmux &>/dev/null; then
-  if tmux has-session 2>/dev/null; then
-    exec tmux attach
+# entirely when tmux isn't installed, and in editor terminals (Kiro, VS Code),
+# which can inherit WT_SESSION when the editor is launched from a WSL shell.
+# PATH is not set up yet (20-path.zsh), so fall back to Linuxbrew's tmux.
+_dot_tmux="${commands[tmux]:-/home/linuxbrew/.linuxbrew/bin/tmux}"
+if [[ -z "$TMUX" && ( -n "$GHOSTTY_RESOURCES_DIR" || -n "$WT_SESSION" ) \
+      && "$TERM_PROGRAM" != (kiro|vscode) && -x "$_dot_tmux" ]]; then
+  if "$_dot_tmux" has-session 2>/dev/null; then
+    exec "$_dot_tmux" attach
   else
-    exec tmux new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')" -c "$PWD"
+    exec "$_dot_tmux" new-session -s "$(date +%b%d-%H%M | tr '[:upper:]' '[:lower:]')" -c "$PWD"
   fi
 fi
+unset _dot_tmux
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]

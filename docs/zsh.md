@@ -49,8 +49,8 @@ Configuration: `zsh/.zshrc` (linked to `~/.zshrc`) plus the modules in
 | Alias | Runs |
 |-------|------|
 | `v`, `vi`, `vim` | `nvim` |
-| `cld` | `claude` |
-| `ccd` | `claude --dangerously-skip-permissions` |
+| `cld` | `claude` (defined only where `claude` is installed) |
+| `ccd` | `claude --dangerously-skip-permissions` (same) |
 | `opc` | `opencode` |
 
 ### tmux
@@ -73,7 +73,7 @@ Configuration: `zsh/.zshrc` (linked to `~/.zshrc`) plus the modules in
 | Alias | Runs |
 |-------|------|
 | `ls` | `eza` |
-| `ll` | `eza -lah --git --icons=always` |
+| `ll` | `eza -lah --git --icons=always` (no icons when `DOTFILES_GLYPHS=0`) |
 | `la` | `eza -a` |
 | `lt` | `eza --tree --level=2` |
 | `l` | `ls -CF` (only when eza is absent) |
@@ -137,6 +137,7 @@ Utilities:
 | `extract` | Extract any archive by extension (tar, zip, 7z, rar, xz, zst, ...) |
 | `proj` | Create a directory, cd into it, and `git init` |
 | `fproj` | Open a project directory as a tmux session (fzf over `DOTFILES_PROJECT_DIRS`, default `~/Projects`; creates or switches). tmux `prefix + o` runs it in a popup |
+| `ko` | Open a directory in Kiro (default: the current one). Defined only where the `kiro` launcher is on `PATH` |
 | `note` | Open `~/notes/<name>.md` in `$EDITOR`, or list notes with no argument |
 | `weather` | Weather report from wttr.in (optional location) |
 | `cheat` | cheat.sh lookup for a command or topic |
@@ -156,6 +157,22 @@ private aliases, credentials) goes in `~/.zshrc.local`, which is untracked and
 sourced last. The installer seeds it from `zsh/.zshrc.local.example`.
 `DOTFILES_PROJECT_DIRS` (colon-separated) sets the roots `fproj` and
 `prefix + o` list; the default is `~/Projects`.
+
+## Machine settings
+
+`~/.config/dotfiles/settings` holds the `DOTFILES_*` switches the installer
+records from the install profile (see "Variants" in the README). `.zshrc`
+sources it first; tmux and Neovim read the same file. No file means every
+default.
+
+| Setting | Effect in zsh |
+|---------|---------------|
+| `DOTFILES_GLYPHS=0` | The terminal font has no Nerd Font glyphs: `ll` drops `--icons` |
+
+tmux starts automatically in Ghostty and in Windows Terminal (WSL), but not in
+an editor's terminal (Kiro, VS Code). On machines where zsh is not the login
+shell, the installer can add a marked block to `~/.bashrc` that starts zsh in
+interactive terminals; `DOTFILES_NO_ZSH=1 bash` gives a plain bash.
 
 ## File layout
 
