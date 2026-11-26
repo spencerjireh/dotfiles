@@ -24,7 +24,10 @@ return {
           lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
         },
       },
-      fuzzy = { implementation = "prefer_rust_with_warning" },
+      -- DOTFILES_PREBUILT=0 (lua/dotfiles/settings.lua): no binary download, pure Lua matcher
+      fuzzy = {
+        implementation = require("dotfiles.settings").on("PREBUILT") and "prefer_rust_with_warning" or "lua",
+      },
     },
   },
 
