@@ -168,6 +168,7 @@ default.
 | Setting | Effect in zsh |
 |---------|---------------|
 | `DOTFILES_GLYPHS=0` | The terminal font has no Nerd Font glyphs: `ll` drops `--icons` |
+| `DOTFILES_PREBUILT=0` | powerlevel10k does not download `gitstatusd`; the git segment uses `vcs_info` |
 
 tmux starts automatically in Ghostty and in Windows Terminal (WSL), but not in
 an editor's terminal (Kiro, VS Code). On machines where zsh is not the login

@@ -44,7 +44,9 @@ return {
       vim.lsp.enable("ruff")
 
       -- Mason off: enable each server whose binary is on PATH (brew, npm -g, mise).
-      -- Order matters for TypeScript: tsgo wins, ts_ls is the fallback.
+      -- TypeScript: a standalone tsgo wins. Otherwise TypeScript 7's own compiler
+      -- is the server (`tsc --lsp`; brew's typescript formula has no tsgo binary),
+      -- and ts_ls is the last resort for an older TypeScript.
       if not mason then
         local on_path = {
           { "pyright", "pyright-langserver" },
@@ -61,6 +63,14 @@ return {
           { "dockerls", "docker-langserver" },
         }
         local enabled = {} ---@type table<string, boolean>
+        if vim.fn.executable("tsgo") == 0 and vim.fn.executable("tsc") == 1 then
+          local major = tonumber(vim.fn.system({ "tsc", "--version" }):match("Version (%d+)"))
+          if major and major >= 7 then
+            vim.lsp.config("tsgo", { cmd = { "tsc", "--lsp", "--stdio" } })
+            vim.lsp.enable("tsgo")
+            enabled.tsgo = true
+          end
+        end
         for _, entry in ipairs(on_path) do
           local server, binary = entry[1], entry[2]
           local shadowed = server == "ts_ls" and enabled.tsgo
