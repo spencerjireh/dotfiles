@@ -151,9 +151,94 @@ jobs:
           test "$(tmux list-keys -T prefix | grep -c ' t ')" = 0
           tmux kill-server
 
+      - name: Brewfile.work installs on x86-64 Linux and the full doctor is clean
+        run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew bundle --file=Brewfile.work
+          echo "Homebrew CLI packages" >> ~/.config/dotfiles/components
+          ./bin/dot doctor
+          if [ -e "$RUNNER_TEMP/sudo-calls.log" ]; then cat "$RUNNER_TEMP/sudo-calls.log"; exit 1; fi
+
       - name: Uninstall removes the profile state and the .bashrc block
         run: |
           printf 'y\n' | ./bin/dot uninstall
           test ! -e ~/.config/dotfiles/profile
           test ! -e ~/.config/dotfiles/settings
           if grep -q 'dotfiles: start zsh' ~/.bashrc; then echo 'the .bashrc block is still there'; exit 1; fi
+
+  # The work profile inside real WSL 2 on a Windows runner: WSL detection, the
+  # warning for a checkout on the Windows filesystem, and a config-only install
+  # with sudo blocked. Brew packages are covered by the Ubuntu job above.
+  wsl:
+    name: install (work profile, real WSL)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: wsl-bash {0}
+    steps:
+      - name: Keep LF line endings in the Windows checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v4
+
+      - uses: Vampire/setup-wsl@v7
+        with:
+          distribution: Ubuntu-24.04
+          additional-packages: git curl ca-certificates tmux zsh build-essential
+
+      - name: WSL is detected, and a checkout on the Windows filesystem is flagged
+        run: |
+          set -euo pipefail
+          pwd
+          source lib/log.sh
+          source lib/env.sh
+          is_wsl
+          ./bin/dot doctor --links > /tmp/doctor-mnt.log 2>&1 || true
+          grep 'Windows filesystem' /tmp/doctor-mnt.log
+
+      - name: Clone into the WSL home, install Neovim, block sudo
+        run: |
+          set -euo pipefail
+          git -c safe.directory='*' clone -q . ~/dotfiles
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+          tar -xzf /tmp/nvim.tar.gz -C /opt
+          ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+          mkdir -p /opt/nosudo
+          printf '#!/bin/sh\necho "sudo $*" >> /tmp/sudo-calls.log\nexit 1\n' > /opt/nosudo/sudo
+          chmod +x /opt/nosudo/sudo
+
+      - name: Run the installer non-interactively with the work profile
+        run: |
+          set -euo pipefail
+          cd ~/dotfiles
+          export PATH="/opt/nosudo:$PATH" SHELL=/bin/bash
+          export DOTFILES_NONINTERACTIVE=1 DOTFILES_PROFILE=work
+          export DOTFILES_COMPONENTS="Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config"
+          export GIT_NAME=ci GIT_EMAIL=ci@example.com
+          ./install.sh
+          if [ -e /tmp/sudo-calls.log ]; then cat /tmp/sudo-calls.log; exit 1; fi
+
+      - name: State, links, clipboard command and shell handoff
+        run: |
+          set -euo pipefail
+          cd ~/dotfiles
+          test "$(cat ~/.config/dotfiles/profile)" = work
+          grep -qx 'DOTFILES_MASON=0' ~/.config/dotfiles/settings
+          grep -qxF '# >>> dotfiles: start zsh >>>' ~/.bashrc
+          ./bin/dot doctor --links
+          DOTFILES_TMUX_BOOTSTRAP=1 tmux new-session -d -s ci -x 80 -y 24
+          sleep 2
+          test "$(tmux show -gv @clip)" = "tmux load-buffer -w -"
+          test "$(tmux list-keys -T prefix | grep -c ' t ')" = 0
+          tmux kill-server
+          zsh -ic 'echo "zsh ok: glyphs=$DOTFILES_GLYPHS agent=$DOTFILES_AGENT"' < /dev/null
+
+      - name: Neovim starts without Mason, debug adapters or the Claude plugin
+        run: |
+          set -euo pipefail
+          cd ~/dotfiles
+          nvim --headless "+Lazy! restore" +qa
+          nvim --headless +'lua local n={}; for _,p in ipairs(require("lazy").plugins()) do n[p.name]=true end; assert(not n["mason.nvim"], "mason.nvim is loaded"); assert(not n["nvim-dap"], "nvim-dap is loaded"); assert(not n["claudecode.nvim"], "claudecode.nvim is loaded"); assert(n["nvim-lspconfig"], "nvim-lspconfig is missing"); io.write("plugins ok\n")' +qa
+          git diff --exit-code nvim/lazy-lock.json
