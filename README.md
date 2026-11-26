@@ -83,13 +83,14 @@ What `work` changes, compared with `default`:
 - **Packages**: `Brewfile.work` covers the core CLI tools plus Python and JS/TS tooling. Go, Java, Rust, C tooling and imagemagick are left out.
 - **Homebrew**: must already be installed; the installer stops with a message instead of bootstrapping it.
 - **Login shell**: instead of `chsh`, a marked block in `~/.bashrc` starts zsh in interactive terminals (`dot uninstall` removes it).
-- **Neovim**: Mason is off. Language servers come from brew (pyright, typescript-language-server, lua-language-server) or anything else on `PATH`; there are no debug adapters. The Claude plugin is off.
+- **Neovim**: Mason is off. Language servers come from brew (pyright, TypeScript 7's own `tsc --lsp`, lua-language-server) or anything else on `PATH`; there are no debug adapters. The Claude plugin is off.
 - **tmux**: tmux-thumbs is not built (it needs Rust) and its key is unbound. Copying goes to the Windows clipboard through the terminal.
+- **No prebuilt binaries from plugins**: powerlevel10k normally downloads a `gitstatusd` binary and blink.cmp a Rust matcher on first use. With `DOTFILES_PREBUILT=0` the prompt uses zsh's `vcs_info` (same git segment, slower in very large repos) and completion uses blink.cmp's Lua matcher.
 - **Git**: commit signing is turned off in `~/.gitconfig`, because the signing key belongs to the personal GitHub setup. Name and email are asked for as usual, so use the work ones.
 - **Icons**: the installer shows three sample icons and asks whether they render. If not, `ll`, the Neovim statusline, the file pickers and the command line use plain characters.
 - **Updates**: `dot update` restores Neovim plugins to `nvim/lazy-lock.json` instead of syncing, so a read-only clone never ends up with local changes.
 
-The profile name is recorded in `~/.config/dotfiles/profile` and its switches in `~/.config/dotfiles/settings` (`DOTFILES_MASON`, `DOTFILES_AGENT`, `DOTFILES_TMUX_THUMBS`, `DOTFILES_GLYPHS`). zsh, tmux and Neovim read the settings file; `dot doctor` and `dot update` follow the recorded profile.
+The profile name is recorded in `~/.config/dotfiles/profile` and its switches in `~/.config/dotfiles/settings` (`DOTFILES_MASON`, `DOTFILES_AGENT`, `DOTFILES_TMUX_THUMBS`, `DOTFILES_PREBUILT`, `DOTFILES_GLYPHS`). zsh, tmux and Neovim read the settings file; `dot doctor` and `dot update` follow the recorded profile.
 
 On a work machine, clone over https inside the WSL home (not under `/mnt/c`), then run the installer:
 

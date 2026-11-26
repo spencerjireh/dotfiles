@@ -192,7 +192,7 @@ if brewfile_has rustup; then
     check_tool rustup "brew bundle (keg-only; PATH via zsh/20-path.zsh)"
     check_tool cargo "rustup default stable (builds tmux-thumbs)"
 fi
-for pair in pyright:pyright-langserver typescript-language-server:typescript-language-server \
+for pair in pyright:pyright-langserver typescript:tsc \
             lua-language-server:lua-language-server; do
     brewfile_has "${pair%%:*}" && check_tool "${pair#*:}" "brew bundle (language server on PATH)"
 done

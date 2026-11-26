@@ -208,7 +208,7 @@ if [ -z "$bad" ]; then pass "profiles only name components the installer knows"
 else fail "profiles only name components the installer knows" "unknown:$bad"; fi
 
 # Brewfile.work must not drift: each formula is in Brewfile or is a known work-only one
-WORK_ONLY="zsh pyright typescript-language-server lua-language-server"
+WORK_ONLY="zsh pyright typescript lua-language-server"
 missing=""
 while IFS= read -r formula; do
     grep -qE "^brew \"$formula\"" "$DOTFILES_DIR/Brewfile" && continue

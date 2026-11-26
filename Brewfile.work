@@ -25,7 +25,7 @@ brew "node"
 
 # --- Language servers (Mason is off in this profile; Neovim enables what is on PATH) ---
 brew "pyright"
-brew "typescript-language-server"
+brew "typescript"  # TypeScript 7: `tsc --lsp` is the language server
 brew "lua-language-server"
 
 # --- Formatters / linters (conform.nvim + nvim-lint) ---
