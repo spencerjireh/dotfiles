@@ -1,1151 +1,294 @@
-# Neovim Configuration Guide
+# Neovim Keys and Plugins
 
-This guide covers the plugins, settings, and keybindings in this Neovim configuration (Neovim 0.11+).
+Configuration: `nvim/` (linked to `~/.config/nvim`), Neovim 0.11+. `nvim/init.lua` holds
+options, autocmds and plugin-free keymaps; each plugin is a file under `nvim/lua/plugins/`.
+`dot keys nvim` shows this file, `dot keys nvim --sheet` only the key tables.
 
-Layout: `nvim/init.lua` holds options, autocmds, plugin-free keymaps and the lazy.nvim bootstrap. Every plugin lives in its own file under `nvim/lua/plugins/` (for example `lsp.lua`, `git.lua`, `debug.lua`), loaded through `{ import = "plugins" }`. Show this file from the shell with `dot keys nvim`.
+Leader is `Space`, local leader is `\`. In the editor, `<Space>?` shows every keymap,
+`<Space><Space>` the leader ones, and `<Space>fk` searches them by description. `?` inside a
+picker, the explorer, Trouble or Mason lists that window's own keys.
 
-## Table of Contents
-- [Basic Settings](#basic-settings)
-- [Leader Keys](#leader-keys)
-- [Plugins](#plugins)
-- [LSP Configuration](#lsp-configuration)
-- [Keybindings Reference](#keybindings-reference)
-- [Tips and Tricks](#tips-and-tricks)
-- [Troubleshooting](#troubleshooting)
-- [Customization](#customization)
-- [Quick Reference Card](#quick-reference-card)
+The `Space` layer uses the same verbs as tmux's `prefix` layer (direction, previous/next, split,
+close, find, help, slot). The table is in [tmux.md](tmux.md) under "Mental model".
 
-## Basic Settings
+| Group | Purpose | Group | Purpose |
+|-------|---------|-------|---------|
+| `<Space>f` | Find | `<Space>g` | Git |
+| `<Space>b` | Buffers | `<Space>x` | Diagnostics (Trouble) |
+| `<Space>c` | Code actions | `<Space>d` | Debug and tests |
+| `<Space>m` | Harpoon marks | `<Space>s` | Sessions |
+| `<Space>t` | Toggles and tools | `<Space>n` | Notifications |
+| `<Space>i` | Images and files | `<Space>a` | Claude |
 
-### Line Numbers
-- **Absolute line numbers**: Enabled
-- **Relative line numbers**: Enabled (shows distance from current line)
-- **Sign column**: Always on, so git and diagnostic signs never shift the text
+## Save, quit, windows
 
-### Indentation
-- **Tab width**: 2 spaces
-- **Expand tabs to spaces**: Yes
-- **Smart indent**: Enabled; Treesitter provides `indentexpr` for filetypes with a parser
+| Action | Keys |
+|--------|------|
+| Format and save | `<Space>w` |
+| Format changed hunks, then save | `<Space>W` |
+| Close the window (quits on the last) | `<Space>q` |
+| Quit everything | `<Space>Q` |
+| Move to a split or tmux pane | `Ctrl+h/j/k/l` |
+| Split right / below / equalize | `<Space>\|` / `<Space>-` / `<Space>=` |
+| Previous / next buffer | `Shift+h` / `Shift+l` |
+| Close this buffer, keep the split | `<Space>bd` |
+| Close every other buffer | `<Space>bo` |
+| Jump back / forward in history | `gh` / `gl` |
+| Reload files from disk | `<Space>tR` |
 
-### Search
-- **Highlight search**: Enabled (highlights all matches)
-- **Incremental search**: Enabled (shows matches as you type)
-- **Ignore case**: Yes (unless you type uppercase)
-- **Smart case**: Enabled (case-sensitive if you type uppercase)
+Split with `<Space>|` and `<Space>-`, the same keys as tmux; `<Space>h` / `<Space>j` / `<Space>k` /
+`<Space>l` also move between splits. Edits are written to disk one second
+after you stop typing (auto-save); auto-save never formats, only `<Space>w` and `<Space>W` do.
 
-### Other Settings
-- **Clipboard**: Synced with system clipboard (`"+y` to copy, `"+p` to paste)
-- **Persistent undo**: Enabled (undo history saved between sessions)
-- **Swap files**: Disabled
-- **Mouse support**: Enabled
-- **True color**: Enabled
-- **Word wrap**: Off by default (`<Space>tw` toggles); on for markdown, with `breakindent` so wrapped lines keep their indent
-- **Splits**: New vertical splits open to the right, horizontal splits below; 8 lines of context are kept above and below the cursor (`scrolloff`)
-- **Stock plugins**: netrw, gzip, tar, zip, tohtml and tutor are not loaded. The snacks explorer opens directories; `gx` (open URL under cursor) is a core mapping
-- **External changes**: Files changed on disk reload silently (`autoread` + `checktime` on focus and buffer enter). A notification appears only when the buffer also has unsaved edits; use `<Space>fu` (undo history) to reconcile.
-- **Remote-plugin providers**: Python, Perl, Ruby and Node providers are disabled. Nothing in this config uses them.
+## Find
 
-## Leader Keys
+| Action | Keys |
+|--------|------|
+| Smart find (buffers, recent, project files) | `<Space>ff` |
+| Project files only | `<Space>fF` |
+| Live grep | `<Space>fg` |
+| Grep the word under the cursor or the selection | `<Space>fw` |
+| Reopen the last picker | `<Space>fl` |
+| Projects (changes directory, restores the session) | `<Space>fp` |
+| Buffers / recent files | `<Space>fb` / `<Space>fr` |
+| Document / workspace symbols | `<Space>fs` / `<Space>fS` |
+| Diagnostics | `<Space>fd` |
+| TODO comments | `<Space>ft` |
+| Help tags / keymaps | `<Space>fh` / `<Space>fk` |
+| Undo history | `<Space>fu` |
+| Notification history | `<Space>fn` |
+| Find and replace across the project | `<Space>fR` |
+| Search for the visual selection | `*` (visual) |
 
-- **Leader**: `Space`
-- **Local Leader**: `\`
+In a picker: `Ctrl+j/k` move, `Enter` opens, `Ctrl+s` / `Ctrl+v` / `Ctrl+t` open in a split,
+vertical split or tab, `Tab` selects several. `:lua Snacks.picker()` lists every picker. In the
+find-and-replace buffer, `<localleader>r` replaces all and `?` lists the rest.
 
-Use leader key for custom commands. Example: `<Space>ff` opens file finder.
+## Explorer
 
-**Shared model with tmux.** The `Space` layer here and the `prefix` layer in tmux use the same verbs: `Ctrl+h/j/k/l` is a direction in both (and `<Space>h/j/k/l` here; under tmux's prefix, `h/l` reorder windows and `j/k` switch them), `Shift+h/l` (here) or `j/k` (tmux) is previous/next in a list, `|` and `-` split, `q` closes and `Q` closes more, `f` finds, `?` helps, and a number jumps to a slot (`Cmd+N` for a tmux window, `<Space>N` for a Harpoon mark). The full table is in `docs/tmux.md`.
+| Action | Keys |
+|--------|------|
+| Toggle / focus the explorer | `-` / `<Space>e` |
+| Open or expand / collapse | `Enter` or `l` / `h` |
+| Add (end with `/` for a directory) | `a` |
+| Rename / delete to trash | `r` / `d` |
+| Copy / move / cut / paste | `c` / `m` / `x` / `p` |
+| Yank the path | `y` |
+| Toggle hidden / ignored files | `H` / `I` |
+
+## Code
+
+| Action | Keys |
+|--------|------|
+| Go to definition | `gd` |
+| References / implementations | `grr` / `gri` |
+| Type definition / document symbols | `grt` / `gO` |
+| Hover, or peek a closed fold | `K` |
+| Rename with live preview | `<Space>rn` |
+| Code actions (ruff fixes in Python) | `<Space>ca` |
+| Next / previous reference of this symbol | `]]` / `[[` |
+| Signature help (insert mode) | `Ctrl+s` |
+| LSP status: what attached and why not | `<Space>tl` |
+
+Completion (blink.cmp, insert mode): `Ctrl+n` opens the menu, `Tab` / `Shift+Tab` move through
+items and snippet placeholders, `Enter` confirms, `Ctrl+e` closes. `Ctrl+Space` does not reach
+Neovim inside tmux.
+
+## Editing
+
+| Action | Keys |
+|--------|------|
+| Jump to a label / select a node | `s` / `S` |
+| Cursor at the next match / skip it | `Ctrl+n` / `Ctrl+p` |
+| Cursors on every match | `<Space>A` |
+| Clear cursors, then highlights | `Esc` |
+| Add / change / delete a surround | `ys` / `cs` / `ds` (`ysiw"`, `cs"'`) |
+| Surround the selection | `S{char}` (visual) |
+| Function / class objects | `af` `if` / `ac` `ic` |
+| Argument / conditional objects | `aa` `ia` / `ai` `ii` |
+| Next / last object (`cin(`) | `an` `in` / `al` `il` |
+| Start / end of the object | `g[` / `g]` |
+| Next / previous function, class | `]f` `[f` / `]c` `[c` |
+| Next / previous argument, loop | `]a` `[a` / `]l` `[l` |
+| Swap argument with next / previous | `]s` / `[s` |
+| Next / previous TODO comment | `]t` / `[t` |
+| Toggle a comment | `gcc`, `gc{motion}`, `gc` (visual) |
+| Scratch buffer / pick one | `<Space>.` / `<Space>S` |
+
+## Git
+
+| Action | Keys |
+|--------|------|
+| Next / previous hunk | `]h` / `[h` |
+| Stage / reset / preview the hunk | `<Space>gs` / `<Space>gr` / `<Space>gp` |
+| Blame the line / diff this file | `<Space>gb` / `<Space>gd` |
+| Lazygit / its log for this file | `<Space>gg` / `<Space>gl` |
+| Open the file or selection on GitHub | `<Space>go` |
+| Commits / status / branches pickers | `<Space>gc` / `<Space>gS` / `<Space>gB` |
+| Diffview: open / close | `<Space>gv` / `<Space>gV` |
+| History of this file / of the repo | `<Space>gh` / `<Space>gH` |
+
+Lazygit is for staging; diffview is for reading a change (`:DiffviewOpen main..HEAD` for a
+branch). `<Space>gh` in visual mode shows the history of the selected lines.
+
+## Diagnostics
+
+| Action | Keys |
+|--------|------|
+| Workspace / buffer diagnostics | `<Space>xx` / `<Space>xX` |
+| Symbols / LSP definitions and references | `<Space>xs` / `<Space>xl` |
+| Location list / quickfix list | `<Space>xL` / `<Space>xQ` |
+| Notifications: history / dismiss | `<Space>nh` / `<Space>nd` |
+
+Diagnostics show as virtual text and underlines, with no gutter signs. Notifications time out
+after 3 s (info) or 8 s (warning); errors stay until dismissed.
+
+## Debug and tests
+
+| Action | Keys |
+|--------|------|
+| Breakpoint / conditional breakpoint | `<Space>db` / `<Space>dB` |
+| Continue (starts a session) | `<Space>dc` or `F5` |
+| Step over / into / out | `<Space>do` / `<Space>di` / `<Space>dO` |
+| The same on function keys | `F10` / `F11` / `Shift+F11` |
+| Evaluate / REPL / run last | `<Space>de` / `<Space>dr` / `<Space>dl` |
+| Toggle the debug UI / terminate | `<Space>du` / `<Space>dx` |
+| Test nearest / file / debug nearest | `<Space>dt` / `<Space>dT` / `<Space>dD` |
+| Test summary / output / stop | `<Space>ds` / `<Space>dp` / `<Space>dS` |
+
+Adapters come from Mason: debugpy, delve, js-debug-adapter, codelldb. Tests run through neotest
+(pytest, Go, vitest, jest, Rust). Python uses `$VIRTUAL_ENV`, else the nearest `.venv`, so open
+uv projects from inside the project. Without Mason the debug keys are absent; test keys remain.
+
+## Sessions and marks
+
+| Action | Keys |
+|--------|------|
+| Restore this directory's / the last session | `<Space>ss` / `<Space>sl` |
+| Do not save this session on exit | `<Space>sd` |
+| Add a Harpoon mark / open the menu | `<Space>ma` / `<Space>mm` |
+| Jump to mark 1 to 5 | `<Space>1` to `<Space>5` |
+| Next / previous mark | `<Space>mn` / `<Space>mp` |
+
+Sessions are saved per directory on exit and never restored automatically.
+
+## Folding
+
+| Action | Keys |
+|--------|------|
+| Toggle / close / open the fold | `za` / `zc` / `zo` |
+| Open all / close all | `zR` / `zM` |
+| Next / previous fold | `zj` / `zk` |
+
+## Toggles
+
+| Action | Keys |
+|--------|------|
+| Wrap / spelling / relative numbers | `<Space>tw` / `<Space>ts` / `<Space>tn` |
+| Diagnostics / inlay hints / indent guides | `<Space>td` / `<Space>th` / `<Space>ti` |
+| Dim outside the scope / zen mode | `<Space>tD` / `<Space>tz` |
+| Treesitter highlighting | `<Space>tT` |
+| Render Markdown / open it in the browser | `<Space>tr` / `<Space>tm` |
+| Open with the system application | `<Space>io` |
+
+Images render inline in Markdown and when opened directly (Kitty graphics protocol; needs
+imagemagick). PDFs and Office files show a hint to use `<Space>io`.
+
+## Claude
+
+| Action | Keys |
+|--------|------|
+| Toggle / focus the Claude terminal | `<Space>ac` / `<Space>af` |
+| Resume / continue a session | `<Space>ar` / `<Space>aC` |
+| Select the model | `<Space>am` |
+| Add this buffer to the context | `<Space>ab` |
+| Send the selection, or the explorer file | `<Space>as` |
+| Accept / deny the proposed diff | `<Space>aa` / `<Space>ad` |
+
+Runs with the same flags as the `ccd` alias, so it never prompts. The plugin and these keys are
+absent when the machine's agent is not Claude (`DOTFILES_AGENT`, see [install.md](install.md)).
+
+## Languages
+
+Everything follows the repo being edited. The statusline shows the result for the current
+buffer: `lsp:<clients> fmt:<formatters|none> lint:<linters>`.
+
+| Language | Server | Formatter (needs its config in the repo) | Linter |
+|----------|--------|------------------------------------------|--------|
+| Python | pyright, ruff | black (`[tool.black]`), else ruff (`[tool.ruff]`, `ruff.toml`) | ruff |
+| JS / TS | tsgo (deno where `deno.json`) | biome, deno fmt, or prettier, by config file | eslint_d |
+| Lua | lua_ls | stylua (`stylua.toml`) | |
+| Go | gopls | gofmt | |
+| Rust | rust-analyzer (rustaceanvim) | rustfmt | |
+| Java | jdtls | google-java-format | |
+| C / C++ | clangd | clang-format (`.clang-format`) | |
+| Shell | on demand | shfmt (`.editorconfig`) | shellcheck |
+| JSON, YAML, CSS, HTML, Markdown | on demand | biome or prettier, by config file | |
+| Dockerfile | on demand | | hadolint |
+
+- **Servers**: the first seven are installed by Mason at first start. Servers for other
+  filetypes (the `on_demand` table in `lua/plugins/lsp.lua`) install the first time such a file
+  opens. To add one, put it in `ensure_installed` or `on_demand`; settings go in a
+  `vim.lsp.config("name", {...})` block.
+- **Formatting** runs only on `<Space>w`. A formatter runs only when the repo carries its config;
+  otherwise the file is saved as is and the statusline says `fmt:none`. Repo-local binaries
+  (`node_modules/.bin`, `.venv/bin`) win over the brew ones. LSP formatting is never a fallback.
+  `:ConformInfo` explains the choice for a buffer.
+- **Linting** runs on read, write and leaving insert mode, with the same repo-config rule.
+- **Formatters and linters come from the Brewfile**, not Mason, so the shell has them too.
+- **Rust** goes through rustaceanvim: `:RustLsp runnables`, `debuggables`, `expandMacro`.
+- **Per-repo overrides**: a `.nvim.lua` in the working directory is sourced after `:trust`.
+- **Indentation** is detected per file (guess-indent); `.editorconfig` wins when present.
+- **Parsers**: 23 Treesitter parsers install on first start; `:TSInstall <lang>` adds one and
+  needs the `tree-sitter` CLI.
+- **Without Mason** (`DOTFILES_MASON=0`, the `work` profile): nothing is downloaded. Servers
+  already on `PATH` are enabled: pyright, lua-language-server, TypeScript (`tsgo`, else
+  TypeScript 7's `tsc --lsp`), and the bash, JSON, YAML, HTML, CSS, Markdown, TOML and Dockerfile
+  servers if present. Settings are listed in [install.md](install.md).
 
 ## Plugins
 
-### 1. Vesper Theme
-**Plugin**: `datsfilipe/vesper.nvim`
-
-Dark theme with transparent background and italic styling.
-
-**Features**:
-- Transparent background (works with terminal transparency)
-- Italics for comments, keywords, functions, strings, and variables
-- Custom highlight overrides so which-key, floats, snacks windows and LSP reference matches use the same palette
-
-**Usage**: Theme is automatically applied on startup.
-
----
-
-### 2. snacks.nvim (Explorer, Picker, UI, Editor Helpers)
-**Plugin**: `folke/snacks.nvim`
-
-One plugin providing several modules. Enabled here: `explorer`, `picker`, `notifier`, `input`, `words`, `indent`, `scroll`, `bigfile`, `quickfile`, `zen`, `scratch`, `dim`, plus `toggle`, `gitbrowse`, `lazygit` and `bufdelete` which need no setup.
-
-**Explorer** (right sidebar, width 30, follows the current file, git status, trash on delete):
-- `-` - Toggle explorer
-- `<Space>e` - Focus explorer
-
-Inside the explorer:
-- `Enter` or `l` - Open file or expand directory
-- `h` - Collapse directory
-- `a` - Add new file/directory (end with `/` for directory)
-- `d` - Delete (sends to trash)
-- `r` - Rename
-- `c` - Copy file(s)
-- `m` - Move file(s)
-- `x` - Cut
-- `y` - Yank path
-- `p` - Paste
-- `H` - Toggle hidden files
-- `I` - Toggle ignored files
-- `q` - Close explorer
-- `?` - Show help
-
-**Picker** (fuzzy finder, replaces Telescope):
-- `<Space>ff` - Smart find: open buffers, recent files and project files in one list, ranked by frecency
-- `<Space>fF` - Find files (project files only)
-- `<Space>fg` - Live grep (search text in files)
-- `<Space>fw` - Grep the word under the cursor, or the visual selection
-- `<Space>fl` - Reopen the last picker with its query
-- `<Space>fp` - Projects under `~/Projects`: pick one to change directory and restore its session
-- `<Space>fb` - Find buffers
-- `<Space>fh` - Help tags
-- `<Space>fu` - Undo history (`Enter` restores that state, `Ctrl+y` yanks added lines, `Ctrl+Shift+y` yanks removed lines)
-- `<Space>fr` - Recent files
-- `<Space>fs` - Document symbols (LSP)
-- `<Space>fS` - Workspace symbols (LSP, whole project)
-- `<Space>fd` - Diagnostics
-- `<Space>fk` - Keymaps
-- `<Space>fn` - Notification history (searchable, with preview)
-- `<Space>ft` - Find TODO/FIXME/NOTE comments (todo-comments source)
-- `<Space>fR` - Find and replace across the project (grug-far, see below)
-
-Inside a picker:
-- `Ctrl+j/k` or `Down/Up` - Navigate results
-- `Enter` - Open selection
-- `Ctrl+s` - Open in horizontal split
-- `Ctrl+v` - Open in vertical split
-- `Ctrl+t` - Open in new tab
-- `Tab` - Select multiple items
-- `?` - Show all picker keys
-- `Esc` - Close
-
-LSP navigation (`gd`, `grr`, `gri`) also opens pickers, see the LSP section. Other pickers are available with `:lua Snacks.picker()` (a picker of pickers), for example `git_status`, `zoxide`, `lsp_workspace_symbols`.
-
-**Words** (highlights other references of the symbol under the cursor via LSP):
-- `]]` - Jump to next reference
-- `[[` - Jump to previous reference
-
-**Indent**: Indent guides with the current scope highlighted. Animation is off.
-
-**Scroll**: Smooth scrolling for all scroll commands.
-
-**Bigfile**: Files over 1.5 MB open with Treesitter, LSP-heavy features and folding trimmed.
-
-**Toggles** (`Snacks.toggle`; which-key shows the current state of each):
-- `<Space>tw` - Wrap
-- `<Space>ts` - Spelling
-- `<Space>tn` - Relative numbers
-- `<Space>td` - Diagnostics
-- `<Space>th` - Inlay hints
-- `<Space>ti` - Indent guides
-- `<Space>tD` - Dim everything outside the current scope
-- `<Space>tz` - Zen mode (distraction-free, current window only)
-- `<Space>tT` - Treesitter highlighting
-- `<Space>tl` - LSP status (`:checkhealth vim.lsp`: what attached, root directory, why not)
-
-**Git and scratch**:
-- `<Space>gg` - Lazygit (full TUI in a floating window; `q` closes)
-- `<Space>gl` - Lazygit log for the current file
-- `<Space>go` - Open the current file, or selected lines, on GitHub in the browser
-- `<Space>gc` - Commits (git log picker with diff preview)
-- `<Space>gS` - Git status picker (changed files, diff preview)
-- `<Space>gB` - Git branches picker (checkout)
-- `<Space>.` - Scratch buffer (persisted per project and filetype; run Lua with `<CR>`)
-- `<Space>S` - Pick a scratch buffer
-
-**Buffers** (`Snacks.bufdelete` closes a file without collapsing its window):
-- `<Space>bd` - Close the current buffer, keep the window layout
-- `<Space>bo` - Close every other buffer
-- `Shift+h` / `Shift+l` - Previous / next buffer (defined in `init.lua`)
-
-**Notifier and input** (`fancy` style: title bar with icon, source and time, message below; toasts stack bottom-right, wrap long lines, and grow to at most half the width and 60 percent of the height, with a "↓ N lines" footer beyond that):
-- `<Space>fn` - Searchable notification history (picker; the preview shows the full text)
-- `<Space>nh` - Notification history as a plain float
-- `<Space>nd` - Dismiss all notifications
-- Timeouts: INFO 3 s, WARN 8 s, ERROR sticky until dismissed
-- Routine Vim messages (file written, yank/undo line counts, search wrap, "pattern not found") show as a fading one-liner bottom-right instead of a toast; see noice below
-- Input prompts (for example LSP rename) use a floating window
-- A one-line hint ("Space = menu | Space fk = search keys | dot keys nvim in the shell") shows on every start. It is marked temporary in `init.lua`; delete the `dotfiles_hint` block once the keys are familiar
-
----
-
-### 3. auto-save.nvim
-**Plugin**: `okuuva/auto-save.nvim`
-
-Writes the buffer to disk one second after you stop editing, and immediately on leaving the buffer or losing focus. Skips special buffers, read-only files, and files over 1 MB.
-
-Auto-save does **not** format. Formatting runs only on `<Space>w` (see conform.nvim).
-
----
-
-### 4. Lualine (Status Line)
-**Plugin**: `nvim-lualine/lualine.nvim`
-
-Statusline showing mode, file path and status, git branch and changes, LSP diagnostics, encoding, filetype, and cursor position.
-
-The right side starts with what the repo activated for the buffer:
-`lsp:<clients> fmt:<formatters|none> lint:<linters>`. `fmt:none` means `<Space>w`
-saves without formatting because the repo carries no config for a formatter
-(see conform below). The segment comes from `lua/dotfiles/project.lua`, the same
-module conform and nvim-lint consult, so the three never disagree.
-
----
-
-### 5. Treesitter (Syntax Highlighting, Indentation, Text Objects)
-**Plugins**:
-- `nvim-treesitter/nvim-treesitter` (`main` branch)
-- `nvim-treesitter/nvim-treesitter-textobjects` (`main` branch)
-- `nvim-treesitter/nvim-treesitter-context`
-
-The `main` branch of nvim-treesitter is only a parser and query installer. Highlighting and indentation are enabled per buffer by a `FileType` autocmd in `lua/plugins/treesitter.lua` for any filetype that has a parser.
-
-**Parsers installed automatically**: c, cpp, lua, vim, vimdoc, query, markdown, markdown_inline, tsx, typescript, javascript, python, go, rust, java, json, yaml, toml, bash, html, css, regex (snacks picker input), latex (render-markdown math).
-
-Missing parsers install asynchronously on the first start; reopen affected buffers with `:e` when the notification appears. `dot update` runs the install synchronously. Compiling parsers requires the `tree-sitter` CLI (`tree-sitter-cli` in the Brewfile).
-
-**Commands**:
-```vim
-:TSInstall zig      " add a parser
-:TSUpdate           " update all parsers
-:TSUninstall zig
-:TSLog              " install log
-```
-
-**Text objects** (selection is provided by mini.ai using Treesitter queries; movement and swapping by textobjects):
-- `af` / `if` - Around / inside function
-- `ac` / `ic` - Around / inside class
-- `aa` / `ia` - Around / inside argument
-- `ai` / `ii` - Around / inside conditional
-- `]f` / `[f` - Next / previous function
-- `]c` / `[c` - Next / previous class
-- `]a` / `[a` - Next / previous argument
-- `]l` / `[l` - Next / previous loop
-- `]s` / `[s` - Swap argument with next / previous
-
-**Context**: The enclosing function or class header stays pinned at the top of the window (up to 3 lines).
-
-`vim.g.no_plugin_maps` is set, so built-in filetype plugin maps (for example Python's `]]`) are not defined; `]]` and `[[` belong to snacks.words.
-
----
-
-### 6. LSP (Language Server Protocol)
-**Plugins**:
-- `neovim/nvim-lspconfig`
-- `mason-org/mason.nvim`
-- `mason-org/mason-lspconfig.nvim`
-
-Provides IDE-like features: autocomplete, go-to-definition, hover docs, rename, code actions, diagnostics.
-
-**Servers installed by Mason at first start**: `lua_ls`, `pyright`, `tsgo` (TypeScript 7 native server), `gopls`, `rust_analyzer`, `jdtls`, `clangd`. Mason needs `node`, `go` and `java` on `PATH` to install them; the Brewfile provides all three.
-
-**Servers installed on demand**: the first time a filetype from the `on_demand` table in `lua/plugins/lsp.lua` opens (shell, JSON, YAML, TOML, Dockerfile, HTML, CSS, Markdown, Ruby, PHP, Elixir, Zig, Svelte, Vue, Astro, Prisma, Terraform, Nix, Kotlin, GraphQL, Protobuf, CMake), Mason installs its server in the background and attaches it to the open buffers when done; a notification reports both steps. `biome` is installed only inside a repo that has `biome.json`. Mason installs into `~/.local/share/nvim/mason`, never into the repo. `<Space>tl` shows what attached and why not.
-
-**Servers read the repo's own config**: pyright reads `pyproject.toml` / `pyrightconfig.json` (without either, checking is lowered to `basic` so an untyped repo is not flooded), tsgo reads `tsconfig.json`, gopls `go.mod`, rust-analyzer `Cargo.toml`. `tsgo` and `denols` never attach together: `deno.json` wins. `b0o/SchemaStore.nvim` feeds `jsonls` and `yamlls` the schemas for `package.json`, `tsconfig.json`, `pyproject.toml`, GitHub workflows, compose files, Kubernetes manifests and more, so unfamiliar config files get completion and validation.
-
-**Per-repo overrides**: `exrc` is on, so a `.nvim.lua` in the working directory is sourced after Neovim asks once (`:trust`). Use it for the cases a general config cannot guess (a nonstandard root, extra server settings). The file is git-ignored globally (`git/ignore`).
-
-**Without Mason** (`DOTFILES_MASON=0` in `~/.config/dotfiles/settings`, recorded by the `work` install profile): Mason, mason-lspconfig and the debug plugins are not loaded and nothing is downloaded. `lua/plugins/lsp.lua` instead enables each server whose binary is already on `PATH`: `pyright-langserver`, `lua-language-server`, TypeScript (`tsgo` if present, else TypeScript 7's `tsc --lsp`, else `typescript-language-server`), and, if present, the bash, JSON, YAML, HTML, CSS, Markdown, TOML and Dockerfile servers. `Brewfile.work` provides the first three; anything else can come from `npm -g` or mise. `<Space>tl` shows what attached. The `<Space>d` debug keys are absent; the test keys still work. Settings are read by `lua/dotfiles/settings.lua`, which also turns off the Claude plugin (`DOTFILES_AGENT` other than `claude`) the icons that need a Nerd Font (`DOTFILES_GLYPHS=0`), and blink.cmp's prebuilt matcher download (`DOTFILES_PREBUILT=0` uses the Lua matcher).
-
-**ruff** also runs as a language server for Python. Its binary comes from the Brewfile, not Mason, so `lua/plugins/lsp.lua` enables it explicitly. It supplies the fix-all and organize-imports code actions under `<Space>ca`; its hover is disabled so `K` shows pyright only.
-
-mason-lspconfig enables every Mason-installed server automatically. `vim.lsp.config("*", ...)` sets the completion capabilities (from blink.cmp) for all of them; only `lua_ls` has extra settings. All of this is in `lua/plugins/lsp.lua`.
-
-**Keybindings** (buffer-local, set when a server attaches):
-- `gd` - Go to definition (snacks picker with preview; jumps directly when there is one result)
-- `grr` - References (snacks picker)
-- `gri` - Implementations (snacks picker)
-- `K` - Peek fold or show LSP hover documentation (context-aware)
-- `<Space>rn` - Rename symbol with a live preview (inc-rename; `Enter` applies, `Esc` cancels)
-- `<Space>ca` - Code actions
-- `<Space>th` - Toggle inlay hints (snacks toggle)
-
-**Rust** is handled by rustaceanvim rather than mason-lspconfig: it starts `rust-analyzer` (the binary still comes from Mason), adds `:RustLsp` commands (`runnables`, `expandMacro`, `openCargo`), and supplies the debugger and test adapter used below. `rust_analyzer` is excluded from mason-lspconfig's auto-enable so only one client attaches.
-
-**Lua** gets `lazydev.nvim`: `lua_ls` and blink see only the runtime and plugin modules a file references, instead of loading every runtime file up front.
-
-**Neovim built-in LSP keys** (also available):
-- `grn` - Rename
-- `gra` - Code action
-- `grt` - Type definition
-- `gO` - Document symbols
-- `Ctrl+s` (insert mode) - Signature help
-
-**Diagnostics**: Shown as virtual text at the end of the line and as underlines; no gutter signs. `<Space>xx` opens the Trouble panel.
-
----
-
-### 7. blink.cmp (Autocompletion)
-**Plugin**: `saghen/blink.cmp`
-
-One plugin for completion, with a prebuilt Rust fuzzy matcher (downloaded on first install; `:Lazy build blink.cmp` rebuilds it, or set `build = "cargo build --release"` if the download fails).
-
-**Completion Sources**:
-1. LSP (context-aware completions)
-2. Path (file system paths)
-3. Snippets (LSP-provided, expanded with the built-in `vim.snippet`)
-4. Buffer (words from open files)
-
-**Keybindings** (in insert mode):
-- `Ctrl+n` - Open the completion menu when it is hidden, move down when it is open (`Ctrl+Space` also works, but only outside tmux, whose prefix swallows it)
-- `Tab` - Select next item / jump to next snippet placeholder
-- `Shift+Tab` - Select previous item / jump to previous placeholder
-- `Enter` - Confirm selection (first item is preselected)
-- `Ctrl+e` - Close completion menu
-- `Ctrl+f` - Scroll docs down
-- `Ctrl+b` - Scroll docs up
-
----
-
-### 8. conform.nvim (Formatting)
-**Plugin**: `stevearc/conform.nvim`
-
-Formatting runs only when you press `<Space>w`: format the buffer, then write it. `<Space>W` formats only the hunks gitsigns reports as changed, then writes; untouched lines stay untouched (formatters that cannot format a range are skipped by conform).
-
-**Formatting follows the repo.** The order is: repo config, then the repo-local binary, then the global binary, then nothing. A formatter runs only when the repo carries its config file (`require_cwd` in `lua/plugins/format.lua`); a repo with no config for the filetype is saved as is and the mini view says `saved, no formatter config in this repo`. The statusline `fmt:` segment shows the decision before you press the key. LSP formatting is never used as a fallback.
-
-**Formatters by filetype** (global binaries from the Brewfile; `prettier` and `biome` prefer `node_modules/.bin`):
-- JavaScript / TypeScript / JSX / TSX: first of `biome` (`biome.json`), `deno_fmt` (`deno.json`), `prettierd` / `prettier` (`.prettierrc*`, `prettier.config.*` or a `prettier` key in `package.json`)
-- JSON / CSS / GraphQL: first of `biome`, `prettierd` / `prettier`; HTML, SCSS, Vue, Svelte, Astro, YAML, Markdown: `prettierd` / `prettier`
-- Python: `black` when `pyproject.toml` has `[tool.black]` (the repo's `.venv/bin/black` wins over the brew one; same for ruff); otherwise `ruff_format` when `[tool.ruff]`, `ruff.toml` or `.ruff.toml` exists, plus `ruff_organize_imports` only when that config selects the isort rules (`"I"`); otherwise nothing
-- Lua: `stylua` (`stylua.toml` / `.stylua.toml`)
-- Shell: `shfmt` (only where `.editorconfig` exists, since that is the only place shfmt reads style from)
-- C / C++: `clang-format` (`.clang-format`)
-- Go: `gofmt`; Rust: `rustfmt`; Java: `google-java-format` (the language's own tool; no config needed)
-
-`:ConformInfo` shows which formatters apply to the current buffer and whether they are available.
-
----
-
-### 9. nvim-lint (Linting)
-**Plugin**: `mfussenegger/nvim-lint`
-
-Runs on read, write, and leaving insert mode. Only linters found on `PATH` are run, and linters that need repo config run only where that config exists (gates in `lua/dotfiles/project.lua`; the statusline `lint:` segment shows the result).
-- Python: `ruff`, only where `[tool.ruff]`, `ruff.toml` or `.ruff.toml` exists
-- JavaScript / TypeScript / JSX / TSX: `eslint_d`, only inside a project that has an eslint config (`eslint.config.*` or `.eslintrc*`); it runs the repo's own eslint from `node_modules`
-- Shell: `shellcheck`
-- Dockerfile: `hadolint`
-
----
-
-### 10. nvim-autopairs
-**Plugin**: `windwp/nvim-autopairs`
-
-Auto-close brackets, quotes, and more.
-
-**Features**:
-- Type `(` and get `()` with cursor in middle
-- Type `)` when next to `)` moves cursor forward (does not insert a duplicate)
-- Works with: `()`, `[]`, `{}`, `''`, `""`, ` `` `
-- Press `Enter` between brackets for formatted expansion
-- Deletes pairs together (backspace after `(` deletes both `(` and `)`)
-
----
-
-### 11. nvim-surround
-**Plugin**: `kylechui/nvim-surround`
-
-Add, change, and delete surrounding characters.
-- `ys{motion}{char}` - Add surround (`ysiw"` wraps the word in quotes)
-- `cs{old}{new}` - Change surround (`cs"'` changes double quotes to single)
-- `ds{char}` - Delete surround (`ds(` removes parentheses)
-- `S{char}` (visual mode) - Surround selection
-
----
-
-### 12. mini.ai (Text Objects)
-**Plugin**: `echasnovski/mini.ai`
-
-Extends `a`/`i` text objects. Searches up to 500 lines forward for the nearest object when the cursor is not inside one.
-
-- `af if ac ic aa ia ai ii` - Treesitter-backed function, class, argument, conditional (see Treesitter)
-- `an` / `in` and `al` / `il` - Next / last instance of any object (for example `cin(` changes inside the next parentheses)
-- `a?` / `i?` - Prompt for a custom delimiter
-- `g[` / `g]` - Move to the start / end of the surrounding object
-
----
-
-### 13. multicursor.nvim
-**Plugin**: `jake-stewart/multicursor.nvim`
-
-VS Code-style multiple cursors.
-- `Ctrl+n` - Add a cursor at the next match of the word under the cursor (or selection)
-- `Ctrl+p` - Skip the current match, add the next one
-- `<Space>A` - Add cursors to all matches
-- `Esc` - Clear cursors; with no cursors active, clears search highlights
-
----
-
-### 14. flash.nvim (Jump)
-**Plugin**: `folke/flash.nvim`
-
-- `s` - Jump: type characters, then the label shown next to the target
-- `S` - Treesitter select: pick a syntax node by label
-
-Works in normal, visual, and operator-pending mode (`ds<label>` deletes up to a target).
-
----
-
-### 15. Comments
-Neovim built-in (no plugin).
-- `gcc` - Toggle line comment
-- `gc{motion}` - Toggle comment over a motion (`gc3j`, `gcap`)
-- `gc` (visual mode) - Toggle comment on selection
-
-Comment strings come from the filetype (`commentstring`).
-
----
-
-### 16. Gitsigns
-**Plugin**: `lewis6991/gitsigns.nvim`
-
-Git change markers in the sign column, hunk actions, and blame.
-
-**Keybindings**:
-- `]h` / `[h` - Next / previous hunk
-- `<Space>gs` - Stage hunk
-- `<Space>gr` - Reset hunk
-- `<Space>gp` - Preview hunk
-- `<Space>gb` - Blame line
-- `<Space>gd` - Diff this file
-
----
-
-### 17. Trouble (Diagnostics Panel)
-**Plugin**: `folke/trouble.nvim`
-
-**Keybindings**:
-- `<Space>xx` - Toggle diagnostics panel (all workspace issues)
-- `<Space>xX` - Buffer diagnostics (current file only)
-- `<Space>xs` - Show symbols (functions, variables in current file)
-- `<Space>xl` - LSP definitions and references
-- `<Space>xL` - Location list
-- `<Space>xQ` - Quickfix list
-
-**Inside Trouble Panel**:
-- `j/k` or `Down/Up` - Navigate through issues
-- `Enter` - Jump to the issue location
-- `q` - Close Trouble panel
-- `?` - Show help
-
----
-
-### 18. todo-comments
-**Plugin**: `folke/todo-comments.nvim`
-
-Highlights `TODO`, `FIXME`, `HACK`, `NOTE`, `PERF`, `WARN` comments.
-- `<Space>ft` - Search all TODO comments in the project (snacks picker)
-- `]t` / `[t` - Next / previous TODO comment
-
----
-
-### 19. which-key (Keymap Helper)
-**Plugin**: `folke/which-key.nvim`
-
-Shows available keybindings in a popup as you type.
-
-**Usage**:
-- `<Space>?` - Show all keymaps
-- `<Space><Space>` - Show leader keymaps
-- Press any key prefix (like `<Space>`, `z`, `g`, `]`) and wait 200 ms to see available completions
-- `<Space>fk` - Searchable picker of every mapping with its description (type a word like "fold" or "harpoon")
-- `?` inside a picker, the explorer, Trouble or Mason lists that window's own keys
-- From the shell: `dot keys nvim` pages this guide
-
-Every keymap carries a `desc`, which is what which-key shows; `lua/plugins/which-key.lua` only defines the groups below and a few built-in keys.
-
-Groups: `<Space>f` Find, `<Space>b` Buffer, `<Space>x` Diagnostics (Trouble), `<Space>c` Code actions, `<Space>g` Git, `<Space>m` Harpoon (marks), `<Space>n` Notifications, `<Space>t` Toggle / tools, `<Space>i` Images/Files, `<Space>a` Claude, `<Space>d` Debug/Test.
-
----
-
-### 20. Satellite (Scrollbar)
-**Plugin**: `lewis6991/satellite.nvim`
-
-Scrollbar on the right of each window showing cursor position, search matches, diagnostics, git changes, and marks.
-
----
-
-### 21. UFO (Code Folding)
-**Plugins**:
-- `kevinhwang91/nvim-ufo`
-- `kevinhwang91/promise-async`
-
-Folding from Treesitter queries with an indent fallback. Folded lines show the first line plus a line count. All folds start open.
-
-**Keybindings**:
-- `za` - Toggle fold under cursor
-- `zc` - Close fold under cursor
-- `zo` - Open fold under cursor
-- `zR` - Open all folds in buffer
-- `zM` - Close all folds in buffer
-- `zr` - Open folds except certain kinds
-- `zm` - Close folds with specific criteria
-- `zj` - Move to next fold
-- `zk` - Move to previous fold
-- `K` - Peek folded content (or show LSP hover if not on fold)
-
----
-
-### 22. Harpoon (Quick File Marks)
-**Plugin**: `ThePrimeagen/harpoon` (harpoon2)
-
-Per-project list of up to 5 files you jump to with one key.
-
-**Keybindings**:
-- `<Space>ma` - Add current file to Harpoon marks
-- `<Space>mm` - Open Harpoon quick menu
-- `<Space>1` `<Space>2` `<Space>3` `<Space>4` `<Space>5` - Jump to mark 1 to 5
-- `<Space>mn` - Navigate to next mark
-- `<Space>mp` - Navigate to previous mark
-
-**Inside Harpoon Menu**:
-- `j/k` or `Down/Up` - Navigate through marks
-- `Enter` - Jump to selected file
-- `dd` - Remove mark from list
-- `q` or `Esc` - Close menu
-
----
-
-### 23. vim-tmux-navigator
-**Plugin**: `christoomey/vim-tmux-navigator`
-
-- `Ctrl+h/j/k/l` - Move between Neovim splits and, at the edge of Neovim, into the neighbouring tmux pane
-
-Pairs with the `is_vim` check in `tmux/tmux.conf`, which forwards the same keys into Neovim when a pane runs it.
-
----
-
-### 24. Render Markdown
-**Plugin**: `MeanderingProgrammer/render-markdown.nvim`
-
-In-buffer markdown rendering: code blocks with borders, custom bullets, heading colors from the Vesper palette (headings use native Treesitter highlights).
-
-**Keybindings**:
-- `<Space>tr` - Toggle render markdown on/off
-- `<Space>tm` - Open the markdown file in the default browser
-
-Markdown buffers also get `conceallevel=2`, word wrap, and spell check.
-
----
-
-### 25. Image.nvim
-**Plugin**: `3rd/image.nvim`
-
-Inline image display through the Kitty graphics protocol (Ghostty supports it; tmux has `allow-passthrough on`).
-
-**Features**:
-- Renders the image under the cursor in markdown files
-- Opens `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` files as images
-- Requires ImageMagick (`imagemagick` in the Brewfile)
-
-**External files**:
-- `<Space>io` - Open the current file with the system default application
-- PDFs and Office documents (`.pdf`, `.docx`, `.xlsx`, `.pptx`, `.doc`, `.xls`, `.ppt`) are detected on open with a hint to use `<Space>io`
-
----
-
-### 26. noice.nvim (Command Line and Messages)
-**Plugin**: `folke/noice.nvim`
-
-Replaces the command line with a centered popup, routes messages through the snacks notifier, adds borders to LSP hover and signature windows, and shows LSP progress.
-
-Routine messages are routed to the `mini` view (a fading one-liner bottom-right, the same place as LSP progress) so they never stack up as toasts: "written", "N lines yanked", "N fewer/more lines", undo/redo counters, "search hit BOTTOM/TOP", and E486 "Pattern not found". They still appear in `:messages` and `:Noice history`. Messages over 20 lines open in a split (`long_message_to_split`).
-
----
-
-### 27. nvim-colorizer
-**Plugin**: `catgoose/nvim-colorizer.lua`
-
-Highlights color codes (`#RGB`, `#RRGGBB`, `#RRGGBBAA`, `rgb()`, `hsl()`) with their color in every filetype. Color names are not highlighted.
-
----
-
-### 28. Rainbow CSV
-**Plugin**: `cameron-wags/rainbow_csv.nvim`
-
-Colors each column of `.csv` and `.tsv` files differently. Loads only for those filetypes.
-
----
-
-### 29. claudecode.nvim (Claude Code in Neovim)
-**Plugin**: `coder/claudecode.nvim`
-
-Runs Claude Code in a snacks terminal split on the right (35 percent) using the same flags as the `ccd` shell alias (`--dangerously-skip-permissions`, so Claude never prompts, including for shell commands). Neovim speaks the same protocol as the VS Code extension: Claude sees the file and selection you send, and proposes edits as diffs you accept or reject inside Neovim.
-
-**Keybindings** (`<Space>a` group):
-- `<Space>ac` - Toggle the Claude terminal
-- `<Space>af` - Focus the Claude terminal (or toggle if already focused)
-- `<Space>ar` - Resume a previous session (`claude --resume`)
-- `<Space>aC` - Continue the last session (`claude --continue`)
-- `<Space>am` - Select the Claude model
-- `<Space>ab` - Add the current buffer to Claude's context
-- `<Space>as` (visual) - Send the selection to Claude
-- `<Space>as` (in the explorer) - Add the file under the cursor
-- `<Space>aa` / `<Space>ad` - Accept / deny the diff Claude proposed
-
-Commands: `:ClaudeCode`, `:ClaudeCodeAdd <file> [start] [end]`, `:ClaudeCodeSendText {text}`, `:ClaudeCodeStatus`.
-
----
-
-### 30. Debugging (nvim-dap + dap-ui)
-**Plugins**: `mfussenegger/nvim-dap`, `rcarriga/nvim-dap-ui`, `jay-babu/mason-nvim-dap.nvim`
-
-Adapters are installed by Mason on first start: `debugpy` (Python), `delve` (Go), `js-debug-adapter` (Node / JS / TS, registered as `pwa-node`), `codelldb` (Rust via rustaceanvim, also C/C++). The UI (scopes, breakpoints, stack, watches, REPL, console) opens when a session starts and closes when it ends.
-
-**Keybindings** (`<Space>d` group, plus function keys like VS Code):
-- `<Space>db` / `<Space>dB` - Toggle breakpoint / conditional breakpoint
-- `<Space>dc` or `F5` - Continue (starts a session; pick a launch config on first run)
-- `<Space>do` or `F10` - Step over
-- `<Space>di` or `F11` - Step into
-- `<Space>dO` or `Shift+F11` - Step out
-- `<Space>de` - Evaluate the expression under the cursor or selection
-- `<Space>dr` - Toggle the REPL
-- `<Space>dl` - Run the last configuration again
-- `<Space>du` - Toggle the debug UI
-- `<Space>dx` - Terminate
-
-Launch configs: Python runs the current file with the active venv's interpreter; Go offers file, test and package configs; JS/TS offer "Launch file (node)" and "Attach to node process"; Rust builds and debugs through `:RustLsp debuggables`.
-
----
-
-### 31. Tests (neotest)
-**Plugins**: `nvim-neotest/neotest` with `neotest-python`, `neotest-golang`, `neotest-vitest`, `neotest-jest`, and rustaceanvim's adapter
-
-Runs the test under the cursor and shows results inline and in a summary tree.
-
-**Keybindings**:
-- `<Space>dt` - Run the nearest test
-- `<Space>dT` - Run the current file
-- `<Space>dD` - Debug the nearest test (uses nvim-dap)
-- `<Space>ds` - Toggle the summary tree
-- `<Space>dp` - Toggle the output panel
-- `<Space>dS` - Stop
-
-Python uses pytest with the interpreter from `$VIRTUAL_ENV`, else `.venv/bin/python` found upward from the cwd, else `python3`. Open uv projects from inside the project so the venv is found.
-
----
-
-### 32. Small helpers
-- `folke/lazydev.nvim` - see the LSP section (Lua workspace library on demand).
-- `smjonas/inc-rename.nvim` - `:IncRename <name>` renames with a live preview; bound to `<Space>rn` when a server attaches. noice renders the prompt.
-- `vim.o.winborder = "rounded"` - every floating window (hover, signature help, pickers) gets the same border.
-
----
-
-### 33. guess-indent.nvim (Indent detection)
-**Plugin**: `NMAC427/guess-indent.nvim`
-
-Sets `shiftwidth` and `expandtab` per buffer from the file's own content, so a four-space Python repo or a tab-indented Go file does not fight the two-space default from `init.lua`. `.editorconfig` (built into Neovim) wins when present; guess-indent only fills in where there is none.
-
----
-
-### 34. SchemaStore.nvim (JSON and YAML schemas)
-**Plugin**: `b0o/SchemaStore.nvim`
-
-Loaded when `jsonls` or `yamlls` starts (see the LSP section). Completion and validation for `package.json`, `tsconfig.json`, `pyproject.toml`, `.github/workflows/*.yml`, `docker-compose.yml`, Kubernetes manifests, and the rest of the SchemaStore catalog.
-
----
-
-### 35. persistence.nvim (Sessions)
-**Plugin**: `folke/persistence.nvim`
-
-Saves the buffers and window layout per working directory on exit. Nothing is restored automatically.
-- `<Space>ss` - Restore the session for the current directory
-- `<Space>sl` - Restore the last session
-- `<Space>sd` - Do not save this session on exit
-
-`<Space>fp` (projects picker) changes directory and restores that project's session.
-
----
-
-### 36. grug-far.nvim (Find and replace)
-**Plugin**: `MagicDuck/grug-far.nvim`
-
-Project-wide search and replace on top of ripgrep: a buffer with search, replace, files-filter and flags fields, live results, and per-match or all-at-once replacement.
-- `<Space>fR` - Open; in visual mode the selection is the search term
-- Inside: `<localleader>r` replace all, `<localleader>j`/`<localleader>k` next/previous match, `<localleader>o` open the match, `<localleader>q` send to quickfix, `<localleader>c` close (`?` lists them all)
-
----
-
-### 37. diffview.nvim (Diffs and history)
-**Plugin**: `sindrets/diffview.nvim`
-
-Side-by-side diffs and file history in a tab page. Lazygit stays the tool for staging; diffview is for reading a change or a branch.
-- `<Space>gv` - Diff the working tree against the index (`:DiffviewOpen`; `:DiffviewOpen main..HEAD` for a branch)
-- `<Space>gV` - Close diffview
-- `<Space>gh` - History of the current file; in visual mode, history of the selected lines
-- `<Space>gH` - History of the whole repo
-- Inside: `Tab` / `S-Tab` next/previous file, `-` stage/unstage, `g?` help
-
----
-
-## LSP Configuration
-
-### What is LSP?
-Language Server Protocol provides IDE features like:
-- **Autocomplete**: Smart suggestions based on code context
-- **Go to Definition**: Jump to where functions/variables are defined
-- **Hover Documentation**: See function signatures and docs
-- **Diagnostics**: Real-time error and warning detection
-- **Rename**: Safely rename symbols across files
-- **Code Actions**: Quick fixes and refactoring
-
-### Managing Language Servers with Mason
-
-**Open Mason**:
-```vim
-:Mason
-```
-
-**Mason Interface**:
-- Use `/` to search
-- Press `i` on a server to install
-- Press `X` on a server to uninstall
-- Press `U` to update all installed servers
-- Press `g?` for help
-
-**Adding a server**:
-1. Add its name to `ensure_installed` in `lua/plugins/lsp.lua` (always installed), or map its filetype to it in the `on_demand` table (installed the first time that filetype opens), or install it once via `:Mason`
-2. mason-lspconfig enables it as soon as it is installed; no `vim.lsp.enable` call is needed
-3. For server-specific settings, add a `vim.lsp.config("server_name", { settings = { ... } })` block next to the `lua_ls` one
-
-Formatters and linters are not managed by Mason. They come from the Brewfile so they are on `PATH` for the shell too. `dot doctor` reports any that are missing.
-
----
-
-## Keybindings Reference
-
-### General Vim
-- `i` - Insert mode
-- `Esc` or `Ctrl+[` - Normal mode
-- `v` - Visual mode
-- `V` - Visual line mode
-- `Ctrl+v` - Visual block mode
-- `:w` - Save (without formatting)
-- `:q` - Quit
-- `:wq` or `ZZ` - Save and quit
-- `:q!` - Quit without saving
-- `u` - Undo
-- `Ctrl+r` - Redo
-
-### General Editor
-- `<Space>w` - Format and save (saves untouched when the repo has no formatter config)
-- `<Space>W` - Format only the changed hunks, then save
-- `<Space>q` - Close the current window; on the last window, quit Neovim (asks about unsaved buffers)
-- `<Space>Q` - Quit everything (asks about unsaved buffers)
-- `<Space>tR` - Reload files from disk (checktime)
-- `<Space>tw` / `<Space>ts` / `<Space>tn` / `<Space>td` / `<Space>th` / `<Space>ti` / `<Space>tD` / `<Space>tz` / `<Space>tT` - Toggles: wrap, spelling, relative numbers, diagnostics, inlay hints, indent guides, dim, zen, treesitter
-- `gh` - Jump back in history
-- `gl` - Jump forward in history
-- `Esc` - Clear multicursors, then search highlights
-
-### Navigation
-- `h/j/k/l` - Left/Down/Up/Right
-- `w` - Next word
-- `b` - Previous word
-- `0` - Start of line
-- `$` - End of line
-- `gg` - Top of file
-- `G` - Bottom of file
-- `{number}G` - Go to line number
-- `%` - Jump to matching bracket
-- `Ctrl+d` - Scroll half page down
-- `Ctrl+u` - Scroll half page up
-- `s` - Flash jump
-- `S` - Flash Treesitter select
-- `]]` / `[[` - Next / previous LSP reference of the word under cursor
-- `]f` `[f` `]c` `[c` `]a` `[a` `]l` `[l` - Treesitter function / class / argument / loop motions
-- `]h` / `[h` - Next / previous git hunk
-- `]t` / `[t` - Next / previous TODO comment
-
-### Editing
-- `dd` - Delete line
-- `yy` - Yank (copy) line
-- `p` - Paste after cursor
-- `P` - Paste before cursor
-- `x` - Delete character
-- `r` - Replace character
-- `cw` - Change word
-- `ciw` - Change inside word
-- `ci(` - Change inside parentheses
-- `cin(` - Change inside the next parentheses (mini.ai)
-- `daf` / `dif` - Delete a function / its body (Treesitter)
-- `]s` / `[s` - Swap argument with next / previous
-- `ys` `cs` `ds` - Add / change / delete surround
-- `Ctrl+n` - Add multicursor at next match
-- `.` - Repeat last command
-
-### Buffers
-- `Shift+h` / `Shift+l` - Previous / next open file
-- `<Space>bd` - Close the current file, keep the split
-- `<Space>bo` - Close all other files
-- `<Space>fb` - Pick an open file
-- `<Space>fr` - Recent files
-
-### Windows/Splits
-- `:split` or `:sp` - Horizontal split
-- `:vsplit` or `:vs` - Vertical split
-- `Ctrl+h/j/k/l` or `<Space>h` / `<Space>j` / `<Space>k` / `<Space>l` - Move to the split in that direction, or into the neighbouring tmux pane at the edge
-- `<Space>|` / `<Space>-` - Split right / below (same keys as tmux `prefix + |` / `prefix + -`)
-- `<Space>=` or `Ctrl+w =` - Equal size splits
-- `<Space>q` or `Ctrl+w q` - Close current split (`<Space>q` quits when it is the last one)
-
-### LSP (configured in this setup)
-- `gd` - Go to definition (picker)
-- `grr` / `gri` - References / implementations (picker)
-- `K` - Peek fold or LSP hover documentation
-- `<Space>rn` - Rename symbol (live preview)
-- `<Space>ca` - Code actions (includes ruff fixes in Python)
-- `<Space>th` - Toggle inlay hints
-- `<Space>tl` - LSP status (`:checkhealth vim.lsp`)
-- `grt` / `gO` - Type definition / document symbols (built-in)
-- `:RustLsp runnables` / `debuggables` / `expandMacro` - rustaceanvim extras (Rust only)
-
-### Claude Code
-- `<Space>ac` / `af` - Toggle / focus the Claude terminal
-- `<Space>ar` / `aC` - Resume / continue a session
-- `<Space>ab` - Add the current buffer as context
-- `<Space>as` - Send the visual selection (or add the explorer file)
-- `<Space>aa` / `ad` - Accept / deny the proposed diff
-
-### Debugging and Tests
-- `<Space>db` / `dB` - Toggle / conditional breakpoint
-- `<Space>dc` `F5` / `do` `F10` / `di` `F11` / `dO` `Shift+F11` - Continue / over / into / out
-- `<Space>de` / `dr` / `dl` / `du` / `dx` - Eval / REPL / run last / toggle UI / terminate
-- `<Space>dt` / `dT` / `dD` - Test nearest / file / debug nearest
-- `<Space>ds` / `dp` / `dS` - Test summary / output panel / stop
-
-### Find (snacks picker)
-- `<Space>ff` - Smart find (buffers, recent, files)
-- `<Space>fF` - Find files
-- `<Space>fg` - Live grep (search in files)
-- `<Space>fw` - Grep word under cursor / selection
-- `<Space>fl` - Last picker
-- `<Space>fp` - Projects
-- `<Space>fb` - Find buffers
-- `<Space>fh` - Help tags
-- `<Space>fu` - Undo history
-- `<Space>fr` - Recent files
-- `<Space>fs` - Document symbols
-- `<Space>fS` - Workspace symbols
-- `<Space>fd` - Diagnostics
-- `<Space>fk` - Keymaps
-- `<Space>fn` - Notification history (searchable)
-- `<Space>ft` - Find TODO comments
-- `<Space>fR` - Find and replace (grug-far)
-
-### File Explorer (snacks)
-- `-` - Toggle explorer
-- `<Space>e` - Focus explorer
-
-### Which-key (Keymap Discovery)
-- `<Space>?` - Show all keymaps
-- `<Space><Space>` - Show leader keymaps only
-
-### Comments
-- `gcc` - Toggle line comment
-- `gc{motion}` - Toggle comment over a motion
-- `gc` - Toggle comment (visual mode)
-
-### Completion (Insert mode)
-- `Ctrl+n` - Open the completion menu (or move down when open)
-- `Tab` - Next item / next snippet placeholder
-- `Shift+Tab` - Previous item / previous placeholder
-- `Enter` - Confirm
-- `Ctrl+e` - Close menu
-
-### Code Folding
-- `za` - Toggle fold under cursor
-- `zc` - Close fold under cursor
-- `zo` - Open fold under cursor
-- `zR` - Open all folds
-- `zM` - Close all folds
-- `zr` - Open folds except kinds
-- `zm` - Close folds with criteria
-- `zj` - Next fold
-- `zk` - Previous fold
-
-### Git (gitsigns and snacks)
-- `<Space>gs` - Stage hunk
-- `<Space>gr` - Reset hunk
-- `<Space>gp` - Preview hunk
-- `<Space>gb` - Blame line
-- `<Space>gd` - Diff this file
-- `<Space>gg` - Lazygit
-- `<Space>gl` - Lazygit log for this file
-- `<Space>go` - Open file or selection on GitHub
-- `<Space>gc` / `<Space>gS` / `<Space>gB` - Commits / status / branches (pickers)
-- `<Space>gv` / `<Space>gV` - Open / close diffview
-- `<Space>gh` / `<Space>gH` - File (or selection) history / repo history (diffview)
-
-### Session (persistence)
-`<Space>s` is the session group:
-- `<Space>ss` - Restore session for this directory
-- `<Space>sl` - Restore last session
-- `<Space>sd` - Do not save this session
-
-### Scratch
-- `<Space>.` - Scratch buffer
-- `<Space>S` - Pick a scratch buffer
-
-### Harpoon (Quick Marks)
-- `<Space>ma` - Add file to Harpoon marks
-- `<Space>mm` - Open Harpoon menu
-- `<Space>1` to `<Space>5` - Jump to mark 1 to 5
-- `<Space>mn` - Navigate to next mark
-- `<Space>mp` - Navigate to previous mark
-
-### Diagnostics (Trouble)
-- `<Space>xx` - Workspace diagnostics
-- `<Space>xX` - Buffer diagnostics
-- `<Space>xs` - Symbols
-- `<Space>xl` - LSP definitions and references
-- `<Space>xL` / `<Space>xQ` - Location list / quickfix list
-
-### Notifications
-- `<Space>nd` - Dismiss notifications
-- `<Space>nh` - Notification history (float)
-- `<Space>fn` - Notification history (searchable picker)
-
-### Markdown
-- `<Space>tm` - Open markdown file in browser
-- `<Space>tr` - Toggle render markdown (in-buffer)
-
-### Images and External Files
-- `<Space>io` - Open file externally (PDFs, Office docs; uses `open` on macOS, `xdg-open` on Linux)
-- `gx` - Open the URL or path under the cursor in the system handler
-
-### Visual Mode
-- `*` - Search for selected text
-- `gc` - Toggle comment on selection
-- `S{char}` - Surround selection
-- `Ctrl+n` - Add multicursor at next match of the selection
-- `<Space>A` - Add cursors to all matches
-
----
-
-## Tips and Tricks
-
-### Workflow Tips
-
-1. **Quick File Switching**:
-   - Use Harpoon for your 5 most-accessed files: `<Space>ma` to mark, `<Space>1` to `<Space>5` to jump
-   - `<Space>ff` to find files by name (for everything else)
-   - `Shift+h` / `Shift+l` to step through open files, `<Space>fb` to pick one
-   - `<Space>bd` to close a file when you are done with it (the split stays)
-   - `-` to toggle the explorer for project navigation
-   - `<Space>q` closes windows one at a time and quits on the last one; `<Space>Q` quits everything at once
-
-2. **Search Across Project**:
-   - `<Space>fg` then type search term
-   - `gd` to jump to definitions, `grr` to list references
-   - Visual select + `*` to search for selected text
-   - `]]` / `[[` to walk through references of the symbol under the cursor
-
-3. **Multiple Cursors**:
-   - `Ctrl+n` on a word to add a cursor at the next occurrence, repeat as needed, then edit
-   - `<Space>A` to grab every occurrence at once
-   - The `cgn` pattern still works: search with `/pattern`, then `cgn` to change the next match, `.` to repeat
-
-4. **Quick Edits**:
-   - `ciw` - change word under cursor
-   - `ci"` - change inside quotes
-   - `cin{` - change inside the next braces even when the cursor is outside them
-   - `cif` - change a function body
-   - `]s` - swap two arguments without retyping
-
-5. **Saving and Formatting**:
-   - Edits are written to disk automatically after a second of idle time
-   - `<Space>w` formats and writes when you want the formatter to run
-
-6. **Markdown Editing**:
-   - In-buffer rendering with `<Space>tr` for quick previews
-   - Open in browser with `<Space>tm` for final review
-   - Images render inline (Kitty graphics protocol)
-   - Use `<Space>io` to open PDFs or Office docs externally
-
-7. **Code Navigation with Folding**:
-   - Open a large file and press `zM` to fold everything
-   - Scan the structure, then `zo` on sections you need to see
-   - Use `K` to peek inside folds without opening them
-
-### Plugin-Specific Tips
-
-**Picker**:
-- `?` inside any picker lists its keys
-- `<Space>fg` also finds TODO comments, but `<Space>ft` groups them by type
-- `:lua Snacks.picker.git_status()` and `:lua Snacks.picker.diagnostics()` are two useful pickers without a mapping
-
-**Explorer**:
-- Press `?` inside the explorer to see all available commands
-- Use `H` to toggle hidden files (like `.gitignore`, `.env`)
-- Create nested directories with `a`: type `folder/subfolder/` and press Enter
-
-**LSP**:
-- `:checkhealth vim.lsp` - Check LSP status for current buffer
-- `:LspLog` - View LSP logs for debugging
-- Hover (`K`) twice to enter hover window (useful for long docs)
-
-**Treesitter**:
-- `:InspectTree` - See syntax tree (great for debugging highlighting)
-- `:Inspect` - Show highlight groups under cursor
-- `:TSLog` - See why a parser install failed
-
-**Code Folding (UFO)**:
-- Use `zM` to fold all code, then `zo` to selectively open sections you're working on
-- Press `K` on a folded line to preview its contents without opening
-
-**Harpoon**:
-- Common pattern: 1=main/index, 2=config, 3=types, 4=tests, 5=utils
-- Marks are stored per working directory
-
-**Rainbow CSV**:
-- Open any `.csv` or `.tsv` file to see automatic column highlighting
-- `:RainbowDelim` sets a custom delimiter
-
-### Learning Resources
-
-- Vim Tutor: Run `vimtutor` in terminal
-- Neovim Docs: Press `<Space>fh` and search
-- Plugin Docs: Visit GitHub repos linked above
-
----
+| Plugin | Purpose | Spec file |
+|--------|---------|-----------|
+| vesper.nvim | Colour scheme, transparent background | `colorscheme.lua` |
+| snacks.nvim | Explorer, pickers, notifier, toggles, lazygit, scratch, zen, smooth scroll | `snacks.lua` |
+| which-key.nvim | Key popup; defines the groups | `which-key.lua` |
+| lualine.nvim | Statusline with the `lsp: fmt: lint:` segment | `lualine.lua` |
+| noice, satellite, colorizer | Command line popup, scrollbar, colour previews | `ui.lua` |
+| nvim-treesitter (+ textobjects, context) | Highlighting, indent, motions, pinned scope header | `treesitter.lua` |
+| lspconfig, mason, SchemaStore, lazydev, inc-rename | Language servers | `lsp.lua` |
+| blink.cmp, nvim-autopairs | Completion and bracket pairs | `completion.lua` |
+| conform.nvim | Formatting | `format.lua` |
+| nvim-lint | Linting | `lint.lua` |
+| guess-indent.nvim | Indent detection | `indent.lua` |
+| auto-save.nvim | Write after one idle second | `autosave.lua` |
+| surround, mini.ai, multicursor, flash, todo-comments, rainbow_csv | Editing helpers | `editing.lua` |
+| nvim-ufo | Folding | `folds.lua` |
+| gitsigns.nvim | Hunks and blame | `git.lua` |
+| diffview.nvim | Diffs and history | `diffview.lua` |
+| trouble.nvim | Diagnostics panel | `trouble.lua` |
+| harpoon | File marks | `harpoon.lua` |
+| persistence.nvim | Sessions | `sessions.lua` |
+| grug-far.nvim | Find and replace | `replace.lua` |
+| render-markdown, image.nvim | Markdown rendering, inline images | `markdown.lua` |
+| vim-tmux-navigator | `Ctrl+h/j/k/l` across splits and tmux panes | `tmux-navigator.lua` |
+| nvim-dap, dap-ui, mason-nvim-dap | Debugging | `debug.lua` |
+| neotest, rustaceanvim | Tests, Rust tooling | `test.lua` |
+| claudecode.nvim | Claude Code terminal and diffs | `claudecode.lua` |
+
+To add a plugin, create `nvim/lua/plugins/<name>.lua` returning a lazy.nvim spec, run
+`:Lazy sync`, and commit `lazy-lock.json`. Every keymap needs a `desc`.
 
 ## Troubleshooting
 
-### LSP not working
-1. Check if server is running: `:checkhealth vim.lsp` (`<Space>tl`); the statusline `lsp:` segment lists attached clients
-2. Verify server is installed: `:Mason`
-3. Check logs: `:LspLog`
-4. Restart LSP: `:LspRestart`
+- **No language server**: `<Space>tl`, then `:Mason`, `:LspLog`, `:LspRestart`
+- **JS / TS server missing**: `:MasonInstall tsgo`; it needs `node` on `PATH`. `ts_ls` is not used
+- **`<Space>w` does not format**: `fmt:none` means the repo has no formatter config, by design. `:ConformInfo` says why
+- **No highlighting for a language**: `:TSInstall <lang>`, reopen with `:e`; `:TSLog` on failure
+- **Completion missing**: `Ctrl+n` opens it by hand; `:checkhealth blink.cmp`
+- **Debugger does not start**: `dot doctor` lists the adapters; `:MasonInstall <name>`; `:DapShowLog`
+- **Tests not found**: The parser must be installed and the file name recognised; Python needs `.venv` in reach
+- **`Ctrl+h/j/k/l` stays inside Neovim**: Reload tmux (`prefix + r`); `:TmuxNavigateLeft` must exist, else `:Lazy sync`
+- **Colours look wrong**: The terminal needs true colour; tmux sets `tmux-256color` and the RGB override
 
-### Completion not appearing
-1. Ensure LSP is running (`:checkhealth vim.lsp`)
-2. Check if you're in insert mode
-3. Try `Ctrl+n` to open it manually (`Ctrl+Space` does not reach Neovim inside tmux)
-4. Check blink loaded and its fuzzy binary is present: `:checkhealth blink.cmp`
-
-### No syntax highlighting or text objects for a language
-1. Check the parser is installed: `:lua print(vim.inspect(require('nvim-treesitter').get_installed('parsers')))`
-2. Install it: `:TSInstall <lang>`, then reopen the buffer with `:e`
-3. If the install fails, check `:TSLog` and that `tree-sitter` is on `PATH` (`dot doctor`)
-
-### Debugger does not start
-1. `:checkhealth mason` and `ls ~/.local/share/nvim/mason/bin` should show `debugpy`, `dlv`, `js-debug-adapter`, `codelldb`; `dot doctor` lists them. `:MasonInstall <name>` installs one by hand
-2. Mason downloads some adapters with `wget` (in the Brewfile)
-3. `:DapShowLog` shows adapter output; for Python make sure the venv interpreter is the one with your dependencies
-
-### Tests are not discovered
-1. neotest needs the parser for the language (`:TSInstall`) and a recognised test file name (`test_*.py`, `*_test.go`, `*.test.ts`)
-2. `<Space>ds` opens the summary; `:Neotest summary` errors show adapter problems
-3. Python: run from inside the project so `.venv` is found, or activate it before starting Neovim
-
-### JavaScript/TypeScript has no LSP or shows an initialize error
-1. `tsgo` must be installed: `:Mason`, or `:MasonInstall tsgo`
-2. It needs `node` on `PATH` (`dot doctor`); the Brewfile installs it
-3. The older `ts_ls` server is not used: its Mason bundle pulls TypeScript 7, which no longer ships the JS `tsserver` it needs
-
-### Formatting does nothing on `<Space>w`
-1. The statusline says `fmt:none` when the repo has no config for a formatter of this filetype; that is by design (see conform above). Add the repo's config (`.prettierrc`, `biome.json`, `[tool.ruff]`, `stylua.toml`, ...) or leave the file as it is
-2. `:ConformInfo` shows the formatters for the buffer and why one is unavailable ("Root directory not found" means no config)
-3. Run `dot doctor` to see which formatter binaries are missing; `brew bundle` installs them
-
-### Picker not finding files
-1. Make sure you're in the right directory (`:pwd`)
-2. Check if files are gitignored (the files picker respects `.gitignore`)
-3. Press `?` inside the picker to find the toggle for hidden and ignored files
-
-### Ctrl+h/j/k/l does not leave Neovim into tmux
-1. Confirm tmux runs the config from this repo (`prefix + r` to reload)
-2. Inside Neovim, `:TmuxNavigateLeft` should exist; if not, run `:Lazy sync`
-
-### Colors look wrong
-1. Check terminal supports true color: `:echo has('termguicolors')`
-2. Inside tmux, confirm `default-terminal` is `tmux-256color` and the RGB override is set (both are in `tmux.conf`)
-
----
-
-## Customization
-
-This configuration uses `lazy.nvim` as the plugin manager. `nvim/init.lua` holds options, autocmds and plugin-free keymaps; each plugin is a file in `nvim/lua/plugins/`.
-
-**To add a new plugin**:
-1. Create `nvim/lua/plugins/<name>.lua` that returns a lazy.nvim spec table (or a list of them), for example `return { "author/plugin.nvim", opts = {} }`
-2. Restart Neovim or run `:Lazy sync` (commit the updated `lazy-lock.json`)
-
-**To modify keybindings**:
-Plugin-free keymaps are `vim.keymap.set()` calls in `init.lua`; plugin keymaps live in that plugin's file under `lua/plugins/`. Keys defined in a plugin's `keys = {}` table load that plugin on first use. Give every mapping a `desc`: which-key shows it and `dot keys nvim` documents it.
-
-**To add LSP servers**:
-Add the server name to `ensure_installed` in `lua/plugins/lsp.lua`. Settings go in a `vim.lsp.config("name", {...})` block next to `lua_ls`.
-
-**To add a formatter or linter**:
-1. Add the binary to the `Brewfile` and run `brew bundle`
-2. Add it to `formatters_by_ft` in `lua/plugins/format.lua` (conform) or `linters_by_ft` in `lua/plugins/lint.lua` (nvim-lint)
-
----
-
-## Quick Reference Card
-
-| Command | Action |
-|---------|--------|
-| `<Space>w` | Format and save |
-| `<Space>W` | Format changed hunks and save |
-| `<Space>q` | Close window (quit if last) |
-| `<Space>Q` | Quit all |
-| `<Space>bd` | Close buffer, keep window |
-| `Shift+h` / `Shift+l` | Previous / next buffer |
-| `<Space>ff` | Find files |
-| `<Space>fg` | Search in files |
-| `<Space>fb` | Find buffers |
-| `<Space>fu` | Undo history |
-| `<Space>fr` | Recent files |
-| `<Space>fd` | Diagnostics |
-| `<Space>ft` | Find TODOs |
-| `-` | Toggle file explorer |
-| `<Space>e` | Focus file explorer |
-| `<Space>xx` | Toggle diagnostics panel |
-| `<Space>xs` / `<Space>xl` | Symbols / LSP panels (Trouble) |
-| `gd` | Go to definition (picker) |
-| `K` | Peek fold or hover docs |
-| `<Space>rn` | Rename |
-| `<Space>ca` | Code actions |
-| `<Space>th` | Toggle inlay hints |
-| `grr` / `gri` | References / implementations (picker) |
-| `]]` / `[[` | Next / previous reference |
-| `gcc` | Toggle comment |
-| `s` | Flash jump |
-| `Ctrl+n` | Add multicursor |
-| `za` | Toggle fold |
-| `zM` | Close all folds |
-| `zR` | Open all folds |
-| `Ctrl+h/j/k/l` or `<Space>h/j/k/l` | Split and tmux pane navigation |
-| `<Space>|` / `<Space>-` / `<Space>=` | Split right / below / equalize |
-| `<Space>gs` / `gr` / `gp` / `gb` | Stage / reset / preview / blame hunk |
-| `<Space>gg` / `go` | Lazygit / open on GitHub |
-| `<Space>ac` / `as` | Toggle Claude / send selection |
-| `<Space>aa` / `ad` | Accept / deny Claude diff |
-| `<Space>db` / `F5` / `F10` / `F11` | Breakpoint / continue / step over / step into |
-| `<Space>du` / `de` | Debug UI / eval |
-| `<Space>dt` / `dT` / `ds` | Test nearest / file / summary |
-| `<Space>.` | Scratch buffer |
-| `<Space>ma` | Add Harpoon mark |
-| `<Space>mm` | Harpoon menu |
-| `<Space>1` to `<Space>5` | Jump to mark 1-5 |
-| `<Space>mn` / `<Space>mp` | Next/previous mark |
-| `<Space>tm` | Open markdown in browser |
-| `<Space>tr` | Toggle markdown render |
-| `<Space>io` | Open file externally |
-| `gh/gl` | Jump history back/forward |
-| `<Space>tw` / `ts` / `tz` / `tD` | Toggle wrap / spell / zen / dim |
-| `<Space>fn` / `<Space>nh` | Notification history (picker / float) |
-| `<Space>?` | Show all keymaps |
-| `<Space><Space>` | Show leader keymaps |
-| `:Mason` | Manage LSP servers |
-| `:Lazy` | Manage plugins |
-| `:TSInstall <lang>` | Install a Treesitter parser |
-| `:ConformInfo` | Show formatters for this buffer |
+`dot doctor` reports missing binaries (formatters, linters, runtimes, adapters).

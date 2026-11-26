@@ -359,7 +359,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-section "docs drift: every key/alias/binding is documented"
+section "docs drift: keys, aliases, bindings, components and links are documented"
 # nvim: each "<leader>xy" literal in nvim/ must appear as `<Space>xy` in docs/nvim.md
 missing=""
 while read -r k; do
@@ -386,6 +386,42 @@ while read -r k; do
 done < <(grep -E '^bind( -r)? [^-]' "$DOTFILES_DIR/tmux/tmux.conf" | awk '{ if ($2=="-r") print $3; else print $2 }' | sort -u)
 if [ -z "$missing" ]; then pass "docs/tmux.md documents every prefix binding"
 else fail "docs/tmux.md documents every prefix binding" "missing:$missing"; fi
+
+# README and docs/install.md: each installer component (FEATURES in cmd/install.sh)
+# and each profile must be named.
+for doc in README.md docs/install.md; do
+    missing=""
+    while IFS= read -r c; do
+        [ -n "$c" ] || continue
+        grep -qF "$c" "$DOTFILES_DIR/$doc" || missing="$missing [$c]"
+    done < <(awk '/^FEATURES=\(/ { on = 1; next } on && /^\)/ { on = 0 } on || /FEATURES\+=\(/' "$DOTFILES_DIR/cmd/install.sh" \
+             | grep -oE '"[^"]+"' | tr -d '"')
+    for f in "$DOTFILES_DIR"/profiles/*.conf; do
+        n="$(basename "$f" .conf)"
+        grep -qF "\`$n\`" "$DOTFILES_DIR/$doc" || missing="$missing [profile $n]"
+    done
+    if [ -z "$missing" ]; then pass "$doc names every component and profile"
+    else fail "$doc names every component and profile" "missing:$missing"; fi
+done
+
+# Relative Markdown links in the docs must point at files that exist.
+missing=""
+for doc in README.md AGENTS.md docs/*.md; do
+    [ -f "$DOTFILES_DIR/$doc" ] || continue
+    while IFS= read -r target; do
+        target="${target%%#*}"
+        [ -n "$target" ] || continue
+        case "$target" in http://*|https://*|mailto:*) continue ;; esac
+        [ -e "$DOTFILES_DIR/$(dirname "$doc")/$target" ] || missing="$missing $doc:$target"
+    done < <(grep -oE '\]\([^)[:space:]]+\)' "$DOTFILES_DIR/$doc" | sed -E 's/^\]\(//; s/\)$//')
+done
+if [ -z "$missing" ]; then pass "doc links resolve"
+else fail "doc links resolve" "missing:$missing"; fi
+
+# CLAUDE.md only imports AGENTS.md, so every agent reads the same file.
+if [ -f "$DOTFILES_DIR/AGENTS.md" ] && grep -qx '@AGENTS.md' "$DOTFILES_DIR/CLAUDE.md"; then
+    pass "CLAUDE.md imports AGENTS.md"
+else fail "CLAUDE.md imports AGENTS.md"; fi
 
 # ---------------------------------------------------------------------------
 echo ""

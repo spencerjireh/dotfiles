@@ -1,234 +1,89 @@
 # Dotfiles
 
-Personal development environment for macOS and Linux.
+Personal terminal setup for macOS and Linux (including WSL): Ghostty, tmux, zsh, Neovim and
+superfile, all in the Vesper colour scheme. One installer links everything into `$HOME`.
 
-## What's Inside
-
-- **Ghostty** - GPU-accelerated terminal (renderer only, titlebar hidden)
-- **tmux** - Window/pane management, vi-style copy mode
-- **Zsh** - Shell with Oh My Zsh, Powerlevel10k, and vi mode
-- **Neovim** - lazy.nvim, one plugin spec per file under `nvim/lua/plugins/`
-- **Superfile** - TUI file manager (`spf`) with vim-style hotkeys, cd-on-quit, bat previews, zoxide
-
-All tools share the **Vesper** color scheme (`#101010` bg, `#ffffff` fg, `#ffc799` accent).
-
-Keybinding and alias references live in [`docs/`](docs/) and are shown by `dot keys`:
-
-| Topic | File | In-app help |
-|-------|------|-------------|
-| Neovim | [docs/nvim.md](docs/nvim.md) | `<Space>?` (which-key), `<Space>fk` (keymap picker) |
-| tmux | [docs/tmux.md](docs/tmux.md) | `prefix + ?` (cheat sheet in a popup) |
-| Zsh | [docs/zsh.md](docs/zsh.md) | `dot keys zsh` |
-| Superfile | [docs/superfile.md](docs/superfile.md) | `?` inside `spf` |
-
-## Installation
-
-### Prerequisites
-
-None. The installer bootstraps its own foundation. On a fresh machine it installs **Homebrew** (may prompt for your password once) and **gum** before the TUI appears; **zsh** and **Oh My Zsh** are installed with the Zsh component. `git` and `curl` (preinstalled on macOS / most Linux) are all you need to start.
-
-### Setup
-
-```bash
-git clone git@github.com:spencerjireh/dotfiles.git
-cd dotfiles
-./install.sh
-```
-
-`./install.sh` forwards to `bin/dot install`. After the first run, `dot` is on your PATH.
-
-### What the Install Script Does
-
-The installer runs a **TUI up front** (powered by [`gum`](https://github.com/charmbracelet/gum), auto-bootstrapped on first run, cross-platform on macOS + Linux): you tick which components to install and fill in any inputs (GitHub/Git name + email), confirm a summary, and then it **runs unattended**. If `gum` can't be installed it falls back to plain text prompts.
-
-Selectable components (all pre-selected by default):
-
-| Component | What it does |
-|-----------|--------------|
-| Homebrew CLI packages | neovim, tree-sitter-cli, tmux, fzf, fd, eza, bat, ripgrep, git-delta, zoxide, uv, mise, direnv, imagemagick, rustup (+ `rustup default stable`), trash, lazygit, wget, language runtimes for the LSP servers (node, go, openjdk; mise overrides them per repo), plus formatters/linters (stylua, ruff, black, prettierd, eslint_d, shfmt, hadolint, clang-format, google-java-format) |
-| Ghostty terminal | Installs the Ghostty app (cask on macOS) + symlinks `ghostty/config` (opens maximized, Option acts as Alt, Cmd keys mapped to tmux) |
-| Claude Code | Installs via the official native installer (self-updating) |
-| Nerd Font | GohuFont Nerd Font (cask on macOS, downloaded on Linux) |
-| Neovim config | Symlinks `nvim/` to `~/.config/nvim` |
-| Superfile file manager | Installs `superfile` (brew) + symlinks config, hotkeys, and Vesper theme |
-| tmux + TPM | Symlinks `tmux.conf`, installs TPM + plugins (resurrect, thumbs; headless, no tmux session needed) |
-| Zsh + Oh My Zsh | Symlinks `.zshrc`/`.p10k.zsh`, installs autosuggestions/syntax-highlighting/powerlevel10k |
-| GitHub SSH + CLI | Generates an ed25519 key, writes a `~/.ssh/config` host block (agent + keychain), installs `gh` |
-| Git global config | name/email prompts; everything else (delta pager, pull.rebase, autoSetupRemote, aliases) is tracked in `git/config` and included via `include.path`; `git/ignore` becomes the global ignore |
-| Karabiner (Caps Lock as Esc/Ctrl) | Installs Karabiner-Elements + links `karabiner/` to `~/.config/karabiner`: Caps Lock is Escape when tapped, Control when held (macOS only) |
-| macOS defaults | Fastest key repeat + repeat-on-hold, Finder, Dock, trackpad, screenshots (macOS only) |
-
-Symlinks are created with **automatic backup** of any existing file. The selection is recorded in `~/.config/dotfiles/components` so `dot doctor` checks only what this machine has; re-running the installer merges new selections into it.
-
-Packages live in a declarative **`Brewfile`** (installed via `brew bundle`); casks that are individually toggleable in the TUI (Ghostty, font, `gh`) stay in `cmd/install.sh`.
-
-### Variants (profiles)
-
-The installer has variants, called profiles. A profile decides which components are offered and ticked, which Brewfile is bundled, and whether the installer may use `sudo`.
-
-```bash
-dot install --list-profiles     # what exists
-dot install                     # asks which variant on the first run, then remembers it
-dot install --profile work      # or DOTFILES_PROFILE=work for scripted runs
-```
-
-| Profile | For | What it does |
-|---------|-----|--------------|
-| `default` | Personal machines | Everything described above |
-| `work` | A locked-down work machine: WSL with Homebrew already installed | Brew formulae (`Brewfile.work`) and plain git clones only. No apps, no casks, no `curl \| bash` installers, no font install, no Claude Code, no personal GitHub key. `sudo` is used only after an explicit yes, and never in a scripted run |
-
-What `work` changes, compared with `default`:
-
-- **Components**: Homebrew CLI packages, Neovim, tmux, Zsh and Git config are ticked; Superfile can be ticked; Ghostty, Claude Code, Nerd Font, GitHub SSH + CLI, Karabiner and macOS defaults are not offered.
-- **Packages**: `Brewfile.work` covers the core CLI tools plus Python and JS/TS tooling. Go, Java, Rust, C tooling and imagemagick are left out.
-- **Homebrew**: must already be installed; the installer stops with a message instead of bootstrapping it.
-- **Login shell**: instead of `chsh`, a marked block in `~/.bashrc` starts zsh in interactive terminals (`dot uninstall` removes it).
-- **Neovim**: Mason is off. Language servers come from brew (pyright, TypeScript 7's own `tsc --lsp`, lua-language-server) or anything else on `PATH`; there are no debug adapters. The Claude plugin is off.
-- **tmux**: tmux-thumbs is not built (it needs Rust) and its key is unbound. Copying goes to the Windows clipboard through the terminal.
-- **No prebuilt binaries from plugins**: powerlevel10k normally downloads a `gitstatusd` binary and blink.cmp a Rust matcher on first use. With `DOTFILES_PREBUILT=0` the prompt uses zsh's `vcs_info` (same git segment, slower in very large repos) and completion uses blink.cmp's Lua matcher.
-- **Git**: commit signing is turned off in `~/.gitconfig`, because the signing key belongs to the personal GitHub setup. Name and email are asked for as usual, so use the work ones.
-- **Icons**: the installer shows three sample icons and asks whether they render. If not, `ll`, the Neovim statusline, the file pickers and the command line use plain characters.
-- **Updates**: `dot update` restores Neovim plugins to `nvim/lazy-lock.json` instead of syncing, so a read-only clone never ends up with local changes.
-
-The profile name is recorded in `~/.config/dotfiles/profile` and its switches in `~/.config/dotfiles/settings` (`DOTFILES_MASON`, `DOTFILES_AGENT`, `DOTFILES_TMUX_THUMBS`, `DOTFILES_PREBUILT`, `DOTFILES_GLYPHS`). zsh, tmux and Neovim read the settings file; `dot doctor` and `dot update` follow the recorded profile.
-
-On a work machine, clone over https inside the WSL home (not under `/mnt/c`), then run the installer:
+## Install
 
 ```bash
 git clone https://github.com/spencerjireh/dotfiles.git ~/dotfiles
 ```
 
 ```bash
+~/dotfiles/install.sh
+```
+
+You tick the components you want, answer a few questions (git name and email), confirm, and the
+rest runs unattended. Existing files are backed up before they are replaced. Only `git` and
+`curl` are needed to start; the installer brings Homebrew and its own prompt tool.
+
+After the first run, `dot` is on your PATH. Running `dot install` again is safe.
+
+## Variants
+
+| Profile | For | What you get |
+|---------|-----|--------------|
+| `default` | Personal machines | Everything below |
+| `work` | A locked-down machine: WSL with Homebrew already installed | Brew formulae and git clones only. No apps, no admin rights, no Claude, no personal GitHub key |
+
+```bash
 ~/dotfiles/install.sh --profile work
 ```
 
-**Adding a variant**: copy `profiles/work.conf` to `profiles/<name>.conf` and edit it. The keys and their defaults are listed in `profile_defaults` in `lib/profile.sh`. Give it its own `Brewfile.<name>` if the package set differs. Tracked configs must react to a setting or to what is installed, never to the profile name.
+On WSL, clone inside the Linux home, not under `/mnt/c`. What `work` changes and how to add a
+variant: [docs/install.md](docs/install.md).
 
-### The `dot` command
+## Components
 
-Linked to `~/.local/bin/dot` during install. Every script in the repo is reachable through it:
+| Component | What it sets up |
+|-----------|-----------------|
+| Homebrew CLI packages | The tools in `Brewfile` (`Brewfile.work` for the work profile) |
+| Ghostty terminal | The app and its config |
+| Claude Code | The CLI, through its own installer |
+| Nerd Font | GohuFont Nerd Font |
+| Neovim config | `nvim/`, plugins through lazy.nvim |
+| Superfile file manager | `spf`, with config and theme |
+| tmux + TPM | `tmux.conf` and plugins |
+| Zsh + Oh My Zsh | zsh config, Powerlevel10k, plugins |
+| GitHub SSH + CLI | An SSH key, a host block, `gh` |
+| Git global config | Name and email; the rest is tracked in `git/config` |
+| Karabiner (Caps Lock as Esc/Ctrl) | Escape when tapped, Control when held (macOS) |
+| macOS defaults | Key repeat, Finder, Dock, trackpad, screenshots (macOS) |
 
-```bash
-dot install          # the installer (same as ./install.sh)
-dot update           # pull dotfiles, brew bundle + upgrade, tmux/zsh/nvim plugins, mason registry, tmux-thumbs, Claude
-dot doctor           # health check for the recorded components: symlinks, tools, runtimes, formatters, LSP servers, adapters, TPM plugins
-dot doctor --links   # only the symlinks/dirs the installer creates (used by CI)
-dot keys             # list reference topics; dot keys tmux | nvim | zsh | superfile | all; --sheet for the key tables only
-dot edit [query]     # fzf over the repo's tracked files, open in $EDITOR (zshconfig, nvimconfig, tmuxconfig are shortcuts)
-dot uninstall        # remove the symlinks, restore backups
-dot dir              # print the repo path: cd "$(dot dir)"
-```
-
-`dotup` and `dotdoctor` remain as zsh aliases for `dot update` and `dot doctor`.
-
-### Non-interactive install
-
-For CI or scripted machines, skip the TUI and pass the component list by name:
-
-```bash
-DOTFILES_NONINTERACTIVE=1 \
-DOTFILES_COMPONENTS="Neovim config,tmux + TPM,Zsh + Oh My Zsh,Git global config" \
-GIT_NAME="Your Name" GIT_EMAIL="you@example.com" ./install.sh
-```
-
-Labels match the TUI checklist exactly. Nothing prompts, the login shell is not changed, and the GitHub login step is skipped.
-
-### Commit signing
-
-Commits and tags are signed with the GitHub SSH key (`gpg.format = ssh` in `git/config`); the installer writes `~/.config/git/allowed_signers` so `git log --show-signature` verifies locally. For the Verified badge, add the same public key on GitHub as a **signing** key: `gh ssh-key add ~/.ssh/id_ed25519_github.pub --type signing`.
-
-The installer generates the key without a passphrase. To protect it, regenerate with one; the host block already loads it into the agent and keychain:
+## The `dot` command
 
 ```bash
-ssh-keygen -t ed25519 -C "you@example.com" -f ~/.ssh/id_ed25519_github   # choose a passphrase
-ssh-add --apple-use-keychain ~/.ssh/id_ed25519_github
-gh ssh-key add ~/.ssh/id_ed25519_github.pub --type authentication --title "$(hostname)"
-gh ssh-key add ~/.ssh/id_ed25519_github.pub --type signing --title "$(hostname) signing"
-dot install   # Git global config component: rewrites allowed_signers for the new key
+dot install      # run the installer again
+dot update       # pull, upgrade packages and plugins
+dot doctor       # check that everything this machine selected is in place
+dot keys         # key and alias reference: dot keys nvim | tmux | zsh | superfile
+dot edit         # pick a tracked file and open it in $EDITOR
+dot uninstall    # remove the links and restore the backups
+dot dir          # print where the repo lives
 ```
 
-Then delete the old key at github.com/settings/keys.
+## Reference
 
-### Machine-specific config
+| Topic | File | Inside the tool |
+|-------|------|-----------------|
+| Install, profiles, settings | [docs/install.md](docs/install.md) | `dot install --help` |
+| Neovim | [docs/nvim.md](docs/nvim.md) | `<Space>?`, `<Space>fk` |
+| tmux | [docs/tmux.md](docs/tmux.md) | `prefix + ?` |
+| Zsh | [docs/zsh.md](docs/zsh.md) | `dot keys zsh` |
+| Superfile | [docs/superfile.md](docs/superfile.md) | `?` inside `spf` |
 
-Anything machine- or work-specific (per-machine PATHs, tool installers, private aliases) goes in **`~/.zshrc.local`** (untracked), sourced at the end of `.zshrc`. Install seeds it from `zsh/.zshrc.local.example` if absent, so the tracked zsh config stays clean and portable.
+## When something is off
 
-### Tests
+Run `dot doctor` first; it names what is missing, and `dot install` repairs links. Three things
+it cannot see:
 
-```bash
-./tests/run.sh   # dependency-free; runs in a sandbox, installs nothing
-```
+- **`dot: command not found`**: open a new shell, or run `./bin/dot` from the repo.
+- **Karabiner does nothing**: open Karabiner-Elements once and grant Input Monitoring and the
+  driver extension in System Settings.
+- **Colours look wrong**: the terminal must support true colour.
 
-Covers script linting (shellcheck at warning level), the `lib/` helpers, `bin/dot` dispatch, the installer's symlink/selection/component logic, stylua formatting of `nvim/`, `zsh -n` on the zsh files, booting `tmux.conf` on an isolated server, and drift guards that fail when a keymap, alias or tmux binding is missing from its `docs/` file. CI (GitHub Actions) runs it on Ubuntu on every push, and an install job on both macOS and Ubuntu runs `install.sh` non-interactively for the config components, checks the links with `dot doctor --links`, restores the Neovim plugins with parsers compiled, and confirms TPM installed its plugins.
+## Working on this repo
 
-### Uninstallation
-
-```bash
-dot uninstall   # removes symlinks, restores backups, drops the git include and component record
-```
-
-## Directory Structure
-
-```
-├── bin/dot             # the dot command (symlinked to ~/.local/bin/dot)
-├── install.sh          # shim: ./install.sh -> dot install
-├── cmd/
-│   ├── install.sh      # TUI installer
-│   ├── update.sh       # dot update
-│   ├── doctor.sh       # dot doctor
-│   ├── uninstall.sh    # dot uninstall
-│   ├── keys.sh         # dot keys
-│   └── edit.sh         # dot edit
-├── lib/
-│   ├── log.sh          # logging helpers
-│   ├── env.sh          # repo-root resolver, brew/rustup PATH loading
-│   ├── components.sh   # ~/.config/dotfiles/components read/write, is_selected
-│   ├── tui.sh          # gum-backed TUI helpers (with plain fallback)
-│   └── tmux.sh         # tpm_run (TPM scripts on a throwaway server), tmux_thumbs_build
-├── docs/
-│   ├── nvim.md         # Neovim plugins and keys
-│   ├── tmux.md         # tmux keys (prefix + ? shows them as a cheat sheet)
-│   ├── zsh.md          # aliases and functions
-│   └── superfile.md    # superfile hotkeys
-├── ghostty/config
-├── tmux/tmux.conf
-├── zsh/
-│   ├── .zshrc          # thin: instant prompt, tmux autostart, Oh My Zsh, then sources *.zsh
-│   ├── 10-options.zsh  # history, navigation, vi mode, completion, env
-│   ├── 20-path.zsh     # brew, rustup, ~/.local/bin, go
-│   ├── 30-tools.zsh    # highlight colors, Ghostty integration, zoxide, fzf, delta
-│   ├── 40-aliases.zsh
-│   ├── 50-functions.zsh
-│   ├── .p10k.zsh
-│   └── .zshrc.local.example
-├── nvim/
-│   ├── init.lua        # options, autocmds, keymaps, lazy.nvim bootstrap
-│   ├── lua/plugins/    # one spec per file (snacks.lua, lsp.lua, ...)
-│   ├── lazy-lock.json
-│   └── .stylua.toml
-├── superfile/          # config.toml, hotkeys.toml, theme/vesper.toml
-├── git/                # config (included from ~/.gitconfig), ignore (global)
-├── karabiner/          # karabiner.json (directory linked to ~/.config/karabiner)
-├── tests/run.sh        # dependency-free test suite
-├── .github/workflows/test.yml
-├── profiles/           # install variants: default.conf, work.conf
-├── Brewfile            # declarative package list (brew bundle)
-├── Brewfile.work       # package list for the work profile
-└── CLAUDE.md           # conventions for Claude Code sessions in this repo
-```
-
-## Troubleshooting
-
-**Symlinks not working** - Run `dot doctor`, then `dot install` to repair.
-
-**`dot: command not found`** - `~/.local/bin` is added to PATH by `zsh/20-path.zsh`; open a new shell, or run `./bin/dot` from the repo.
-
-**tmux colors wrong** - Ensure terminal reports 256-color. Config sets `default-terminal` to `tmux-256color`.
-
-**tmux plugins not loaded** - Run `dot update` (or `dot install` with the tmux component) to install them headlessly, or press `prefix + I` inside tmux. `dot doctor` lists any missing plugin directories.
-
-**`prefix + t` (tmux-thumbs) shows an installer prompt** - The Rust binary is missing. `dot update` builds it with cargo (`rustup` is in the Brewfile); `dot doctor` reports the missing binary.
-
-**`prefix + ?` shows "dot is not installed"** - The popup runs `~/.local/bin/dot`; run `dot install` (any component) to create the link.
-
-**Karabiner rule does nothing** - Open Karabiner-Elements once and grant Input Monitoring plus the driver extension in System Settings. The rule is in the "Default" profile, which the tracked config selects.
+`./tests/run.sh` runs the test suite in a sandbox and installs nothing. Conventions, layout and
+how to add a key, alias, package or setting are in [AGENTS.md](AGENTS.md), written for both
+people and coding agents.
