@@ -19,9 +19,10 @@ dotfiles_dir() {
     esac
 }
 
-# True inside WSL (Windows Subsystem for Linux).
+# True inside WSL (Windows Subsystem for Linux). WSL sets WSL_DISTRO_NAME in
+# every session; the kernel string covers shells that scrubbed the environment.
 is_wsl() {
-    grep -qi microsoft /proc/version 2>/dev/null
+    [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null
 }
 
 # Make `brew` available in this shell session regardless of platform/arch.
