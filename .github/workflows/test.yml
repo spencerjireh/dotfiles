@@ -131,6 +131,7 @@ jobs:
           grep -qx 'DOTFILES_MASON=0' ~/.config/dotfiles/settings
           grep -qx 'DOTFILES_AGENT=kiro' ~/.config/dotfiles/settings
           grep -qx 'DOTFILES_GLYPHS=0' ~/.config/dotfiles/settings
+          grep -qx 'DOTFILES_PREBUILT=0' ~/.config/dotfiles/settings
           if grep -q 'Claude Code' ~/.config/dotfiles/components; then echo 'Claude Code was recorded'; exit 1; fi
           if command -v claude; then echo 'claude was installed'; exit 1; fi
           grep -qxF '# >>> dotfiles: start zsh >>>' ~/.bashrc
