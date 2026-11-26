@@ -5,6 +5,7 @@
 --   DOTFILES_MASON=0     no Mason: language servers come from PATH, no debug adapters
 --   DOTFILES_AGENT=kiro  no Claude plugin or keys (default: claude)
 --   DOTFILES_GLYPHS=0    the terminal font has no Nerd Font glyphs: plain characters
+--   DOTFILES_PREBUILT=0  plugins must not fetch prebuilt binaries (blink.cmp matcher)
 local M = {}
 
 local values ---@type table<string, string>|nil
