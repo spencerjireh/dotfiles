@@ -152,34 +152,21 @@ Utilities:
 
 ## Machine-local config
 
-Anything machine- or work-specific (extra PATH entries, tool installers,
-private aliases, credentials) goes in `~/.zshrc.local`, which is untracked and
-sourced last. The installer seeds it from `zsh/.zshrc.local.example`.
-`DOTFILES_PROJECT_DIRS` (colon-separated) sets the roots `fproj` and
-`prefix + o` list; the default is `~/Projects`.
+`~/.zshrc.local` is untracked and sourced last; machine-specific PATHs, aliases and credentials
+go there. `DOTFILES_PROJECT_DIRS` (colon-separated) sets the roots `fproj` and `prefix + o`
+list; the default is `~/Projects`.
 
-## Machine settings
+`.zshrc` first sources `~/.config/dotfiles/settings`, the `DOTFILES_*` switches recorded by the
+installer. They are listed in [install.md](install.md).
 
-`~/.config/dotfiles/settings` holds the `DOTFILES_*` switches the installer
-records from the install profile (see "Variants" in the README). `.zshrc`
-sources it first; tmux and Neovim read the same file. No file means every
-default.
-
-| Setting | Effect in zsh |
-|---------|---------------|
-| `DOTFILES_GLYPHS=0` | The terminal font has no Nerd Font glyphs: `ll` drops `--icons` |
-| `DOTFILES_PREBUILT=0` | powerlevel10k does not download `gitstatusd`; the git segment uses `vcs_info` |
-
-tmux starts automatically in Ghostty and in Windows Terminal (WSL), but not in
-an editor's terminal (Kiro, VS Code). On machines where zsh is not the login
-shell, the installer can add a marked block to `~/.bashrc` that starts zsh in
-interactive terminals; `DOTFILES_NO_ZSH=1 bash` gives a plain bash.
+tmux starts automatically in Ghostty and in Windows Terminal (WSL), but not in an editor's
+terminal (Kiro, VS Code).
 
 ## File layout
 
 | File | Contents |
 |------|----------|
-| `zsh/.zshrc` | p10k instant prompt, tmux auto-attach in Ghostty, Oh My Zsh, then sources the modules below in order, then p10k and `~/.zshrc.local` |
+| `zsh/.zshrc` | p10k instant prompt, tmux auto-attach, Oh My Zsh, then sources the modules below in order, then p10k and `~/.zshrc.local` |
 | `zsh/10-options.zsh` | History, directory navigation, vi mode and cursor shape, completion styles, `LANG`, `EDITOR`, colored man pages |
 | `zsh/20-path.zsh` | Homebrew (macOS and Linuxbrew), openjdk, `~/.local/bin`, Go, Rust (`~/.cargo/bin`, keg-only rustup) |
 | `zsh/30-tools.zsh` | Syntax-highlighting colors, Ghostty shell integration, zoxide, mise, direnv, delta pager, fzf options and key bindings |
