@@ -218,6 +218,12 @@ done < <(grep -oE '^brew "[^"]+"' "$DOTFILES_DIR/Brewfile.work" | sed 's/^brew "
 if [ -z "$missing" ]; then pass "Brewfile.work formulae are in Brewfile or the work-only allowlist"
 else fail "Brewfile.work formulae are in Brewfile or the work-only allowlist" "unexpected:$missing"; fi
 
+# is_wsl: WSL_DISTRO_NAME is enough; without it the answer comes from the kernel string
+( WSL_DISTRO_NAME=Ubuntu is_wsl ); assert_success "$?" "is_wsl is true when WSL_DISTRO_NAME is set"
+if ! grep -qi microsoft /proc/version 2>/dev/null; then
+    ( unset WSL_DISTRO_NAME; is_wsl ); assert_failure "$?" "is_wsl is false outside WSL"
+fi
+
 # profile + settings state files (sandboxed)
 PROF_HOME="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-prof.XXXXXX")"
 PROFILE_FILE="$PROF_HOME/dotfiles/profile"
